@@ -1,0 +1,20 @@
+# Compiled Delphi output
+*.dcu
+*.dpu
+*.exe
+*.dll
+*.res
+*.map
+*.stat
+
+# IDE caches and local settings
+*.identcache
+*.dproj.local
+*.local
+__history/
+__recovery/
+*.deployproj
+
+# Debug output
+*.rsm
+*.drc
