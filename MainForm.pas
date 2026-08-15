@@ -19,7 +19,7 @@ const
 
 type
   TFormMain = class(TForm)
-    PanelTop:       TPanel;
+    PanelLeft:      TPanel;
     BtnOpen:        TButton;
     BtnPlay:        TButton;
     BtnPause:       TButton;

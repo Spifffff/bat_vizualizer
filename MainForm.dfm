@@ -14,64 +14,64 @@ object FormMain: TFormMain
   OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
-  object PanelTop: TPanel
+  object PanelLeft: TPanel
     Left = 0
     Top = 0
-    Width = 1200
-    Height = 80
-    Align = alTop
+    Width = 180
+    Height = 707
+    Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
     object BtnOpen: TButton
       Left = 8
       Top = 10
-      Width = 90
-      Height = 30
+      Width = 164
+      Height = 28
       Caption = 'Open WAV'
       TabOrder = 0
       OnClick = BtnOpenClick
     end
     object BtnPlay: TButton
-      Left = 106
-      Top = 10
-      Width = 70
-      Height = 30
+      Left = 8
+      Top = 44
+      Width = 50
+      Height = 26
       Caption = 'Play'
       Enabled = False
       TabOrder = 1
       OnClick = BtnPlayClick
     end
     object BtnPause: TButton
-      Left = 182
-      Top = 10
-      Width = 70
-      Height = 30
+      Left = 63
+      Top = 44
+      Width = 50
+      Height = 26
       Caption = 'Pause'
       Enabled = False
       TabOrder = 2
       OnClick = BtnPauseClick
     end
     object BtnStop: TButton
-      Left = 258
-      Top = 10
-      Width = 70
-      Height = 30
+      Left = 118
+      Top = 44
+      Width = 54
+      Height = 26
       Caption = 'Stop'
       Enabled = False
       TabOrder = 3
       OnClick = BtnStopClick
     end
     object LblWindow: TLabel
-      Left = 346
-      Top = 18
+      Left = 8
+      Top = 82
       Width = 59
       Height = 13
       Caption = 'Window fn:'
     end
     object CbxWindow: TComboBox
-      Left = 410
-      Top = 14
-      Width = 110
+      Left = 8
+      Top = 98
+      Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 1
@@ -86,16 +86,16 @@ object FormMain: TFormMain
         'Flat-Top')
     end
     object LblFFTSize: TLabel
-      Left = 534
-      Top = 18
+      Left = 8
+      Top = 128
       Width = 44
       Height = 13
       Caption = 'FFT size:'
     end
     object CbxFFTSize: TComboBox
-      Left = 582
-      Top = 14
-      Width = 80
+      Left = 8
+      Top = 144
+      Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 3
@@ -110,24 +110,17 @@ object FormMain: TFormMain
         '8192'
         '16384')
     end
-    object LblSpeed: TLabel
-      Left = 676
-      Top = 18
-      Width = 70
-      Height = 13
-      Caption = 'Speed: 10%'
-    end
     object LblPlayMode: TLabel
-      Left = 762
-      Top = 18
+      Left = 8
+      Top = 174
       Width = 52
       Height = 13
       Caption = 'Play mode:'
     end
     object CbxPlayMode: TComboBox
-      Left = 818
-      Top = 14
-      Width = 165
+      Left = 8
+      Top = 190
+      Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 0
@@ -138,17 +131,31 @@ object FormMain: TFormMain
         'VLC'
         'Native (correct pitch)')
     end
+    object LblSpeed: TLabel
+      Left = 8
+      Top = 220
+      Width = 70
+      Height = 13
+      Caption = 'Speed: 10%'
+    end
     object LblGainCaption: TLabel
       Left = 8
-      Top = 61
+      Top = 244
       Width = 27
       Height = 13
       Caption = 'Gain:'
     end
+    object LblGainVal: TLabel
+      Left = 50
+      Top = 244
+      Width = 30
+      Height = 13
+      Caption = '0 dB'
+    end
     object TrkGain: TTrackBar
-      Left = 42
-      Top = 52
-      Width = 140
+      Left = 4
+      Top = 260
+      Width = 172
       Height = 26
       Max = 80
       Frequency = 10
@@ -157,17 +164,10 @@ object FormMain: TFormMain
       TabOrder = 7
       OnChange = TrkGainChange
     end
-    object LblGainVal: TLabel
-      Left = 188
-      Top = 61
-      Width = 45
-      Height = 13
-      Caption = '0 dB'
-    end
     object ChkBGSub: TCheckBox
-      Left = 252
-      Top = 57
-      Width = 110
+      Left = 8
+      Top = 294
+      Width = 164
       Height = 17
       Caption = 'BG Subtract'
       TabOrder = 8
@@ -203,10 +203,10 @@ object FormMain: TFormMain
     OnChange = ZoomBarChange
   end
   object PaintBox: TPaintBox
-    Left = 0
-    Top = 80
-    Width = 1200
-    Height = 627
+    Left = 180
+    Top = 0
+    Width = 1020
+    Height = 707
     Align = alClient
     OnMouseDown = PaintBoxMouseDown
     OnMouseMove = PaintBoxMouseMove
