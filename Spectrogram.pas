@@ -10,49 +10,36 @@ uses
 type
   TSpectrogramData = class
   private
-    FBitmap:     TBitmap;
-    FNumFrames:  Integer;
+    FWavFile:    TWavFile;    // not owned
+    FFFTSize:    Integer;
+    FWindow:     TWindowType;
     FNumBins:    Integer;
     FSampleRate: Cardinal;
-    FFFTSize:    Integer;
-    FHopSize:    Integer;
-    FMinDB:      Double;
-    FMaxDB:      Double;
-    FRawMags:    TArray<TArray<Double>>;  // [frame][bin] raw FFT magnitudes
-    FProcMags:   TArray<TArray<Double>>;  // after optional background subtraction
-
+    FBgSpectrum: TArray<Double>;
+    FHasBg:      Boolean;
     procedure ViridisRGB(T: Double; out R, G, B: Byte);
   public
-    constructor Create;
-    destructor  Destroy; override;
+    { Call when file / FFT size / window changes.  Fast — only computes
+      background spectrum from a non-overlapping coarse pass. }
+    procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
 
-    { Compute all FFT frames and store raw magnitudes.  Slow — re-run only
-      when file / FFT size / window function changes. }
-    procedure Compute(WavFile: TWavFile;
-                      FFTSize: Integer;
-                      Window:  TWindowType;
-                      HopFraction: Double = 0.5);
+    { Render the visible zoom window at display resolution.  Each pixel column
+      gets its own FFT so there is no block artefact when zoomed in. }
+    procedure Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer;
+                     ZoomStart, ZoomEnd: Double;
+                     BgSubtract: Boolean; GainDB, Gamma: Double;
+                     MinDB: Double = -100.0; MaxDB: Double = 0.0);
 
-    { Apply optional per-bin background subtraction, then re-render the
-      bitmap with the given gain and power-law gamma.  Fast — call this
-      whenever gain, BGsub, or gamma changes without re-FFT. }
-    procedure ProcessAndRender(BgSubtract: Boolean;
-                               GainDB:     Double;
-                               Gamma:      Double;
-                               MinDB:      Double = -100.0;
-                               MaxDB:      Double =    0.0);
-
-    property Bitmap:     TBitmap  read FBitmap;
-    property NumFrames:  Integer  read FNumFrames;
     property NumBins:    Integer  read FNumBins;
     property SampleRate: Cardinal read FSampleRate;
-    property FFTSize:    Integer  read FFFTSize;
-    property HopSize:    Integer  read FHopSize;
-    property MinDB:      Double   read FMinDB;
-    property MaxDB:      Double   read FMaxDB;
   end;
 
 implementation
+
+type
+  TBGRPixel  = packed record B, G, R: Byte; end;
+  TBGRRowArr = array[0..MaxInt div SizeOf(TBGRPixel) - 1] of TBGRPixel;
+  PBGRRow    = ^TBGRRowArr;
 
 procedure TSpectrogramData.ViridisRGB(T: Double; out R, G, B: Byte);
 const
@@ -73,109 +60,98 @@ begin
   B := Byte(Round(VB[Seg] + (VB[Seg+1] - VB[Seg]) * Frac));
 end;
 
-constructor TSpectrogramData.Create;
-begin
-  inherited;
-  FBitmap := TBitmap.Create;
-  FBitmap.PixelFormat := pf24bit;
-end;
-
-destructor TSpectrogramData.Destroy;
-begin
-  FBitmap.Free;
-  inherited;
-end;
-
-procedure TSpectrogramData.Compute(WavFile: TWavFile;
-                                    FFTSize: Integer;
-                                    Window:  TWindowType;
-                                    HopFraction: Double);
+procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer;
+  AWindow: TWindowType);
 var
-  Samples:   TArray<Single>;
-  HopSize:   Integer;
-  NumFrames: Integer;
-  I:         Integer;
+  Samples:      TArray<Single>;
+  TotalSamples: Integer;
+  Mags:         TArray<Double>;
+  BgSum:        TArray<Double>;
+  FrameCount, B, Offset: Integer;
 begin
-  Samples := WavFile.Samples;
-  if Length(Samples) = 0 then Exit;
+  FWavFile    := AWavFile;
+  FFFTSize    := AFFTSize;
+  FWindow     := AWindow;
+  FNumBins    := AFFTSize shr 1;
+  FSampleRate := AWavFile.Info.SampleRate;
+  FHasBg      := False;
+  SetLength(FBgSpectrum, 0);
 
-  HopSize   := Max(1, Round(FFTSize * HopFraction));
-  NumFrames := (Length(Samples) - FFTSize) div HopSize + 1;
-  if NumFrames < 1 then NumFrames := 1;
+  Samples      := AWavFile.Samples;
+  TotalSamples := Length(Samples);
+  if TotalSamples < AFFTSize then Exit;
 
-  FNumFrames  := NumFrames;
-  FNumBins    := FFTSize shr 1;
-  FSampleRate := WavFile.Info.SampleRate;
-  FFFTSize    := FFTSize;
-  FHopSize    := HopSize;
-
-  SetLength(FRawMags, NumFrames);
-  for I := 0 to NumFrames - 1 do
-    ComputeWindowedFFT(Samples, I * HopSize, FFTSize, Window, FRawMags[I]);
-end;
-
-procedure TSpectrogramData.ProcessAndRender(BgSubtract: Boolean;
-                                             GainDB: Double;
-                                             Gamma:  Double;
-                                             MinDB:  Double;
-                                             MaxDB:  Double);
-type
-  TBGRPixel = packed record B, G, R: Byte; end;
-  PBGRPixel  = ^TBGRPixel;
-var
-  I, J, Row:  Integer;
-  Mag, DB:    Double;
-  TLin, T:    Double;
-  P:          PBGRPixel;
-  PR, PG, PB: Byte;
-  BgMean:     TArray<Double>;
-  N:          Integer;
-begin
-  if FNumFrames = 0 then Exit;
-
-  FMinDB := MinDB;
-  FMaxDB := MaxDB;
-  N      := FNumFrames;
-
-  { Copy raw magnitudes into processing buffer. }
-  SetLength(FProcMags, N);
-  for I := 0 to N - 1 do
+  SetLength(BgSum, FNumBins);
+  FrameCount := 0;
+  Offset := 0;
+  while Offset + AFFTSize <= TotalSamples do
   begin
-    SetLength(FProcMags[I], FNumBins);
-    Move(FRawMags[I][0], FProcMags[I][0], FNumBins * SizeOf(Double));
+    ComputeWindowedFFT(Samples, Offset, AFFTSize, AWindow, Mags);
+    for B := 0 to FNumBins - 1 do
+      BgSum[B] := BgSum[B] + Mags[B];
+    Inc(FrameCount);
+    Inc(Offset, AFFTSize);  // non-overlapping for speed
   end;
 
-  { Per-bin mean background subtraction. }
-  if BgSubtract then
+  if FrameCount > 0 then
   begin
-    SetLength(BgMean, FNumBins);
-    for J := 0 to FNumBins - 1 do
-    begin
-      BgMean[J] := 0.0;
-      for I := 0 to N - 1 do
-        BgMean[J] := BgMean[J] + FProcMags[I][J];
-      BgMean[J] := BgMean[J] / N;
-    end;
-    for I := 0 to N - 1 do
-      for J := 0 to FNumBins - 1 do
-      begin
-        FProcMags[I][J] := FProcMags[I][J] - BgMean[J];
-        if FProcMags[I][J] < 0.0 then FProcMags[I][J] := 0.0;
-      end;
+    SetLength(FBgSpectrum, FNumBins);
+    for B := 0 to FNumBins - 1 do
+      FBgSpectrum[B] := BgSum[B] / FrameCount;
+    FHasBg := True;
   end;
+end;
 
-  { Render bitmap.  Column = time frame; row 0 = highest frequency bin. }
-  FBitmap.Width  := N;
-  FBitmap.Height := FNumBins;
+procedure TSpectrogramData.Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer;
+  ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
+  MinDB: Double; MaxDB: Double);
+var
+  Samples:      TArray<Single>;
+  TotalSamples: Integer;
+  Rows:         TArray<PBGRRow>;
+  Mags:         TArray<Double>;
+  X, Y, Bin:   Integer;
+  Frac, ZFrac:  Double;
+  CenterSample: Integer;
+  Mag, DB:      Double;
+  TLin, T:      Double;
+  VR, VG, VB:  Byte;
+  UseBg:        Boolean;
+begin
+  if (FWavFile = nil) or (FNumBins = 0) or (DestWidth <= 0) or (DestHeight <= 0) then Exit;
 
-  for Row := 0 to FNumBins - 1 do
+  Samples      := FWavFile.Samples;
+  TotalSamples := Length(Samples);
+  UseBg        := BgSubtract and FHasBg;
+
+  DestBmp.PixelFormat := pf24bit;
+  DestBmp.Width       := DestWidth;
+  DestBmp.Height      := DestHeight;
+
+  SetLength(Rows, DestHeight);
+  for Y := 0 to DestHeight - 1 do
+    Rows[Y] := PBGRRow(DestBmp.ScanLine[Y]);
+
+  for X := 0 to DestWidth - 1 do
   begin
-    J := FNumBins - 1 - Row;
-    P := PBGRPixel(FBitmap.ScanLine[Row]);
+    Frac         := (X + 0.5) / DestWidth;
+    ZFrac        := ZoomStart + Frac * (ZoomEnd - ZoomStart);
+    CenterSample := Round(ZFrac * TotalSamples);
 
-    for I := 0 to N - 1 do
+    // ComputeWindowedFFT uses Offset as start of window; we center it on
+    // CenterSample.  FFT.pas handles out-of-range indices with zero-padding.
+    ComputeWindowedFFT(Samples, CenterSample - (FFFTSize shr 1),
+                       FFFTSize, FWindow, Mags);
+
+    for Y := 0 to DestHeight - 1 do
     begin
-      Mag := FProcMags[I][J];
+      Bin := Round((1.0 - (Y + 0.5) / DestHeight) * (FNumBins - 1));
+      if Bin < 0 then Bin := 0;
+      if Bin >= FNumBins then Bin := FNumBins - 1;
+
+      Mag := Mags[Bin];
+      if UseBg then
+        Mag := Max(0.0, Mag - FBgSpectrum[Bin]);
 
       if Mag > 1.0e-12 then
         DB := 20.0 * Log10(Mag) + GainDB
@@ -186,17 +162,15 @@ begin
       if TLin < 0.0 then TLin := 0.0;
       if TLin > 1.0 then TLin := 1.0;
 
-      { Power-law curve: Gamma > 1 keeps low values dark, pulls out peaks. }
       if (Gamma > 0.0) and (TLin > 0.0) then
         T := Power(TLin, Gamma)
       else
         T := TLin;
 
-      ViridisRGB(T, PR, PG, PB);
-      P^.R := PR;
-      P^.G := PG;
-      P^.B := PB;
-      Inc(P);
+      ViridisRGB(T, VR, VG, VB);
+      Rows[Y]^[X].R := VR;
+      Rows[Y]^[X].G := VG;
+      Rows[Y]^[X].B := VB;
     end;
   end;
 end;

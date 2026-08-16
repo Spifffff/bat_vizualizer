@@ -111,7 +111,7 @@ begin
   for I := 0 to Size - 1 do
   begin
     var Idx := Offset + I;
-    if Idx < Length(Samples) then
+    if (Idx >= 0) and (Idx < Length(Samples)) then
       Buf[I] := Samples[Idx]
     else
       Buf[I] := 0.0;

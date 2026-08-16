@@ -76,6 +76,9 @@ type
     { Native waveOut player }
     FWavePlayer: TWaveOutPlayer;
 
+    { Off-screen bitmap rendered at display resolution by FSpecgram.Render }
+    FDisplayBmp: TBitmap;
+
     { Zoom state (0..1 fractions of the full recording) }
     FZoomStart:    Double;
     FZoomEnd:      Double;
@@ -180,15 +183,25 @@ begin
   FreeAndNil(FSpecgram);
   if FWavFile = nil then Exit;
   FSpecgram := TSpectrogramData.Create;
-  FSpecgram.Compute(FWavFile, GetFFTSize, GetWindowType);
+  FSpecgram.Prepare(FWavFile, GetFFTSize, GetWindowType);
   RenderSpectrogram;
   PaintBox.Invalidate;
 end;
 
 procedure TFormMain.RenderSpectrogram;
+var
+  R: TRect;
+  W, H: Integer;
 begin
   if FSpecgram = nil then Exit;
-  FSpecgram.ProcessAndRender(ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA);
+  R := SpectRect;
+  W := R.Right  - R.Left;
+  H := R.Bottom - R.Top;
+  if (W <= 0) or (H <= 0) then Exit;
+  if FDisplayBmp = nil then
+    FDisplayBmp := TBitmap.Create;
+  FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd,
+                   ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA);
 end;
 
 procedure TFormMain.StopAllPlayers;
@@ -233,6 +246,7 @@ begin
   FVLCPlayer   := nil;
   FCursorPos   := 0;
   FWavePlayer  := TWaveOutPlayer.Create;
+  FDisplayBmp  := nil;
 
   FZoomStart := 0.0;
   FZoomEnd   := 1.0;
@@ -263,6 +277,7 @@ begin
     FVLCInst := nil;
   end;
   FWavePlayer.Free;
+  FDisplayBmp.Free;
   FSpecgram.Free;
   FWavFile.Free;
   UnloadVLC;
@@ -564,6 +579,7 @@ begin
     FZoomStart := 1.0 - ZoomWidth;
     if FZoomStart < 0.0 then FZoomStart := 0.0;
   end;
+  RenderSpectrogram;
   PaintBox.Invalidate;
 end;
 
@@ -640,6 +656,7 @@ begin
     end;
 
     UpdateZoomBar;
+    RenderSpectrogram;
     PaintBox.Invalidate;
   end;
 
@@ -781,11 +798,13 @@ end;
 
 procedure TFormMain.PaintBoxPaint(Sender: TObject);
 var
-  R:        TRect;
-  Msg:      string;
-  SrcLeft, SrcWidth: Integer;
+  R:   TRect;
+  W, H: Integer;
+  Msg: string;
 begin
   R := SpectRect;
+  W := R.Right  - R.Left;
+  H := R.Bottom - R.Top;
 
   PaintBox.Canvas.Brush.Color := $00202020;
   PaintBox.Canvas.FillRect(PaintBox.ClientRect);
@@ -803,16 +822,13 @@ begin
     Exit;
   end;
 
-  { Render the zoomed portion of the spectrogram bitmap via StretchBlt. }
-  SrcLeft  := Round(FZoomStart * FSpecgram.NumFrames);
-  SrcWidth := Max(1, Round((FZoomEnd - FZoomStart) * FSpecgram.NumFrames));
+  { Re-render if the display bitmap is stale (first paint or after resize). }
+  if (FDisplayBmp = nil) or (FDisplayBmp.Width <> W) or (FDisplayBmp.Height <> H) then
+    RenderSpectrogram;
 
-  StretchBlt(
-    PaintBox.Canvas.Handle,
-    R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
-    FSpecgram.Bitmap.Canvas.Handle,
-    SrcLeft, 0, SrcWidth, FSpecgram.NumBins,
-    SRCCOPY);
+  if (FDisplayBmp <> nil) and (FDisplayBmp.Width > 0) then
+    BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H,
+           FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
 
   DrawAxes(PaintBox.Canvas, R);
   DrawCursor(PaintBox.Canvas, R);
