@@ -31,8 +31,10 @@ type
     LblGainCaption: TLabel;
     LblGainVal:     TLabel;
     TrkGain:        TTrackBar;
-    ChkBGSub:       TCheckBox;
-    StatusBar:      TStatusBar;
+    ChkBGSub:         TCheckBox;
+    LblColorScheme:   TLabel;
+    CbxColorScheme:   TComboBox;
+    StatusBar:        TStatusBar;
     ZoomBar:        TScrollBar;
     PanelMain:      TPanel;
     PaintBox:       TPaintBox;
@@ -56,6 +58,7 @@ type
     procedure CbxFFTSizeChange(Sender: TObject);
     procedure TrkGainChange(Sender: TObject);
     procedure ChkBGSubChange(Sender: TObject);
+    procedure CbxColorSchemeChange(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
   private
     FWavFile:    TWavFile;
@@ -89,6 +92,16 @@ var
 implementation
 
 {$R *.dfm}
+
+function IdxToColorScheme(Idx: Integer): TColorScheme; inline;
+begin
+  case Idx of
+    1: Result := csInferno;
+    2: Result := csMagma;
+    3: Result := csGrayscale;
+  else Result := csViridis;
+  end;
+end;
 
 { ---- helpers --------------------------------------------------------------- }
 
@@ -177,7 +190,8 @@ begin
   if FDisplayBmp = nil then
     FDisplayBmp := TBitmap.Create;
   FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd,
-                   ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA);
+                   ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA,
+                   -100.0, 0.0, IdxToColorScheme(CbxColorScheme.ItemIndex));
 end;
 
 procedure TFormMain.ResetPlaybackUI;
@@ -379,6 +393,13 @@ begin
 end;
 
 procedure TFormMain.ChkBGSubChange(Sender: TObject);
+begin
+  if FSpecgram = nil then Exit;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
+end;
+
+procedure TFormMain.CbxColorSchemeChange(Sender: TObject);
 begin
   if FSpecgram = nil then Exit;
   RenderSpectrogram;

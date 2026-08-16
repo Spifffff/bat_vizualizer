@@ -8,6 +8,8 @@ uses
   FFT, WavReader;
 
 type
+  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale);
+
   TSpectrogramData = class
   private
     FWavFile:    TWavFile;    // not owned
@@ -17,7 +19,7 @@ type
     FSampleRate: Cardinal;
     FBgSpectrum: TArray<Double>;
     FHasBg:      Boolean;
-    procedure ViridisRGB(T: Double; out R, G, B: Byte);
+    procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
   public
     { Call when file / FFT size / window changes.  Fast — only computes
       background spectrum from a non-overlapping coarse pass. }
@@ -28,7 +30,8 @@ type
     procedure Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer;
                      ZoomStart, ZoomEnd: Double;
                      BgSubtract: Boolean; GainDB, Gamma: Double;
-                     MinDB: Double = -100.0; MaxDB: Double = 0.0);
+                     MinDB: Double = -100.0; MaxDB: Double = 0.0;
+                     ColorScheme: TColorScheme = csViridis);
 
     property NumBins:    Integer  read FNumBins;
     property SampleRate: Cardinal read FSampleRate;
@@ -41,23 +44,54 @@ type
   TBGRRowArr = array[0..MaxInt div SizeOf(TBGRPixel) - 1] of TBGRPixel;
   PBGRRow    = ^TBGRRowArr;
 
-procedure TSpectrogramData.ViridisRGB(T: Double; out R, G, B: Byte);
+procedure TSpectrogramData.GetColor(T: Double; Scheme: TColorScheme;
+  out R, G, B: Byte);
 const
-  VR: array[0..7] of Integer = ( 68,  72,  59,  44,  33,  94, 144, 253);
-  VG: array[0..7] of Integer = (  1,  40,  81, 113, 144, 201, 213, 231);
-  VB: array[0..7] of Integer = ( 84, 120, 139, 142, 141, 100,  68,  37);
+  // 8 anchor points for each colormap (R, G, B), evenly spaced 0..1
+  VirR: array[0..7] of Integer = ( 68,  72,  59,  44,  33,  94, 144, 253);
+  VirG: array[0..7] of Integer = (  1,  40,  81, 113, 144, 201, 213, 231);
+  VirB: array[0..7] of Integer = ( 84, 120, 139, 142, 141, 100,  68,  37);
+  InfR: array[0..7] of Integer = (  0,  40, 101, 159, 212, 245, 254, 252);
+  InfG: array[0..7] of Integer = (  0,  11,  21,  42,  72, 125, 188, 255);
+  InfB: array[0..7] of Integer = (  4,  84, 110,  99,  66,  21,  43, 164);
+  MagR: array[0..7] of Integer = (  0,  28,  79, 129, 181, 229, 251, 252);
+  MagG: array[0..7] of Integer = (  0,  16,  18,  37,  54,  80, 135, 253);
+  MagB: array[0..7] of Integer = (  4,  68, 123, 129, 122, 100,  97, 191);
 var
   Seg:  Integer;
   Frac: Double;
+  V:    Integer;
 begin
   T    := Min(1.0, Max(0.0, T));
+  if Scheme = csGrayscale then
+  begin
+    V := Round(T * 255);
+    R := V; G := V; B := V;
+    Exit;
+  end;
   Frac := T * 7.0;
   Seg  := Trunc(Frac);
   if Seg >= 7 then Seg := 6;
   Frac := Frac - Seg;
-  R := Byte(Round(VR[Seg] + (VR[Seg+1] - VR[Seg]) * Frac));
-  G := Byte(Round(VG[Seg] + (VG[Seg+1] - VG[Seg]) * Frac));
-  B := Byte(Round(VB[Seg] + (VB[Seg+1] - VB[Seg]) * Frac));
+  case Scheme of
+    csViridis: begin
+      R := Byte(Round(VirR[Seg] + (VirR[Seg+1] - VirR[Seg]) * Frac));
+      G := Byte(Round(VirG[Seg] + (VirG[Seg+1] - VirG[Seg]) * Frac));
+      B := Byte(Round(VirB[Seg] + (VirB[Seg+1] - VirB[Seg]) * Frac));
+    end;
+    csInferno: begin
+      R := Byte(Round(InfR[Seg] + (InfR[Seg+1] - InfR[Seg]) * Frac));
+      G := Byte(Round(InfG[Seg] + (InfG[Seg+1] - InfG[Seg]) * Frac));
+      B := Byte(Round(InfB[Seg] + (InfB[Seg+1] - InfB[Seg]) * Frac));
+    end;
+    csMagma: begin
+      R := Byte(Round(MagR[Seg] + (MagR[Seg+1] - MagR[Seg]) * Frac));
+      G := Byte(Round(MagG[Seg] + (MagG[Seg+1] - MagG[Seg]) * Frac));
+      B := Byte(Round(MagB[Seg] + (MagB[Seg+1] - MagB[Seg]) * Frac));
+    end;
+  else
+    R := 0; G := 0; B := 0;
+  end;
 end;
 
 procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer;
@@ -104,7 +138,7 @@ end;
 
 procedure TSpectrogramData.Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer;
   ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
-  MinDB: Double; MaxDB: Double);
+  MinDB: Double; MaxDB: Double; ColorScheme: TColorScheme);
 var
   Samples:      TArray<Single>;
   TotalSamples: Integer;
@@ -167,7 +201,7 @@ begin
       else
         T := TLin;
 
-      ViridisRGB(T, VR, VG, VB);
+      GetColor(T, ColorScheme, VR, VG, VB);
       Rows[Y]^[X].R := VR;
       Rows[Y]^[X].G := VG;
       Rows[Y]^[X].B := VB;

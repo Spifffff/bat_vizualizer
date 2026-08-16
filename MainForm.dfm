@@ -143,6 +143,29 @@ object FormMain: TFormMain
       TabOrder = 7
       OnClick = ChkBGSubChange
     end
+    object LblColorScheme: TLabel
+      Left = 8
+      Top = 256
+      Width = 67
+      Height = 13
+      Caption = 'Color scheme:'
+    end
+    object CbxColorScheme: TComboBox
+      Left = 8
+      Top = 272
+      Width = 164
+      Height = 21
+      Style = csDropDownList
+      ItemIndex = 0
+      TabOrder = 8
+      Text = 'Viridis'
+      OnChange = CbxColorSchemeChange
+      Items.Strings = (
+        'Viridis'
+        'Inferno'
+        'Magma'
+        'Grayscale')
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
