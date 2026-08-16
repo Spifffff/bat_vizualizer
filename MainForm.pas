@@ -34,6 +34,10 @@ type
     ChkBGSub:         TCheckBox;
     LblColorScheme:   TLabel;
     CbxColorScheme:   TComboBox;
+    LblFloor:         TLabel;
+    TrkFloor:         TTrackBar;
+    LblCeiling:       TLabel;
+    TrkCeiling:       TTrackBar;
     StatusBar:        TStatusBar;
     ZoomBar:        TScrollBar;
     PanelMain:      TPanel;
@@ -59,6 +63,8 @@ type
     procedure TrkGainChange(Sender: TObject);
     procedure ChkBGSubChange(Sender: TObject);
     procedure CbxColorSchemeChange(Sender: TObject);
+    procedure TrkFloorChange(Sender: TObject);
+    procedure TrkCeilingChange(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
   private
     FWavFile:    TWavFile;
@@ -191,7 +197,8 @@ begin
     FDisplayBmp := TBitmap.Create;
   FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd,
                    ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA,
-                   -100.0, 0.0, IdxToColorScheme(CbxColorScheme.ItemIndex));
+                   TrkFloor.Position, TrkCeiling.Position,
+                   IdxToColorScheme(CbxColorScheme.ItemIndex));
 end;
 
 procedure TFormMain.ResetPlaybackUI;
@@ -401,6 +408,22 @@ end;
 
 procedure TFormMain.CbxColorSchemeChange(Sender: TObject);
 begin
+  if FSpecgram = nil then Exit;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
+end;
+
+procedure TFormMain.TrkFloorChange(Sender: TObject);
+begin
+  LblFloor.Caption := Format('Floor: %d dB', [TrkFloor.Position]);
+  if FSpecgram = nil then Exit;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
+end;
+
+procedure TFormMain.TrkCeilingChange(Sender: TObject);
+begin
+  LblCeiling.Caption := Format('Ceiling: %d dB', [TrkCeiling.Position]);
   if FSpecgram = nil then Exit;
   RenderSpectrogram;
   PaintBox.Invalidate;

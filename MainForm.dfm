@@ -166,6 +166,46 @@ object FormMain: TFormMain
         'Magma'
         'Grayscale')
     end
+    object LblFloor: TLabel
+      Left = 8
+      Top = 308
+      Width = 75
+      Height = 13
+      Caption = 'Floor: -100 dB'
+    end
+    object TrkFloor: TTrackBar
+      Left = 4
+      Top = 324
+      Width = 172
+      Height = 26
+      Min = -120
+      Max = -20
+      Position = -100
+      Frequency = 10
+      TabOrder = 9
+      TickStyle = tsNone
+      OnChange = TrkFloorChange
+    end
+    object LblCeiling: TLabel
+      Left = 8
+      Top = 358
+      Width = 66
+      Height = 13
+      Caption = 'Ceiling: 0 dB'
+    end
+    object TrkCeiling: TTrackBar
+      Left = 4
+      Top = 374
+      Width = 172
+      Height = 26
+      Min = -60
+      Max = 0
+      Position = 0
+      Frequency = 10
+      TabOrder = 10
+      TickStyle = tsNone
+      OnChange = TrkCeilingChange
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
