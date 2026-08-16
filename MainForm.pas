@@ -564,13 +564,12 @@ begin
     C.MoveTo(R.Left, Y);
     C.LineTo(R.Right, Y);
 
-    if Freq >= 1000 then Lbl := Format('%g k', [Freq / 1000])
-    else                 Lbl := Format('%g',   [Freq]);
+    if Freq >= 1000 then Lbl := Format('%gk', [Freq / 1000])
+    else                 Lbl := Format('%g',  [Freq]);
     TextW := C.TextWidth(Lbl);
     C.Font.Color := CLR_AXIS;
     C.TextOut(R.Left - TextW - 6, Y - TextH div 2, Lbl);
   end;
-  C.TextOut(2, R.Top, 'Hz');
 
   StartTime := FZoomStart * DurSec;
   EndTime   := FZoomEnd   * DurSec;
