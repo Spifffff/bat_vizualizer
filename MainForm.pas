@@ -566,11 +566,12 @@ end;
 
 procedure TFormMain.WaveformBoxPaint(Sender: TObject);
 const
-  BG_COLOR   = $00202020;
   WAVE_COLOR = $00BBBBBB;
   ZERO_COLOR = $00444444;
+  AXIS_COLOR = clWhite;
   VPAD       = 4;
 var
+  C:            TCanvas;
   Samples:      TArray<Single>;
   TotalSamples: Integer;
   R:            TRect;
@@ -581,11 +582,13 @@ var
   YHi, YLo:    Integer;
   VisFrac:      Double;
   CurX:         Integer;
+  TextH, TextW: Integer;
+  Lbl:          string;
+  LblY:         Integer;
 begin
-  WaveformBox.Canvas.Brush.Color := BG_COLOR;
-  WaveformBox.Canvas.FillRect(WaveformBox.ClientRect);
-
-  if FWavFile = nil then Exit;
+  C := WaveformBox.Canvas;
+  C.Brush.Color := clBlack;
+  C.FillRect(WaveformBox.ClientRect);
 
   R    := Rect(LEFT_MARGIN, VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - VPAD);
   W    := R.Right - R.Left;
@@ -593,18 +596,40 @@ begin
   MidY := R.Top + H div 2;
   if (W <= 0) or (H <= 0) then Exit;
 
+  { Y-axis: tick marks and labels for 100%, 0%, -100% }
+  C.Font.Size   := 8;
+  C.Font.Color  := AXIS_COLOR;
+  C.Brush.Style := bsClear;
+  C.Pen.Color   := AXIS_COLOR;
+  C.Pen.Width   := 1;
+  TextH := C.TextHeight('0');
+
+  for I := 0 to 2 do
+  begin
+    case I of
+      0: begin Lbl := '100%';  LblY := R.Top;    end;
+      1: begin Lbl := '0%';    LblY := MidY;     end;
+    else     Lbl := '-100%'; LblY := R.Bottom;
+    end;
+    C.MoveTo(R.Left - 4, LblY);
+    C.LineTo(R.Left, LblY);
+    TextW := C.TextWidth(Lbl);
+    C.TextOut(R.Left - TextW - 6, LblY - TextH div 2, Lbl);
+  end;
+
+  if FWavFile = nil then Exit;
+
   Samples      := FWavFile.Samples;
   TotalSamples := Length(Samples);
   if TotalSamples = 0 then Exit;
 
   { Centre (zero) line }
-  WaveformBox.Canvas.Pen.Color := ZERO_COLOR;
-  WaveformBox.Canvas.Pen.Width := 1;
-  WaveformBox.Canvas.MoveTo(R.Left,  MidY);
-  WaveformBox.Canvas.LineTo(R.Right, MidY);
+  C.Pen.Color := ZERO_COLOR;
+  C.MoveTo(R.Left,  MidY);
+  C.LineTo(R.Right, MidY);
 
   { Waveform: min/max envelope per pixel column }
-  WaveformBox.Canvas.Pen.Color := WAVE_COLOR;
+  C.Pen.Color := WAVE_COLOR;
   for X := 0 to W - 1 do
   begin
     Frac0 := FZoomStart + X       / W * (FZoomEnd - FZoomStart);
@@ -623,10 +648,10 @@ begin
 
     YHi := MidY - Round(MaxVal * (H div 2));
     YLo := MidY - Round(MinVal * (H div 2));
-    if YHi = YLo then Inc(YLo);  // always at least 1 px
+    if YHi = YLo then Inc(YLo);
 
-    WaveformBox.Canvas.MoveTo(R.Left + X, YHi);
-    WaveformBox.Canvas.LineTo(R.Left + X, YLo);
+    C.MoveTo(R.Left + X, YHi);
+    C.LineTo(R.Left + X, YLo);
   end;
 
   { Playback cursor }
@@ -636,11 +661,11 @@ begin
     if (VisFrac >= 0.0) and (VisFrac <= 1.0) then
     begin
       CurX := R.Left + Round(VisFrac * W);
-      WaveformBox.Canvas.Pen.Color := clWhite;
-      WaveformBox.Canvas.Pen.Width := 2;
-      WaveformBox.Canvas.MoveTo(CurX, R.Top);
-      WaveformBox.Canvas.LineTo(CurX, R.Bottom);
-      WaveformBox.Canvas.Pen.Width := 1;
+      C.Pen.Color := clWhite;
+      C.Pen.Width := 2;
+      C.MoveTo(CurX, R.Top);
+      C.LineTo(CurX, R.Bottom);
+      C.Pen.Width := 1;
     end;
   end;
 end;
