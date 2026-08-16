@@ -199,7 +199,7 @@ object FormMain: TFormMain
       Width = 172
       Height = 26
       Min = -60
-      Max = 0
+      Max = 40
       Position = 0
       Frequency = 10
       TabOrder = 10
@@ -266,5 +266,12 @@ object FormMain: TFormMain
     OnTimer = TimerTick
     Left = 1130
     Top = 8
+  end
+  object RenderTimer: TTimer
+    Enabled = False
+    Interval = 500
+    OnTimer = RenderTimerTick
+    Left = 1130
+    Top = 40
   end
 end

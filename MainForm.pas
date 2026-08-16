@@ -44,6 +44,7 @@ type
     PaintBox:       TPaintBox;
     OpenDialog:     TOpenDialog;
     Timer:          TTimer;
+    RenderTimer:    TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenClick(Sender: TObject);
@@ -65,6 +66,7 @@ type
     procedure CbxColorSchemeChange(Sender: TObject);
     procedure TrkFloorChange(Sender: TObject);
     procedure TrkCeilingChange(Sender: TObject);
+    procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
   private
     FWavFile:    TWavFile;
@@ -86,6 +88,7 @@ type
     function  GetWindowType: TWindowType;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
+    procedure ScheduleRender;
     procedure DrawAxes(C: TCanvas; const R: TRect);
     procedure DrawCursor(C: TCanvas; const R: TRect);
     procedure ResetPlaybackUI;
@@ -175,6 +178,7 @@ end;
 
 procedure TFormMain.RecomputeSpectrogram;
 begin
+  RenderTimer.Enabled := False;
   FreeAndNil(FSpecgram);
   if FWavFile = nil then Exit;
   FSpecgram := TSpectrogramData.Create;
@@ -199,6 +203,20 @@ begin
                    ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA,
                    TrkFloor.Position, TrkCeiling.Position,
                    IdxToColorScheme(CbxColorScheme.ItemIndex));
+end;
+
+procedure TFormMain.ScheduleRender;
+begin
+  RenderTimer.Enabled := False;
+  RenderTimer.Enabled := True;
+end;
+
+procedure TFormMain.RenderTimerTick(Sender: TObject);
+begin
+  RenderTimer.Enabled := False;
+  if FSpecgram = nil then Exit;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
 end;
 
 procedure TFormMain.ResetPlaybackUI;
@@ -394,9 +412,7 @@ begin
   G := TrkGain.Position;
   if G = 0 then LblGainVal.Caption := '0 dB'
   else          LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
-  if FSpecgram = nil then Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+  ScheduleRender;
 end;
 
 procedure TFormMain.ChkBGSubChange(Sender: TObject);
@@ -416,17 +432,13 @@ end;
 procedure TFormMain.TrkFloorChange(Sender: TObject);
 begin
   LblFloor.Caption := Format('Floor: %d dB', [TrkFloor.Position]);
-  if FSpecgram = nil then Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+  ScheduleRender;
 end;
 
 procedure TFormMain.TrkCeilingChange(Sender: TObject);
 begin
   LblCeiling.Caption := Format('Ceiling: %d dB', [TrkCeiling.Position]);
-  if FSpecgram = nil then Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+  ScheduleRender;
 end;
 
 procedure TFormMain.ZoomBarChange(Sender: TObject);
