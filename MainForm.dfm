@@ -164,7 +164,12 @@ object FormMain: TFormMain
         'Viridis'
         'Inferno'
         'Magma'
-        'Grayscale')
+        'Grayscale'
+        'Plasma'
+        'Cividis'
+        'Mako'
+        'Rocket'
+        'Spectral')
     end
     object LblFloor: TLabel
       Left = 8

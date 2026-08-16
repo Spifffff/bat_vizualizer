@@ -111,6 +111,11 @@ begin
     1: Result := csInferno;
     2: Result := csMagma;
     3: Result := csGrayscale;
+    4: Result := csPlasma;
+    5: Result := csCividis;
+    6: Result := csMako;
+    7: Result := csRocket;
+    8: Result := csSpectral;
   else Result := csViridis;
   end;
 end;

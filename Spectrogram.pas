@@ -8,7 +8,8 @@ uses
   FFT, WavReader;
 
 type
-  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale);
+  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale,
+                  csPlasma, csCividis, csMako, csRocket, csSpectral);
 
   TSpectrogramData = class
   private
@@ -47,7 +48,7 @@ type
 procedure TSpectrogramData.GetColor(T: Double; Scheme: TColorScheme;
   out R, G, B: Byte);
 const
-  // 8 anchor points for each colormap (R, G, B), evenly spaced 0..1
+  // 8 anchor points evenly spaced 0..1 for each colormap
   VirR: array[0..7] of Integer = (  0,  72,  59,  44,  33,  94, 144, 253);
   VirG: array[0..7] of Integer = (  0,  40,  81, 113, 144, 201, 213, 231);
   VirB: array[0..7] of Integer = (  0, 120, 139, 142, 141, 100,  68,  37);
@@ -57,6 +58,26 @@ const
   MagR: array[0..7] of Integer = (  0,  28,  79, 129, 181, 229, 251, 252);
   MagG: array[0..7] of Integer = (  0,  16,  18,  37,  54,  80, 135, 253);
   MagB: array[0..7] of Integer = (  4,  68, 123, 129, 122, 100,  97, 191);
+  // Plasma (matplotlib)
+  PlR:  array[0..7] of Integer = ( 13,  83, 139, 184, 218, 243, 254, 240);
+  PlG:  array[0..7] of Integer = (  8,   2,  10,  50,  91, 135, 187, 247);
+  PlB:  array[0..7] of Integer = (135, 163, 165, 137, 105,  74,  43,  36);
+  // Cividis (matplotlib)
+  CiR:  array[0..7] of Integer = (  0,  33,  76, 108, 141, 176, 215, 254);
+  CiG:  array[0..7] of Integer = ( 34,  59,  85, 110, 136, 165, 196, 230);
+  CiB:  array[0..7] of Integer = ( 78, 110, 108, 114, 120, 113,  92,  54);
+  // Mako (seaborn)
+  MkR:  array[0..7] of Integer = ( 11,  46,  65,  55,  52,  64, 139, 222);
+  MkG:  array[0..7] of Integer = (  4,  30,  61, 101, 143, 183, 218, 245);
+  MkB:  array[0..7] of Integer = (  5,  59, 123, 158, 167, 173, 178, 229);
+  // Rocket (seaborn)
+  RkR:  array[0..7] of Integer = (  3,  53, 112, 173, 225, 243, 246, 250);
+  RkG:  array[0..7] of Integer = (  5,  25,  31,  23,  51, 118, 180, 235);
+  RkB:  array[0..7] of Integer = ( 26,  62,  87,  89,  66,  81, 143, 221);
+  // Spectral (ColorBrewer, sampled from 11-class table)
+  SpR:  array[0..7] of Integer = (158, 213, 253, 254, 230, 171,  50,  94);
+  SpG:  array[0..7] of Integer = (  1,  62, 174, 224, 245, 221, 136,  79);
+  SpB:  array[0..7] of Integer = ( 66,  79,  97, 139, 152, 164, 189, 162);
 var
   Seg:  Integer;
   Frac: Double;
@@ -88,6 +109,31 @@ begin
       R := Byte(Round(MagR[Seg] + (MagR[Seg+1] - MagR[Seg]) * Frac));
       G := Byte(Round(MagG[Seg] + (MagG[Seg+1] - MagG[Seg]) * Frac));
       B := Byte(Round(MagB[Seg] + (MagB[Seg+1] - MagB[Seg]) * Frac));
+    end;
+    csPlasma: begin
+      R := Byte(Round(PlR[Seg] + (PlR[Seg+1] - PlR[Seg]) * Frac));
+      G := Byte(Round(PlG[Seg] + (PlG[Seg+1] - PlG[Seg]) * Frac));
+      B := Byte(Round(PlB[Seg] + (PlB[Seg+1] - PlB[Seg]) * Frac));
+    end;
+    csCividis: begin
+      R := Byte(Round(CiR[Seg] + (CiR[Seg+1] - CiR[Seg]) * Frac));
+      G := Byte(Round(CiG[Seg] + (CiG[Seg+1] - CiG[Seg]) * Frac));
+      B := Byte(Round(CiB[Seg] + (CiB[Seg+1] - CiB[Seg]) * Frac));
+    end;
+    csMako: begin
+      R := Byte(Round(MkR[Seg] + (MkR[Seg+1] - MkR[Seg]) * Frac));
+      G := Byte(Round(MkG[Seg] + (MkG[Seg+1] - MkG[Seg]) * Frac));
+      B := Byte(Round(MkB[Seg] + (MkB[Seg+1] - MkB[Seg]) * Frac));
+    end;
+    csRocket: begin
+      R := Byte(Round(RkR[Seg] + (RkR[Seg+1] - RkR[Seg]) * Frac));
+      G := Byte(Round(RkG[Seg] + (RkG[Seg+1] - RkG[Seg]) * Frac));
+      B := Byte(Round(RkB[Seg] + (RkB[Seg+1] - RkB[Seg]) * Frac));
+    end;
+    csSpectral: begin
+      R := Byte(Round(SpR[Seg] + (SpR[Seg+1] - SpR[Seg]) * Frac));
+      G := Byte(Round(SpG[Seg] + (SpG[Seg+1] - SpG[Seg]) * Frac));
+      B := Byte(Round(SpB[Seg] + (SpB[Seg+1] - SpB[Seg]) * Frac));
     end;
   else
     R := 0; G := 0; B := 0;
