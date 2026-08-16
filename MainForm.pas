@@ -28,7 +28,6 @@ type
     CbxWindow:      TComboBox;
     LblFFTSize:     TLabel;
     CbxFFTSize:     TComboBox;
-    LblSpeed:       TLabel;
     LblPlayMode:    TLabel;
     CbxPlayMode:    TComboBox;
     LblGainCaption: TLabel;

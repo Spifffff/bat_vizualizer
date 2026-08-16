@@ -131,30 +131,23 @@ object FormMain: TFormMain
         'VLC'
         'Native (correct pitch)')
     end
-    object LblSpeed: TLabel
-      Left = 8
-      Top = 220
-      Width = 70
-      Height = 13
-      Caption = 'Speed: 10%'
-    end
     object LblGainCaption: TLabel
       Left = 8
-      Top = 244
+      Top = 220
       Width = 27
       Height = 13
       Caption = 'Gain:'
     end
     object LblGainVal: TLabel
       Left = 50
-      Top = 244
+      Top = 220
       Width = 30
       Height = 13
       Caption = '0 dB'
     end
     object TrkGain: TTrackBar
       Left = 4
-      Top = 260
+      Top = 236
       Width = 172
       Height = 26
       Max = 80
@@ -166,7 +159,7 @@ object FormMain: TFormMain
     end
     object ChkBGSub: TCheckBox
       Left = 8
-      Top = 294
+      Top = 270
       Width = 164
       Height = 17
       Caption = 'BG Subtract'
