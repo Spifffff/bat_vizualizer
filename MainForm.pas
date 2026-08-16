@@ -566,10 +566,11 @@ end;
 
 procedure TFormMain.WaveformBoxPaint(Sender: TObject);
 const
-  WAVE_COLOR = $00BBBBBB;
-  ZERO_COLOR = $00444444;
-  AXIS_COLOR = clWhite;
-  VPAD       = 4;
+  WAVE_COLOR  = $00BBBBBB;
+  GRID_COLOR  = $00444444;
+  AXIS_COLOR  = clWhite;
+  OUTER_COLOR = $00202020;  // same grey as spectrogram outer area
+  WAVE_VPAD   = 12;         // top/bottom margin so labels have clearance
 var
   C:            TCanvas;
   Samples:      TArray<Single>;
@@ -587,21 +588,26 @@ var
   LblY:         Integer;
 begin
   C := WaveformBox.Canvas;
-  C.Brush.Color := clBlack;
+
+  { Outer panel: grey (matches spectrogram background) }
+  C.Brush.Color := OUTER_COLOR;
   C.FillRect(WaveformBox.ClientRect);
 
-  R    := Rect(LEFT_MARGIN, VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - VPAD);
+  R    := Rect(LEFT_MARGIN, WAVE_VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - WAVE_VPAD);
   W    := R.Right - R.Left;
   H    := R.Bottom - R.Top;
   MidY := R.Top + H div 2;
   if (W <= 0) or (H <= 0) then Exit;
 
-  { Y-axis: tick marks and labels for 100%, 0%, -100% }
-  C.Font.Size   := 8;
-  C.Font.Color  := AXIS_COLOR;
+  { Chart area: black }
+  C.Brush.Color := clBlack;
+  C.FillRect(R);
   C.Brush.Style := bsClear;
-  C.Pen.Color   := AXIS_COLOR;
-  C.Pen.Width   := 1;
+
+  { Y-axis tick marks, labels, and grid lines for 100%, 0%, -100% }
+  C.Font.Size  := 8;
+  C.Font.Color := AXIS_COLOR;
+  C.Pen.Width  := 1;
   TextH := C.TextHeight('0');
 
   for I := 0 to 2 do
@@ -611,8 +617,15 @@ begin
       1: begin Lbl := '0%';    LblY := MidY;     end;
     else     Lbl := '-100%'; LblY := R.Bottom;
     end;
+    { Grid line }
+    C.Pen.Color := GRID_COLOR;
+    C.MoveTo(R.Left,  LblY);
+    C.LineTo(R.Right, LblY);
+    { Tick mark }
+    C.Pen.Color := AXIS_COLOR;
     C.MoveTo(R.Left - 4, LblY);
     C.LineTo(R.Left, LblY);
+    { Label }
     TextW := C.TextWidth(Lbl);
     C.TextOut(R.Left - TextW - 6, LblY - TextH div 2, Lbl);
   end;
@@ -622,11 +635,6 @@ begin
   Samples      := FWavFile.Samples;
   TotalSamples := Length(Samples);
   if TotalSamples = 0 then Exit;
-
-  { Centre (zero) line }
-  C.Pen.Color := ZERO_COLOR;
-  C.MoveTo(R.Left,  MidY);
-  C.LineTo(R.Right, MidY);
 
   { Waveform: min/max envelope per pixel column }
   C.Pen.Color := WAVE_COLOR;
