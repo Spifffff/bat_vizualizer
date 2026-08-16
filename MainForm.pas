@@ -1,4 +1,4 @@
-﻿unit MainForm;
+unit MainForm;
 
 interface
 
@@ -7,15 +7,15 @@ uses
   System.SysUtils, System.Classes, System.Math,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  FFT, WavReader, LibVLC, Spectrogram, WaveOutPlayer;
+  FFT, WavReader, Spectrogram, WaveOutPlayer;
 
 const
-  PLAYBACK_RATE = 0.1;
-  LEFT_MARGIN   = 65;
-  BOTTOM_MARGIN = 35;
-  TOP_MARGIN    = 8;
-  RIGHT_MARGIN  = 10;
-  SPECTROGRAM_GAMMA = 2.5;  // power-law colour curve > 1 = dark background
+  PLAYBACK_RATE     = 0.1;
+  LEFT_MARGIN       = 65;
+  BOTTOM_MARGIN     = 35;
+  TOP_MARGIN        = 8;
+  RIGHT_MARGIN      = 10;
+  SPECTROGRAM_GAMMA = 2.5;
 
 type
   TFormMain = class(TForm)
@@ -28,11 +28,9 @@ type
     CbxWindow:      TComboBox;
     LblFFTSize:     TLabel;
     CbxFFTSize:     TComboBox;
-    LblPlayMode:    TLabel;
-    CbxPlayMode:    TComboBox;
     LblGainCaption: TLabel;
-    TrkGain:        TTrackBar;
     LblGainVal:     TLabel;
+    TrkGain:        TTrackBar;
     ChkBGSub:       TCheckBox;
     StatusBar:      TStatusBar;
     ZoomBar:        TScrollBar;
@@ -56,46 +54,29 @@ type
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
-    procedure CbxPlayModeChange(Sender: TObject);
     procedure TrkGainChange(Sender: TObject);
     procedure ChkBGSubChange(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
   private
-    { File / spectrogram }
-    FWavFile:     TWavFile;
-    FSpecgram:    TSpectrogramData;
-    FCurrentFile: string;
-    FCursorPos:   Double;   // 0..1 normalised position in the recording
-
-    { VLC player state }
-    FVLCInst:      Plibvlc_instance_t;
-    FVLCMedia:     Plibvlc_media_t;
-    FVLCPlayer:    Plibvlc_media_player_t;
-    FRateSetCount: Integer;
-
-    { Native waveOut player }
+    FWavFile:    TWavFile;
+    FSpecgram:   TSpectrogramData;
+    FCursorPos:  Double;
     FWavePlayer: TWaveOutPlayer;
-
-    { Off-screen bitmap rendered at display resolution by FSpecgram.Render }
     FDisplayBmp: TBitmap;
 
-    { Zoom state (0..1 fractions of the full recording) }
     FZoomStart:    Double;
     FZoomEnd:      Double;
     FDragging:     Boolean;
     FDragStartX:   Integer;
     FDragZoomStart: Double;
     FDragZoomEnd:   Double;
-    FDragZoomFrac:  Double;  // recording fraction under cursor at drag-start
+    FDragZoomFrac:  Double;
 
-    function  UseNativeMode: Boolean;
     function  SpectRect: TRect;
     function  GetFFTSize: Integer;
     function  GetWindowType: TWindowType;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
-    procedure StopAllPlayers;
-    procedure ReleaseVLCMedia;
     procedure DrawAxes(C: TCanvas; const R: TRect);
     procedure DrawCursor(C: TCanvas; const R: TRect);
     procedure ResetPlaybackUI;
@@ -110,11 +91,6 @@ implementation
 {$R *.dfm}
 
 { ---- helpers --------------------------------------------------------------- }
-
-function TFormMain.UseNativeMode: Boolean;
-begin
-  Result := CbxPlayMode.ItemIndex = 1;
-end;
 
 function TFormMain.SpectRect: TRect;
 begin
@@ -204,27 +180,6 @@ begin
                    ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA);
 end;
 
-procedure TFormMain.StopAllPlayers;
-begin
-  if FVLCPlayer <> nil then
-  begin
-    if libvlc_media_player_is_playing(FVLCPlayer) <> 0 then
-      libvlc_media_player_stop(FVLCPlayer);
-    libvlc_media_player_release(FVLCPlayer);
-    FVLCPlayer := nil;
-  end;
-  FWavePlayer.Stop;
-end;
-
-procedure TFormMain.ReleaseVLCMedia;
-begin
-  if FVLCMedia <> nil then
-  begin
-    libvlc_media_release(FVLCMedia);
-    FVLCMedia := nil;
-  end;
-end;
-
 procedure TFormMain.ResetPlaybackUI;
 begin
   BtnPlay.Enabled  := FWavFile <> nil;
@@ -235,52 +190,27 @@ end;
 { ---- form lifecycle -------------------------------------------------------- }
 
 procedure TFormMain.FormCreate(Sender: TObject);
-var
-  ErrMsg:  string;
-  NilArgs: PPAnsiChar;
 begin
-  FWavFile     := nil;
-  FSpecgram    := nil;
-  FVLCInst     := nil;
-  FVLCMedia    := nil;
-  FVLCPlayer   := nil;
-  FCursorPos   := 0;
-  FWavePlayer  := TWaveOutPlayer.Create;
-  FDisplayBmp  := nil;
-
-  FZoomStart := 0.0;
-  FZoomEnd   := 1.0;
-  FDragging  := False;
+  FWavFile    := nil;
+  FSpecgram   := nil;
+  FDisplayBmp := nil;
+  FCursorPos  := 0;
+  FWavePlayer := TWaveOutPlayer.Create;
+  FZoomStart  := 0.0;
+  FZoomEnd    := 1.0;
+  FDragging   := False;
   UpdateZoomBar;
-
-  NilArgs := nil;
-  if not LoadVLC(ErrMsg) then
-    StatusBar.Panels[0].Text := 'VLC not available: ' + ErrMsg
-  else
-  begin
-    FVLCInst := libvlc_new(0, NilArgs);
-    if FVLCInst = nil then
-      StatusBar.Panels[0].Text := 'VLC instance failed to initialise'
-    else
-      StatusBar.Panels[0].Text := 'Ready. Open a WAV file.';
-  end;
+  StatusBar.Panels[0].Text := 'Ready. Open a WAV file.';
 end;
 
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   Timer.Enabled := False;
-  StopAllPlayers;
-  ReleaseVLCMedia;
-  if FVLCInst <> nil then
-  begin
-    libvlc_release(FVLCInst);
-    FVLCInst := nil;
-  end;
+  FWavePlayer.Stop;
   FWavePlayer.Free;
   FDisplayBmp.Free;
   FSpecgram.Free;
   FWavFile.Free;
-  UnloadVLC;
 end;
 
 { ---- file loading ---------------------------------------------------------- }
@@ -290,8 +220,7 @@ begin
   if not OpenDialog.Execute then Exit;
 
   Timer.Enabled := False;
-  StopAllPlayers;
-  ReleaseVLCMedia;
+  FWavePlayer.Stop;
   FCursorPos := 0;
   FreeAndNil(FSpecgram);
   FreeAndNil(FWavFile);
@@ -299,15 +228,13 @@ begin
   BtnPause.Enabled := False;
   BtnStop.Enabled  := False;
 
-  FCurrentFile := OpenDialog.FileName;
-
   try
     FWavFile := TWavFile.Create;
-    FWavFile.LoadFromFile(FCurrentFile);
+    FWavFile.LoadFromFile(OpenDialog.FileName);
 
     StatusBar.Panels[0].Text := Format(
       '%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
-      [ExtractFileName(FCurrentFile),
+      [ExtractFileName(OpenDialog.FileName),
        FWavFile.Info.DurationSec,
        FWavFile.Info.SampleRate,
        FWavFile.Info.BitsPerSample,
@@ -320,11 +247,9 @@ begin
       Screen.Cursor := crDefault;
     end;
 
-    { Reset zoom to full view for the new file. }
     FZoomStart := 0.0;
     FZoomEnd   := 1.0;
     UpdateZoomBar;
-
     BtnPlay.Enabled := True;
 
   except
@@ -341,76 +266,34 @@ end;
 
 procedure TFormMain.BtnPlayClick(Sender: TObject);
 var
-  MediaPath:  UTF8String;
-  OutRate:    Cardinal;
-  ActualRate: Cardinal;
+  OutRate, ActualRate: Cardinal;
 begin
   if FWavFile = nil then Exit;
-
-  if UseNativeMode then
-  begin
-    try
-      if FWavePlayer.IsPaused then
-        FWavePlayer.Resume
-      else
-      begin
-        OutRate := Round(FWavFile.Info.SampleRate * PLAYBACK_RATE);
-        FWavePlayer.Load(FWavFile.Samples, OutRate, ActualRate);
-        FWavePlayer.Play;
-        FCursorPos := 0;
-
-        if ActualRate <> OutRate then
-          StatusBar.Panels[0].Text :=
-            Format('Native: requested %d Hz, using %d Hz (%.1f%% speed)',
-              [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
-        else
-          StatusBar.Panels[0].Text :=
-            Format('Native: %d Hz output (%.1f%% speed — correct pitch)',
-              [ActualRate, PLAYBACK_RATE * 100]);
-      end;
-    except
-      on E: Exception do
-      begin
-        ShowMessage('Native audio failed:'#13#10 + E.Message);
-        Exit;
-      end;
-    end;
-  end
-  else
-  begin
-    if FVLCInst = nil then
-    begin
-      ShowMessage('VLC is not available. Switch to Native mode or install VLC.');
-      Exit;
-    end;
-    if FCurrentFile = '' then Exit;
-
-    if FVLCPlayer <> nil then
-      libvlc_media_player_play(FVLCPlayer)
+  try
+    if FWavePlayer.IsPaused then
+      FWavePlayer.Resume
     else
     begin
-      ReleaseVLCMedia;
-      MediaPath  := UTF8String(FCurrentFile);
-      FVLCMedia  := libvlc_media_new_path(FVLCInst, PAnsiChar(MediaPath));
-      if FVLCMedia = nil then
-      begin
-        ShowMessage('VLC could not open: ' + FCurrentFile);
-        Exit;
-      end;
-      FVLCPlayer := libvlc_media_player_new_from_media(FVLCMedia);
-      if FVLCPlayer = nil then
-      begin
-        ShowMessage('VLC could not create a media player.');
-        Exit;
-      end;
-      libvlc_media_player_play(FVLCPlayer);
+      OutRate := Round(FWavFile.Info.SampleRate * PLAYBACK_RATE);
+      FWavePlayer.Load(FWavFile.Samples, OutRate, ActualRate);
+      FWavePlayer.Play;
       FCursorPos := 0;
-      StatusBar.Panels[0].Text :=
-        'VLC mode — audio above ~24 kHz is filtered before pitch shift';
+      if ActualRate <> OutRate then
+        StatusBar.Panels[0].Text := Format(
+          'Requested %d Hz, using %d Hz (%.1f%% speed)',
+          [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
+      else
+        StatusBar.Panels[0].Text := Format(
+          '%d Hz  |  %.1f%% speed',
+          [ActualRate, PLAYBACK_RATE * 100]);
     end;
-    FRateSetCount := 0;
+  except
+    on E: Exception do
+    begin
+      ShowMessage('Audio playback failed:'#13#10 + E.Message);
+      Exit;
+    end;
   end;
-
   Timer.Enabled    := True;
   BtnPlay.Enabled  := False;
   BtnPause.Enabled := True;
@@ -420,11 +303,7 @@ end;
 procedure TFormMain.BtnPauseClick(Sender: TObject);
 begin
   Timer.Enabled := False;
-  if UseNativeMode then
-    FWavePlayer.Pause
-  else
-    if FVLCPlayer <> nil then
-      libvlc_media_player_pause(FVLCPlayer);
+  FWavePlayer.Pause;
   BtnPlay.Enabled  := True;
   BtnPause.Enabled := False;
 end;
@@ -432,8 +311,7 @@ end;
 procedure TFormMain.BtnStopClick(Sender: TObject);
 begin
   Timer.Enabled := False;
-  StopAllPlayers;
-  ReleaseVLCMedia;
+  FWavePlayer.Stop;
   FCursorPos := 0;
   ResetPlaybackUI;
   PaintBox.Invalidate;
@@ -443,68 +321,31 @@ end;
 
 procedure TFormMain.TimerTick(Sender: TObject);
 var
-  Pos:        Double;
-  Cur, Total: Int64;
-  DurSec:     Double;
+  Pos:    Double;
+  DurSec: Double;
 begin
-  if UseNativeMode then
+  if FWavePlayer.HasEnded then
   begin
-    if FWavePlayer.HasEnded then
-    begin
-      Timer.Enabled := False;
-      FWavePlayer.Stop;
-      FCursorPos := 0;
-      ResetPlaybackUI;
-      PaintBox.Invalidate;
-      Exit;
-    end;
-
-    if not (FWavePlayer.IsPlaying or FWavePlayer.IsPaused) then Exit;
-
-    Pos        := FWavePlayer.GetNormalizedPosition;
-    FCursorPos := Pos;
-
-    if FWavFile <> nil then
-    begin
-      DurSec := FWavFile.Info.DurationSec;
-      StatusBar.Panels[1].Text := Format('%.3f / %.3f s (file)',
-        [Pos * DurSec, DurSec]);
-    end;
-
+    Timer.Enabled := False;
+    FWavePlayer.Stop;
+    FCursorPos := 0;
+    ResetPlaybackUI;
     PaintBox.Invalidate;
-  end
-  else
-  begin
-    if FVLCPlayer = nil then Exit;
-
-    if FRateSetCount < 5 then
-    begin
-      libvlc_media_player_set_rate(FVLCPlayer, PLAYBACK_RATE);
-      Inc(FRateSetCount);
-    end;
-
-    Cur   := libvlc_media_player_get_time(FVLCPlayer);
-    Total := libvlc_media_player_get_length(FVLCPlayer);
-
-    if Total > 0 then
-    begin
-      FCursorPos := Cur / Total;
-      StatusBar.Panels[1].Text := Format('%.2f / %.2f s (file)',
-        [Cur / 1000.0, Total / 1000.0]);
-      PaintBox.Invalidate;
-
-      if (libvlc_media_player_is_playing(FVLCPlayer) = 0)
-         and (Cur >= Total - 500) then
-      begin
-        Timer.Enabled := False;
-        StopAllPlayers;
-        ReleaseVLCMedia;
-        FCursorPos := 0;
-        ResetPlaybackUI;
-        PaintBox.Invalidate;
-      end;
-    end;
+    Exit;
   end;
+
+  if not (FWavePlayer.IsPlaying or FWavePlayer.IsPaused) then Exit;
+
+  Pos        := FWavePlayer.GetNormalizedPosition;
+  FCursorPos := Pos;
+
+  if FWavFile <> nil then
+  begin
+    DurSec := FWavFile.Info.DurationSec;
+    StatusBar.Panels[1].Text := Format('%.3f / %.3f s', [Pos * DurSec, DurSec]);
+  end;
+
+  PaintBox.Invalidate;
 end;
 
 { ---- settings -------------------------------------------------------------- }
@@ -525,30 +366,13 @@ begin
   CbxWindowChange(Sender);
 end;
 
-procedure TFormMain.CbxPlayModeChange(Sender: TObject);
-begin
-  Timer.Enabled := False;
-  StopAllPlayers;
-  ReleaseVLCMedia;
-  FCursorPos := 0;
-  ResetPlaybackUI;
-  PaintBox.Invalidate;
-
-  if UseNativeMode then
-    StatusBar.Panels[0].Text :=
-      'Native mode: plays at correct pitch (full frequency range).'
-  else
-    StatusBar.Panels[0].Text :=
-      'VLC mode: audio above ~24 kHz filtered before pitch shift.';
-end;
-
 procedure TFormMain.TrkGainChange(Sender: TObject);
 var
   G: Integer;
 begin
   G := TrkGain.Position;
   if G = 0 then LblGainVal.Caption := '0 dB'
-  else LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
+  else          LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
   if FSpecgram = nil then Exit;
   RenderSpectrogram;
   PaintBox.Invalidate;
@@ -598,7 +422,6 @@ begin
   FDragStartX    := X;
   FDragZoomStart := FZoomStart;
   FDragZoomEnd   := FZoomEnd;
-  { Recording fraction under cursor. }
   FDragZoomFrac  := FZoomStart +
     (X - R.Left) / Max(1, R.Right - R.Left) * (FZoomEnd - FZoomStart);
 end;
@@ -612,31 +435,29 @@ end;
 procedure TFormMain.PaintBoxMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
 var
-  R:             TRect;
-  Delta:         Integer;
-  OldW, NewW:    Double;
-  NewStart:      Double;
-  DurSec:        Double;
-  TimeAtCursor:  Double;
-  FreqAtCursor:  Double;
+  R:            TRect;
+  Delta:        Integer;
+  OldW, NewW:   Double;
+  NewStart:     Double;
+  DurSec:       Double;
+  TimeAtCursor: Double;
+  FreqAtCursor: Double;
 begin
   R := SpectRect;
 
   if FDragging then
   begin
     Delta := X - FDragStartX;
-    if Delta > 400 then Delta := 400;
+    if Delta > 400  then Delta := 400;
     if Delta < -400 then Delta := -400;
 
     OldW := FDragZoomEnd - FDragZoomStart;
     if OldW < 1.0e-9 then OldW := 1.0e-9;
 
-    { Right drag = zoom in (factor < 1), left drag = zoom out. }
     NewW := OldW * Power(0.99, Delta);
     if NewW < 0.001 then NewW := 0.001;
     if NewW > 1.0   then NewW := 1.0;
 
-    { Keep the recording fraction under the drag-start cursor fixed. }
     NewStart := FDragZoomFrac -
       (FDragZoomFrac - FDragZoomStart) / OldW * NewW;
 
@@ -660,7 +481,6 @@ begin
     PaintBox.Invalidate;
   end;
 
-  { Coordinate readout (always, even while dragging). }
   if (FSpecgram = nil) or (FWavFile = nil) then Exit;
   if not PtInRect(R, Point(X, Y)) then
   begin
@@ -681,17 +501,17 @@ end;
 
 procedure TFormMain.DrawAxes(C: TCanvas; const R: TRect);
 const
-  CLR_AXIS  = clWhite;
-  CLR_GRID  = $00444444;
+  CLR_AXIS = clWhite;
+  CLR_GRID = $00444444;
 var
-  MaxHz, DurSec:           Double;
+  MaxHz, DurSec:               Double;
   StartTime, EndTime, ZoomDur: Double;
-  FreqStep, TimeStep:      Double;
-  Freq, T:                 Double;
-  FirstTick:               Double;
-  I, X, Y, TextH, TextW:  Integer;
-  NumTicks:                Integer;
-  Lbl:                     string;
+  FreqStep, TimeStep:          Double;
+  Freq, T:                     Double;
+  FirstTick:                   Double;
+  I, X, Y, TextH, TextW:      Integer;
+  NumTicks:                    Integer;
+  Lbl:                         string;
 begin
   if FWavFile = nil then Exit;
 
@@ -702,10 +522,9 @@ begin
   C.Font.Color  := CLR_AXIS;
   C.Brush.Style := bsClear;
 
-  { --- Frequency (Y) axis ------------------------------------------------- }
-  if MaxHz >= 40000 then FreqStep := 10000
+  if MaxHz >= 40000      then FreqStep := 10000
   else if MaxHz >= 10000 then FreqStep := 5000
-  else FreqStep := 1000;
+  else                        FreqStep := 1000;
 
   NumTicks := Floor(MaxHz / FreqStep);
   TextH    := C.TextHeight('0');
@@ -724,17 +543,14 @@ begin
     C.MoveTo(R.Left, Y);
     C.LineTo(R.Right, Y);
 
-    if Freq >= 1000 then
-      Lbl := Format('%g k', [Freq / 1000])
-    else
-      Lbl := Format('%g', [Freq]);
+    if Freq >= 1000 then Lbl := Format('%g k', [Freq / 1000])
+    else                 Lbl := Format('%g',   [Freq]);
     TextW := C.TextWidth(Lbl);
     C.Font.Color := CLR_AXIS;
     C.TextOut(R.Left - TextW - 6, Y - TextH div 2, Lbl);
   end;
   C.TextOut(2, R.Top, 'Hz');
 
-  { --- Time (X) axis ------------------------------------------------------- }
   StartTime := FZoomStart * DurSec;
   EndTime   := FZoomEnd   * DurSec;
   ZoomDur   := EndTime - StartTime;
@@ -749,7 +565,6 @@ begin
   else if ZoomDur >= 0.03 then TimeStep := 0.01
   else                         TimeStep := 0.002;
 
-  { First tick at or just after StartTime, snapped to TimeStep grid. }
   FirstTick := Ceil(StartTime / TimeStep - 1.0e-9) * TimeStep;
 
   T := FirstTick;
@@ -766,10 +581,8 @@ begin
       C.MoveTo(X, R.Top);
       C.LineTo(X, R.Bottom);
 
-      if ZoomDur < 0.5 then
-        Lbl := Format('%.3f s', [T])
-      else
-        Lbl := Format('%.2g s', [T]);
+      if ZoomDur < 0.5 then Lbl := Format('%.3f s', [T])
+      else                  Lbl := Format('%.2g s', [T]);
       TextW := C.TextWidth(Lbl);
       C.Font.Color := CLR_AXIS;
       C.TextOut(X - TextW div 2, R.Bottom + 5, Lbl);
@@ -784,10 +597,8 @@ var
   X:       Integer;
 begin
   if (FCursorPos <= 0.0) or (FZoomEnd <= FZoomStart) then Exit;
-
   VisFrac := (FCursorPos - FZoomStart) / (FZoomEnd - FZoomStart);
   if (VisFrac < 0.0) or (VisFrac > 1.0) then Exit;
-
   X := R.Left + Round(VisFrac * (R.Right - R.Left));
   C.Pen.Color := clWhite;
   C.Pen.Width := 2;
@@ -798,9 +609,9 @@ end;
 
 procedure TFormMain.PaintBoxPaint(Sender: TObject);
 var
-  R:   TRect;
+  R:    TRect;
   W, H: Integer;
-  Msg: string;
+  Msg:  string;
 begin
   R := SpectRect;
   W := R.Right  - R.Left;
@@ -822,7 +633,6 @@ begin
     Exit;
   end;
 
-  { Re-render if the display bitmap is stale (first paint or after resize). }
   if (FDisplayBmp = nil) or (FDisplayBmp.Width <> W) or (FDisplayBmp.Height <> H) then
     RenderSpectrogram;
 

@@ -35,23 +35,16 @@ object FormMain: TFormMain
       Height = 13
       Caption = 'FFT size:'
     end
-    object LblPlayMode: TLabel
-      Left = 8
-      Top = 174
-      Width = 55
-      Height = 13
-      Caption = 'Play mode:'
-    end
     object LblGainCaption: TLabel
       Left = 8
-      Top = 220
+      Top = 174
       Width = 27
       Height = 13
       Caption = 'Gain:'
     end
     object LblGainVal: TLabel
       Left = 50
-      Top = 220
+      Top = 174
       Width = 22
       Height = 13
       Caption = '0 dB'
@@ -130,38 +123,24 @@ object FormMain: TFormMain
         '8192'
         '16384')
     end
-    object CbxPlayMode: TComboBox
-      Left = 8
-      Top = 190
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 0
-      TabOrder = 6
-      Text = 'VLC'
-      OnChange = CbxPlayModeChange
-      Items.Strings = (
-        'VLC'
-        'Native (correct pitch)')
-    end
     object TrkGain: TTrackBar
       Left = 4
-      Top = 236
+      Top = 190
       Width = 172
       Height = 26
       Max = 80
       Frequency = 10
-      TabOrder = 7
+      TabOrder = 6
       TickStyle = tsNone
       OnChange = TrkGainChange
     end
     object ChkBGSub: TCheckBox
       Left = 8
-      Top = 270
+      Top = 224
       Width = 164
       Height = 17
       Caption = 'Subtract background'
-      TabOrder = 8
+      TabOrder = 7
       OnClick = ChkBGSubChange
     end
   end
