@@ -48,9 +48,9 @@ procedure TSpectrogramData.GetColor(T: Double; Scheme: TColorScheme;
   out R, G, B: Byte);
 const
   // 8 anchor points for each colormap (R, G, B), evenly spaced 0..1
-  VirR: array[0..7] of Integer = ( 68,  72,  59,  44,  33,  94, 144, 253);
-  VirG: array[0..7] of Integer = (  1,  40,  81, 113, 144, 201, 213, 231);
-  VirB: array[0..7] of Integer = ( 84, 120, 139, 142, 141, 100,  68,  37);
+  VirR: array[0..7] of Integer = (  0,  72,  59,  44,  33,  94, 144, 253);
+  VirG: array[0..7] of Integer = (  0,  40,  81, 113, 144, 201, 213, 231);
+  VirB: array[0..7] of Integer = (  0, 120, 139, 142, 141, 100,  68,  37);
   InfR: array[0..7] of Integer = (  0,  40, 101, 159, 212, 245, 254, 252);
   InfG: array[0..7] of Integer = (  0,  11,  21,  42,  72, 125, 188, 255);
   InfB: array[0..7] of Integer = (  4,  84, 110,  99,  66,  21,  43, 164);
