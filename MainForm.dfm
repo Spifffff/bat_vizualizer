@@ -232,11 +232,28 @@ object FormMain: TFormMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    object PaintBox: TPaintBox
+    object WaveformBox: TPaintBox
       Left = 0
       Top = 0
       Width = 1020
-      Height = 707
+      Height = 120
+      Align = alTop
+      OnPaint = WaveformBoxPaint
+    end
+    object Splitter1: TSplitter
+      Left = 0
+      Top = 120
+      Width = 1020
+      Height = 4
+      Align = alTop
+      MinSize = 40
+      ResizeStyle = rsUpdate
+    end
+    object PaintBox: TPaintBox
+      Left = 0
+      Top = 124
+      Width = 1020
+      Height = 583
       Align = alClient
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove

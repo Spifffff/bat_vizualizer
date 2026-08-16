@@ -41,6 +41,8 @@ type
     StatusBar:        TStatusBar;
     ZoomBar:        TScrollBar;
     PanelMain:      TPanel;
+    WaveformBox:    TPaintBox;
+    Splitter1:      TSplitter;
     PaintBox:       TPaintBox;
     OpenDialog:     TOpenDialog;
     Timer:          TTimer;
@@ -58,6 +60,7 @@ type
                                 X, Y: Integer);
     procedure PaintBoxMouseUp(Sender: TObject; Button: TMouseButton;
                               Shift: TShiftState; X, Y: Integer);
+    procedure WaveformBoxPaint(Sender: TObject);
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
@@ -185,6 +188,7 @@ begin
   FSpecgram.Prepare(FWavFile, GetFFTSize, GetWindowType);
   RenderSpectrogram;
   PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 procedure TFormMain.RenderSpectrogram;
@@ -354,6 +358,7 @@ begin
   FCursorPos := 0;
   ResetPlaybackUI;
   PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 { ---- playback timer -------------------------------------------------------- }
@@ -370,6 +375,7 @@ begin
     FCursorPos := 0;
     ResetPlaybackUI;
     PaintBox.Invalidate;
+    WaveformBox.Invalidate;
     Exit;
   end;
 
@@ -385,6 +391,7 @@ begin
   end;
 
   PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 { ---- settings -------------------------------------------------------------- }
@@ -461,6 +468,7 @@ begin
   end;
   RenderSpectrogram;
   PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 { ---- zoom drag ------------------------------------------------------------- }
@@ -535,6 +543,7 @@ begin
     UpdateZoomBar;
     RenderSpectrogram;
     PaintBox.Invalidate;
+    WaveformBox.Invalidate;
   end;
 
   if (FSpecgram = nil) or (FWavFile = nil) then Exit;
@@ -554,6 +563,87 @@ begin
 end;
 
 { ---- painting -------------------------------------------------------------- }
+
+procedure TFormMain.WaveformBoxPaint(Sender: TObject);
+const
+  BG_COLOR   = $00202020;
+  WAVE_COLOR = $00BBBBBB;
+  ZERO_COLOR = $00444444;
+  VPAD       = 4;
+var
+  Samples:      TArray<Single>;
+  TotalSamples: Integer;
+  R:            TRect;
+  W, H, MidY:  Integer;
+  X, S0, S1, I: Integer;
+  Frac0, Frac1: Double;
+  MinVal, MaxVal, V: Single;
+  YHi, YLo:    Integer;
+  VisFrac:      Double;
+  CurX:         Integer;
+begin
+  WaveformBox.Canvas.Brush.Color := BG_COLOR;
+  WaveformBox.Canvas.FillRect(WaveformBox.ClientRect);
+
+  if FWavFile = nil then Exit;
+
+  R    := Rect(LEFT_MARGIN, VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - VPAD);
+  W    := R.Right - R.Left;
+  H    := R.Bottom - R.Top;
+  MidY := R.Top + H div 2;
+  if (W <= 0) or (H <= 0) then Exit;
+
+  Samples      := FWavFile.Samples;
+  TotalSamples := Length(Samples);
+  if TotalSamples = 0 then Exit;
+
+  { Centre (zero) line }
+  WaveformBox.Canvas.Pen.Color := ZERO_COLOR;
+  WaveformBox.Canvas.Pen.Width := 1;
+  WaveformBox.Canvas.MoveTo(R.Left,  MidY);
+  WaveformBox.Canvas.LineTo(R.Right, MidY);
+
+  { Waveform: min/max envelope per pixel column }
+  WaveformBox.Canvas.Pen.Color := WAVE_COLOR;
+  for X := 0 to W - 1 do
+  begin
+    Frac0 := FZoomStart + X       / W * (FZoomEnd - FZoomStart);
+    Frac1 := FZoomStart + (X + 1) / W * (FZoomEnd - FZoomStart);
+    S0 := Max(0, Min(TotalSamples - 1, Round(Frac0 * TotalSamples)));
+    S1 := Max(S0 + 1, Min(TotalSamples, Round(Frac1 * TotalSamples)));
+
+    MinVal :=  1.0;
+    MaxVal := -1.0;
+    for I := S0 to S1 - 1 do
+    begin
+      V := Samples[I];
+      if V < MinVal then MinVal := V;
+      if V > MaxVal then MaxVal := V;
+    end;
+
+    YHi := MidY - Round(MaxVal * (H div 2));
+    YLo := MidY - Round(MinVal * (H div 2));
+    if YHi = YLo then Inc(YLo);  // always at least 1 px
+
+    WaveformBox.Canvas.MoveTo(R.Left + X, YHi);
+    WaveformBox.Canvas.LineTo(R.Left + X, YLo);
+  end;
+
+  { Playback cursor }
+  if (FCursorPos > 0.0) and (FZoomEnd > FZoomStart) then
+  begin
+    VisFrac := (FCursorPos - FZoomStart) / (FZoomEnd - FZoomStart);
+    if (VisFrac >= 0.0) and (VisFrac <= 1.0) then
+    begin
+      CurX := R.Left + Round(VisFrac * W);
+      WaveformBox.Canvas.Pen.Color := clWhite;
+      WaveformBox.Canvas.Pen.Width := 2;
+      WaveformBox.Canvas.MoveTo(CurX, R.Top);
+      WaveformBox.Canvas.LineTo(CurX, R.Bottom);
+      WaveformBox.Canvas.Pen.Width := 1;
+    end;
+  end;
+end;
 
 procedure TFormMain.DrawAxes(C: TCanvas; const R: TRect);
 const
