@@ -12,7 +12,6 @@ object FormMain: TFormMain
   Font.Style = []
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
   TextHeight = 13
   object PanelLeft: TPanel
     Left = 0
@@ -22,6 +21,41 @@ object FormMain: TFormMain
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
+    object LblWindow: TLabel
+      Left = 8
+      Top = 82
+      Width = 61
+      Height = 13
+      Caption = 'Window fn:'
+    end
+    object LblFFTSize: TLabel
+      Left = 8
+      Top = 128
+      Width = 43
+      Height = 13
+      Caption = 'FFT size:'
+    end
+    object LblPlayMode: TLabel
+      Left = 8
+      Top = 174
+      Width = 55
+      Height = 13
+      Caption = 'Play mode:'
+    end
+    object LblGainCaption: TLabel
+      Left = 8
+      Top = 220
+      Width = 27
+      Height = 13
+      Caption = 'Gain:'
+    end
+    object LblGainVal: TLabel
+      Left = 50
+      Top = 220
+      Width = 22
+      Height = 13
+      Caption = '0 dB'
+    end
     object BtnOpen: TButton
       Left = 8
       Top = 10
@@ -61,13 +95,6 @@ object FormMain: TFormMain
       TabOrder = 3
       OnClick = BtnStopClick
     end
-    object LblWindow: TLabel
-      Left = 8
-      Top = 82
-      Width = 59
-      Height = 13
-      Caption = 'Window fn:'
-    end
     object CbxWindow: TComboBox
       Left = 8
       Top = 98
@@ -84,13 +111,6 @@ object FormMain: TFormMain
         'Hamming'
         'Blackman'
         'Flat-Top')
-    end
-    object LblFFTSize: TLabel
-      Left = 8
-      Top = 128
-      Width = 44
-      Height = 13
-      Caption = 'FFT size:'
     end
     object CbxFFTSize: TComboBox
       Left = 8
@@ -110,13 +130,6 @@ object FormMain: TFormMain
         '8192'
         '16384')
     end
-    object LblPlayMode: TLabel
-      Left = 8
-      Top = 174
-      Width = 52
-      Height = 13
-      Caption = 'Play mode:'
-    end
     object CbxPlayMode: TComboBox
       Left = 8
       Top = 190
@@ -131,20 +144,6 @@ object FormMain: TFormMain
         'VLC'
         'Native (correct pitch)')
     end
-    object LblGainCaption: TLabel
-      Left = 8
-      Top = 220
-      Width = 27
-      Height = 13
-      Caption = 'Gain:'
-    end
-    object LblGainVal: TLabel
-      Left = 50
-      Top = 220
-      Width = 30
-      Height = 13
-      Caption = '0 dB'
-    end
     object TrkGain: TTrackBar
       Left = 4
       Top = 236
@@ -152,9 +151,8 @@ object FormMain: TFormMain
       Height = 26
       Max = 80
       Frequency = 10
-      Position = 0
-      TickStyle = tsNone
       TabOrder = 7
+      TickStyle = tsNone
       OnChange = TrkGainChange
     end
     object ChkBGSub: TCheckBox
@@ -162,7 +160,7 @@ object FormMain: TFormMain
       Top = 270
       Width = 164
       Height = 17
-      Caption = 'BG Subtract'
+      Caption = 'Subtract background'
       TabOrder = 8
       OnClick = ChkBGSubChange
     end
@@ -192,17 +190,6 @@ object FormMain: TFormMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    object ZoomBar: TScrollBar
-      Left = 0
-      Top = 707
-      Width = 1020
-      Height = 20
-      Align = alBottom
-      Kind = sbHorizontal
-      Max = 1000
-      TabOrder = 0
-      OnChange = ZoomBarChange
-    end
     object PaintBox: TPaintBox
       Left = 0
       Top = 0
@@ -213,6 +200,17 @@ object FormMain: TFormMain
       OnMouseMove = PaintBoxMouseMove
       OnMouseUp = PaintBoxMouseUp
       OnPaint = PaintBoxPaint
+    end
+    object ZoomBar: TScrollBar
+      Left = 0
+      Top = 707
+      Width = 1020
+      Height = 20
+      Align = alBottom
+      Max = 1000
+      PageSize = 0
+      TabOrder = 0
+      OnChange = ZoomBarChange
     end
   end
   object OpenDialog: TOpenDialog
