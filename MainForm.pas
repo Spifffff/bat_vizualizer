@@ -37,6 +37,7 @@ type
     ChkBGSub:       TCheckBox;
     StatusBar:      TStatusBar;
     ZoomBar:        TScrollBar;
+    PanelMain:      TPanel;
     PaintBox:       TPaintBox;
     OpenDialog:     TOpenDialog;
     Timer:          TTimer;

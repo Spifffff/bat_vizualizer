@@ -18,7 +18,7 @@ object FormMain: TFormMain
     Left = 0
     Top = 0
     Width = 180
-    Height = 707
+    Height = 727
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
@@ -191,27 +191,36 @@ object FormMain: TFormMain
         Width = 200
       end>
   end
-  object ZoomBar: TScrollBar
-    Left = 0
-    Top = 707
-    Width = 1200
-    Height = 20
-    Align = alBottom
-    Kind = sbHorizontal
-    Max = 1000
-    TabOrder = 1
-    OnChange = ZoomBarChange
-  end
-  object PaintBox: TPaintBox
+  object PanelMain: TPanel
     Left = 180
     Top = 0
     Width = 1020
-    Height = 707
+    Height = 727
     Align = alClient
-    OnMouseDown = PaintBoxMouseDown
-    OnMouseMove = PaintBoxMouseMove
-    OnMouseUp = PaintBoxMouseUp
-    OnPaint = PaintBoxPaint
+    BevelOuter = bvNone
+    TabOrder = 1
+    object ZoomBar: TScrollBar
+      Left = 0
+      Top = 707
+      Width = 1020
+      Height = 20
+      Align = alBottom
+      Kind = sbHorizontal
+      Max = 1000
+      TabOrder = 0
+      OnChange = ZoomBarChange
+    end
+    object PaintBox: TPaintBox
+      Left = 0
+      Top = 0
+      Width = 1020
+      Height = 707
+      Align = alClient
+      OnMouseDown = PaintBoxMouseDown
+      OnMouseMove = PaintBoxMouseMove
+      OnMouseUp = PaintBoxMouseUp
+      OnPaint = PaintBoxPaint
+    end
   end
   object OpenDialog: TOpenDialog
     Filter = 'WAV files|*.wav|All files|*.*'
