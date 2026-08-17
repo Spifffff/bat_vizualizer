@@ -959,7 +959,7 @@ begin
         BF.BlendFlags := 0;
         BF.SourceConstantAlpha := 60;
         BF.AlphaFormat := 0;
-        AlphaBlend(PaintBox.Canvas.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
+        Winapi.Windows.AlphaBlend(PaintBox.Canvas.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
           OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
       finally
         OverBmp.Free;
