@@ -20,6 +20,7 @@ const
   TOP_MARGIN = 8;
   RIGHT_MARGIN = 10;
   SPECTROGRAM_GAMMA = 2.5;
+  WAVE_VPAD = 12;
 
 type
   TFormMain = class(TForm)
@@ -62,6 +63,9 @@ type
     procedure PaintBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxPaint(Sender: TObject);
+    procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
@@ -87,6 +91,7 @@ type
     FDragCurrentX: Integer;
 
     function SpectRect: TRect;
+    function WaveRect: TRect;
     function GetFFTSize: Integer;
     function GetWindowType: TWindowType;
     procedure RecomputeSpectrogram;
@@ -142,6 +147,13 @@ end;
 function TFormMain.SpectRect: TRect;
 begin
   Result := Rect(LEFT_MARGIN, TOP_MARGIN, PaintBox.Width - RIGHT_MARGIN, PaintBox.Height - BOTTOM_MARGIN);
+end;
+
+
+
+function TFormMain.WaveRect: TRect;
+begin
+  Result := Rect(LEFT_MARGIN, WAVE_VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - WAVE_VPAD);
 end;
 
 
@@ -623,6 +635,7 @@ begin
   if FDragging then begin
     FDragCurrentX := X;
     PaintBox.Invalidate;
+    WaveformBox.Invalidate;
   end;
 
   if (FSpecgram = nil) or (FWavFile = nil) then
@@ -638,6 +651,40 @@ begin
   StatusBar.Panels[2].Text := Format('%.4f s  |  %.1f kHz', [TimeAtCursor, FreqAtCursor]);
 end;
 
+procedure TFormMain.WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TRect;
+begin
+  if (Button <> mbLeft) or (FSpecgram = nil) then
+    Exit;
+  R := WaveRect;
+  if not PtInRect(R, Point(X, Y)) then
+    Exit;
+  FDragging := True;
+  FDragStartX := X;
+  FDragCurrentX := X;
+end;
+
+
+
+procedure TFormMain.WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+begin
+  if FDragging then begin
+    FDragCurrentX := X;
+    WaveformBox.Invalidate;
+    PaintBox.Invalidate;
+  end;
+end;
+
+
+
+procedure TFormMain.WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  PaintBoxMouseUp(Sender, Button, Shift, X, Y);
+end;
+
+
+
 { ---- painting -------------------------------------------------------------- }
 
 
@@ -647,7 +694,6 @@ const
   GRID_COLOR = $00444444;
   AXIS_COLOR = clWhite;
   OUTER_COLOR = $00202020;
-  WAVE_VPAD = 12;
 var
   C: TCanvas;
   Samples: TArray<Single>;
@@ -667,6 +713,9 @@ var
   VR, VG, VB: Byte;
   BgColor: TColor;
   WaveColor: TColor;
+  SelX1, SelX2: Integer;
+  OverBmp: TBitmap;
+  BF: TBlendFunction;
 begin
   C := WaveformBox.Canvas;
 
@@ -776,6 +825,30 @@ begin
       C.MoveTo(CurX, R.Top);
       C.LineTo(CurX, R.Bottom);
       C.Pen.Width := 1;
+    end;
+  end;
+
+  { Rubber-band selection overlay when dragging right }
+  if FDragging and (FDragCurrentX > FDragStartX) then begin
+    SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
+    SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
+    if SelX2 > SelX1 then begin
+      OverBmp := TBitmap.Create;
+      try
+        OverBmp.PixelFormat := pf24bit;
+        OverBmp.Width := SelX2 - SelX1;
+        OverBmp.Height := R.Bottom - R.Top;
+        OverBmp.Canvas.Brush.Color := clWhite;
+        OverBmp.Canvas.FillRect(Rect(0, 0, OverBmp.Width, OverBmp.Height));
+        BF.BlendOp := AC_SRC_OVER;
+        BF.BlendFlags := 0;
+        BF.SourceConstantAlpha := 60;
+        BF.AlphaFormat := 0;
+        Winapi.Windows.AlphaBlend(C.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
+          OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
+      finally
+        OverBmp.Free;
+      end;
     end;
   end;
 end;

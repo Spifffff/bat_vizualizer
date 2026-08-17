@@ -49,6 +49,27 @@ object FormMain: TFormMain
       Height = 13
       Caption = '0 dB'
     end
+    object LblColorScheme: TLabel
+      Left = 8
+      Top = 256
+      Width = 72
+      Height = 13
+      Caption = 'Color scheme:'
+    end
+    object LblFloor: TLabel
+      Left = 8
+      Top = 308
+      Width = 71
+      Height = 13
+      Caption = 'Floor: -100 dB'
+    end
+    object LblCeiling: TLabel
+      Left = 8
+      Top = 358
+      Width = 64
+      Height = 13
+      Caption = 'Ceiling: 0 dB'
+    end
     object BtnOpen: TButton
       Left = 8
       Top = 10
@@ -143,13 +164,6 @@ object FormMain: TFormMain
       TabOrder = 7
       OnClick = ChkBGSubChange
     end
-    object LblColorScheme: TLabel
-      Left = 8
-      Top = 256
-      Width = 67
-      Height = 13
-      Caption = 'Color scheme:'
-    end
     object CbxColorScheme: TComboBox
       Left = 8
       Top = 272
@@ -171,41 +185,26 @@ object FormMain: TFormMain
         'Rocket'
         'Spectral')
     end
-    object LblFloor: TLabel
-      Left = 8
-      Top = 308
-      Width = 75
-      Height = 13
-      Caption = 'Floor: -100 dB'
-    end
     object TrkFloor: TTrackBar
       Left = 4
       Top = 324
       Width = 172
       Height = 26
-      Min = -120
       Max = -20
-      Position = -100
+      Min = -120
       Frequency = 10
+      Position = -100
       TabOrder = 9
       TickStyle = tsNone
       OnChange = TrkFloorChange
-    end
-    object LblCeiling: TLabel
-      Left = 8
-      Top = 358
-      Width = 66
-      Height = 13
-      Caption = 'Ceiling: 0 dB'
     end
     object TrkCeiling: TTrackBar
       Left = 4
       Top = 374
       Width = 172
       Height = 26
-      Min = -60
       Max = 40
-      Position = 0
+      Min = -60
       Frequency = 10
       TabOrder = 10
       TickStyle = tsNone
@@ -243,6 +242,9 @@ object FormMain: TFormMain
       Width = 1020
       Height = 120
       Align = alTop
+      OnMouseDown = WaveformBoxMouseDown
+      OnMouseMove = WaveformBoxMouseMove
+      OnMouseUp = WaveformBoxMouseUp
       OnPaint = WaveformBoxPaint
     end
     object Splitter1: TSplitter
@@ -250,6 +252,7 @@ object FormMain: TFormMain
       Top = 120
       Width = 1020
       Height = 4
+      Cursor = crVSplit
       Align = alTop
       MinSize = 40
       ResizeStyle = rsUpdate
