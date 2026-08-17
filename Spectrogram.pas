@@ -75,9 +75,9 @@ const
   RkG:  array[0..7] of Integer = (  5,  25,  31,  23,  51, 118, 180, 235);
   RkB:  array[0..7] of Integer = ( 26,  62,  87,  89,  66,  81, 143, 221);
   // Spectral (ColorBrewer, sampled from 11-class table)
-  SpR:  array[0..7] of Integer = (158, 213, 253, 254, 230, 171,  50,  94);
-  SpG:  array[0..7] of Integer = (  1,  62, 174, 224, 245, 221, 136,  79);
-  SpB:  array[0..7] of Integer = ( 66,  79,  97, 139, 152, 164, 189, 162);
+  SpR:  array[0..7] of Integer = ( 94,  50, 171, 230, 254, 253, 213, 158);
+  SpG:  array[0..7] of Integer = ( 79, 136, 221, 245, 224, 174,  62,   1);
+  SpB:  array[0..7] of Integer = (162, 189, 164, 152, 139,  97,  79,  66);
 var
   Seg:  Integer;
   Frac: Double;
