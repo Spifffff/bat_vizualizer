@@ -182,6 +182,9 @@ begin
   finally
     ZoomBar.OnChange := ZoomBarChange;
   end;
+  // SetScrollInfo marks dirty but doesn't always flush; force immediate repaint
+  InvalidateRect(ZoomBar.Handle, nil, True);
+  UpdateWindow(ZoomBar.Handle);
 end;
 
 procedure TFormMain.RecomputeSpectrogram;
