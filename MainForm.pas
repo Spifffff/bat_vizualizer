@@ -84,9 +84,7 @@ type
     FZoomEnd: Double;
     FDragging: Boolean;
     FDragStartX: Integer;
-    FDragZoomStart: Double;
-    FDragZoomEnd: Double;
-    FDragZoomFrac: Double;
+    FDragCurrentX: Integer;
 
     function SpectRect: TRect;
     function GetFFTSize: Integer;
@@ -569,19 +567,46 @@ begin
   R := SpectRect;
   if not PtInRect(R, Point(X, Y)) then
     Exit;
-
   FDragging := True;
   FDragStartX := X;
-  FDragZoomStart := FZoomStart;
-  FDragZoomEnd := FZoomEnd;
-  FDragZoomFrac := FZoomStart + (X - R.Left) / Max(1, R.Right - R.Left) * (FZoomEnd - FZoomStart);
+  FDragCurrentX := X;
 end;
 
 
 
 procedure TFormMain.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TRect;
+  W, SelX1, SelX2: Integer;
+  Frac1, Frac2: Double;
 begin
+  if not FDragging then
+    Exit;
   FDragging := False;
+  R := SpectRect;
+  W := Max(1, R.Right - R.Left);
+
+  if FDragCurrentX > FDragStartX then begin
+    // Zoom into selected region
+    SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
+    SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
+    Frac1 := FZoomStart + (SelX1 - R.Left) / W * (FZoomEnd - FZoomStart);
+    Frac2 := FZoomStart + (SelX2 - R.Left) / W * (FZoomEnd - FZoomStart);
+    FZoomStart := Max(0.0, Frac1);
+    FZoomEnd := Min(1.0, Frac2);
+    if FZoomEnd <= FZoomStart then
+      FZoomEnd := FZoomStart + 0.001;
+  end
+  else begin
+    // Zoom out completely
+    FZoomStart := 0.0;
+    FZoomEnd := 1.0;
+  end;
+
+  UpdateZoomBar;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 
@@ -589,9 +614,6 @@ end;
 procedure TFormMain.PaintBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 var
   R: TRect;
-  Delta: Integer;
-  OldW, NewW: Double;
-  NewStart: Double;
   DurSec: Double;
   TimeAtCursor: Double;
   FreqAtCursor: Double;
@@ -599,42 +621,8 @@ begin
   R := SpectRect;
 
   if FDragging then begin
-    Delta := X - FDragStartX;
-    if Delta > 400 then
-      Delta := 400;
-    if Delta < -400 then
-      Delta := -400;
-
-    OldW := FDragZoomEnd - FDragZoomStart;
-    if OldW < 1.0E-9 then
-      OldW := 1.0E-9;
-
-    NewW := OldW * Power(0.99, Delta);
-    if NewW < 0.001 then
-      NewW := 0.001;
-    if NewW > 1.0 then
-      NewW := 1.0;
-
-    NewStart := FDragZoomFrac - (FDragZoomFrac - FDragZoomStart) / OldW * NewW;
-
-    FZoomStart := NewStart;
-    FZoomEnd := NewStart + NewW;
-
-    if FZoomStart < 0.0 then begin
-      FZoomStart := 0.0;
-      FZoomEnd := NewW;
-    end;
-    if FZoomEnd > 1.0 then begin
-      FZoomEnd := 1.0;
-      FZoomStart := 1.0 - NewW;
-      if FZoomStart < 0.0 then
-        FZoomStart := 0.0;
-    end;
-
-    UpdateZoomBar;
-    RenderSpectrogram;
+    FDragCurrentX := X;
     PaintBox.Invalidate;
-    WaveformBox.Invalidate;
   end;
 
   if (FSpecgram = nil) or (FWavFile = nil) then
@@ -926,6 +914,9 @@ var
   R: TRect;
   W, H: Integer;
   Msg: string;
+  SelX1, SelX2: Integer;
+  OverBmp: TBitmap;
+  BF: TBlendFunction;
 begin
   R := SpectRect;
   W := R.Right - R.Left;
@@ -951,6 +942,30 @@ begin
 
   DrawAxes(PaintBox.Canvas, R);
   DrawCursor(PaintBox.Canvas, R);
+
+  // Rubber-band selection overlay when dragging right
+  if FDragging and (FDragCurrentX > FDragStartX) then begin
+    SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
+    SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
+    if SelX2 > SelX1 then begin
+      OverBmp := TBitmap.Create;
+      try
+        OverBmp.PixelFormat := pf24bit;
+        OverBmp.Width := SelX2 - SelX1;
+        OverBmp.Height := R.Bottom - R.Top;
+        OverBmp.Canvas.Brush.Color := clWhite;
+        OverBmp.Canvas.FillRect(Rect(0, 0, OverBmp.Width, OverBmp.Height));
+        BF.BlendOp := AC_SRC_OVER;
+        BF.BlendFlags := 0;
+        BF.SourceConstantAlpha := 60;
+        BF.AlphaFormat := 0;
+        AlphaBlend(PaintBox.Canvas.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
+          OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
+      finally
+        OverBmp.Free;
+      end;
+    end;
+  end;
 end;
 
 
