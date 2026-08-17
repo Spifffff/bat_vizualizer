@@ -43,6 +43,8 @@ type
     TrkFloor: TTrackBar;
     LblCeiling: TLabel;
     TrkCeiling: TTrackBar;
+    LblMaxFreq: TLabel;
+    TrkMaxFreq: TTrackBar;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -75,6 +77,7 @@ type
     procedure CbxColorSchemeChange(Sender: TObject);
     procedure TrkFloorChange(Sender: TObject);
     procedure TrkCeilingChange(Sender: TObject);
+    procedure TrkMaxFreqChange(Sender: TObject);
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
   private
@@ -85,6 +88,7 @@ type
     FDisplayBmp: TBitmap;
 
     FFileInfo: string;
+    FMaxPlotHz: Double;
     FZoomStart: Double;
     FZoomEnd: Double;
     FDragging: Boolean;
@@ -266,7 +270,7 @@ begin
   if FDisplayBmp = nil then
     FDisplayBmp := TBitmap.Create;
   FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd, ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA, TrkFloor.Position, TrkCeiling.Position,
-    IdxToColorScheme(CbxColorScheme.ItemIndex));
+    IdxToColorScheme(CbxColorScheme.ItemIndex), FMaxPlotHz);
 end;
 
 
@@ -366,6 +370,13 @@ begin
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
     UpdateZoomBar;
+
+    TrkMaxFreq.Max := FWavFile.Info.SampleRate div 2000;
+    TrkMaxFreq.Min := 1;
+    TrkMaxFreq.Position := TrkMaxFreq.Max;
+    FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
+    LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+
     BtnPlay.Enabled := True;
 
   except
@@ -544,6 +555,15 @@ end;
 
 
 
+procedure TFormMain.TrkMaxFreqChange(Sender: TObject);
+begin
+  FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
+  LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+  ScheduleRender;
+end;
+
+
+
 procedure TFormMain.ZoomBarChange(Sender: TObject);
 var
   SI: TScrollInfo;
@@ -648,7 +668,7 @@ begin
 
   DurSec := FWavFile.Info.DurationSec;
   TimeAtCursor := FZoomStart * DurSec + (X - R.Left) / Max(1, R.Right - R.Left) * (FZoomEnd - FZoomStart) * DurSec;
-  FreqAtCursor := (1.0 - (Y - R.Top) / Max(1, R.Bottom - R.Top)) * FWavFile.Info.SampleRate / 2000.0;
+  FreqAtCursor := (1.0 - (Y - R.Top) / Max(1, R.Bottom - R.Top)) * FMaxPlotHz / 1000.0;
   StatusBar.Panels[2].Text := Format('%.4f s  |  %.1f kHz', [TimeAtCursor, FreqAtCursor]);
 end;
 
@@ -914,7 +934,10 @@ begin
   if FWavFile = nil then
     Exit;
 
-  MaxHz := FWavFile.Info.SampleRate / 2.0;
+  if FMaxPlotHz > 0 then
+    MaxHz := FMaxPlotHz
+  else
+    MaxHz := FWavFile.Info.SampleRate / 2.0;
   DurSec := FWavFile.Info.DurationSec;
 
   C.Font.Size := 8;

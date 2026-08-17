@@ -210,6 +210,26 @@ object FormMain: TFormMain
       TickStyle = tsNone
       OnChange = TrkCeilingChange
     end
+    object LblMaxFreq: TLabel
+      Left = 8
+      Top = 408
+      Width = 63
+      Height = 13
+      Caption = 'Max: 96 kHz'
+    end
+    object TrkMaxFreq: TTrackBar
+      Left = 4
+      Top = 424
+      Width = 172
+      Height = 26
+      Max = 96
+      Min = 1
+      Frequency = 10
+      Position = 96
+      TabOrder = 11
+      TickStyle = tsNone
+      OnChange = TrkMaxFreqChange
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
