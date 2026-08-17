@@ -160,7 +160,7 @@ object FormMain: TFormMain
       Top = 224
       Width = 164
       Height = 17
-      Caption = 'Subtract background'
+      Caption = 'Reduce noise'
       TabOrder = 7
       OnClick = ChkBGSubChange
     end

@@ -23,12 +23,13 @@ type
     FWindow: TWindowType;
     FNumBins: Integer;
     FSampleRate: Cardinal;
-    FBgSpectrum: TArray<Double>;
+    FNoiseFloor: TArray<TArray<Double>>;
+    FNoiseFramePos: TArray<Double>;
     FHasBg: Boolean;
   public
     procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
-    { Call when file / FFT size / window changes.  Fast — only computes
-      background spectrum from a non-overlapping coarse pass. }
+    { Call when file / FFT size / window changes.  Computes a rolling-median
+      noise floor used by Render when BgSubtract is True. }
     procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
 
     { Render the visible zoom window at display resolution.  Each pixel column
@@ -159,12 +160,17 @@ end;
 
 
 procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
+const
+  MAX_NOISE_FRAMES = 256;
+  NOISE_HALF_WIN = 16;
 var
   Samples: TArray<Single>;
-  TotalSamples: Integer;
+  TotalSamples, Hop, N, HalfW: Integer;
+  Frame, B, J, K, WinStart, WinEnd, WinLen, Offset: Integer;
   Mags: TArray<Double>;
-  BgSum: TArray<Double>;
-  FrameCount, B, Offset: Integer;
+  RawMags: TArray<TArray<Double>>;
+  Scratch: array [0 .. 2 * NOISE_HALF_WIN] of Double;
+  Tmp: Double;
 begin
   FWavFile := AWavFile;
   FFFTSize := AFFTSize;
@@ -172,30 +178,67 @@ begin
   FNumBins := AFFTSize shr 1;
   FSampleRate := AWavFile.Info.SampleRate;
   FHasBg := False;
-  SetLength(FBgSpectrum, 0);
+  SetLength(FNoiseFloor, 0);
+  SetLength(FNoiseFramePos, 0);
 
   Samples := AWavFile.Samples;
   TotalSamples := Length(Samples);
   if TotalSamples < AFFTSize then
     Exit;
 
-  SetLength(BgSum, FNumBins);
-  FrameCount := 0;
+  // Evenly-spaced noise frames, at most MAX_NOISE_FRAMES
+  Hop := Max(AFFTSize, TotalSamples div MAX_NOISE_FRAMES);
+  N := 0;
   Offset := 0;
   while Offset + AFFTSize <= TotalSamples do begin
+    Inc(N);
+    Inc(Offset, Hop);
+  end;
+  N := Min(N, MAX_NOISE_FRAMES);
+  if N = 0 then
+    Exit;
+
+  // Window half-width: aim for ~1 second each side, capped at NOISE_HALF_WIN
+  HalfW := Min(NOISE_HALF_WIN, Max(1, Round(FSampleRate / (2.0 * Hop))));
+  HalfW := Min(HalfW, N div 2);
+  HalfW := Max(HalfW, 1);
+
+  // Compute raw magnitude frames
+  SetLength(RawMags, N);
+  SetLength(FNoiseFramePos, N);
+  Offset := 0;
+  for Frame := 0 to N - 1 do begin
     ComputeWindowedFFT(Samples, Offset, AFFTSize, AWindow, Mags);
-    for B := 0 to FNumBins - 1 do
-      BgSum[B] := BgSum[B] + Mags[B];
-    Inc(FrameCount);
-    Inc(Offset, AFFTSize); // non-overlapping for speed
+    SetLength(RawMags[Frame], FNumBins);
+    Move(Mags[0], RawMags[Frame][0], FNumBins * SizeOf(Double));
+    FNoiseFramePos[Frame] := (Offset + AFFTSize * 0.5) / TotalSamples;
+    Inc(Offset, Hop);
   end;
 
-  if FrameCount > 0 then begin
-    SetLength(FBgSpectrum, FNumBins);
-    for B := 0 to FNumBins - 1 do
-      FBgSpectrum[B] := BgSum[B] / FrameCount;
-    FHasBg := True;
+  // Per-bin rolling median across the window
+  SetLength(FNoiseFloor, N);
+  for Frame := 0 to N - 1 do begin
+    SetLength(FNoiseFloor[Frame], FNumBins);
+    WinStart := Max(0, Frame - HalfW);
+    WinEnd := Min(N - 1, Frame + HalfW);
+    WinLen := WinEnd - WinStart + 1;
+    for B := 0 to FNumBins - 1 do begin
+      for J := 0 to WinLen - 1 do
+        Scratch[J] := RawMags[WinStart + J][B];
+      for J := 1 to WinLen - 1 do begin
+        Tmp := Scratch[J];
+        K := J - 1;
+        while (K >= 0) and (Scratch[K] > Tmp) do begin
+          Scratch[K + 1] := Scratch[K];
+          Dec(K);
+        end;
+        Scratch[K + 1] := Tmp;
+      end;
+      FNoiseFloor[Frame][B] := Scratch[WinLen div 2];
+    end;
   end;
+
+  FHasBg := True;
 end;
 
 
@@ -214,6 +257,9 @@ var
   TLin, T: Double;
   VR, VG, VB: Byte;
   UseBg: Boolean;
+  NoiseBuf: TArray<Double>;
+  NoiseF0, NoiseF1, BIdx: Integer;
+  Alpha: Double;
 begin
   if (FWavFile = nil) or (FNumBins = 0) or (DestWidth <= 0) or (DestHeight <= 0) then
     Exit;
@@ -221,6 +267,9 @@ begin
   Samples := FWavFile.Samples;
   TotalSamples := Length(Samples);
   UseBg := BgSubtract and FHasBg;
+  NoiseF0 := 0;
+  if UseBg then
+    SetLength(NoiseBuf, FNumBins);
 
   MaxBin := FNumBins - 1;
   if (MaxFreqHz > 0) and (MaxFreqHz < FSampleRate / 2.0) then
@@ -243,6 +292,18 @@ begin
     // CenterSample.  FFT.pas handles out-of-range indices with zero-padding.
     ComputeWindowedFFT(Samples, CenterSample - (FFFTSize shr 1), FFFTSize, FWindow, Mags);
 
+    if UseBg then begin
+      while (NoiseF0 < Length(FNoiseFloor) - 2) and (FNoiseFramePos[NoiseF0 + 1] <= ZFrac) do
+        Inc(NoiseF0);
+      NoiseF1 := Min(NoiseF0 + 1, Length(FNoiseFloor) - 1);
+      if (NoiseF0 < NoiseF1) and (FNoiseFramePos[NoiseF1] > FNoiseFramePos[NoiseF0]) then
+        Alpha := Max(0.0, Min(1.0, (ZFrac - FNoiseFramePos[NoiseF0]) / (FNoiseFramePos[NoiseF1] - FNoiseFramePos[NoiseF0])))
+      else
+        Alpha := 0.0;
+      for BIdx := 0 to FNumBins - 1 do
+        NoiseBuf[BIdx] := FNoiseFloor[NoiseF0][BIdx] * (1.0 - Alpha) + FNoiseFloor[NoiseF1][BIdx] * Alpha;
+    end;
+
     for Y := 0 to DestHeight - 1 do begin
       Bin := Round((1.0 - (Y + 0.5) / DestHeight) * MaxBin);
       if Bin < 0 then
@@ -252,7 +313,7 @@ begin
 
       Mag := Mags[Bin];
       if UseBg then
-        Mag := Max(0.0, Mag - FBgSpectrum[Bin]);
+        Mag := Max(0.0, Mag - NoiseBuf[Bin]);
 
       if Mag > 1.0E-12 then
         DB := 20.0 * Log10(Mag) + GainDB
