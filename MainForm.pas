@@ -66,6 +66,7 @@ type
     procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure ZoomMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
@@ -650,6 +651,47 @@ begin
   FreqAtCursor := (1.0 - (Y - R.Top) / Max(1, R.Bottom - R.Top)) * FWavFile.Info.SampleRate / 2000.0;
   StatusBar.Panels[2].Text := Format('%.4f s  |  %.1f kHz', [TimeAtCursor, FreqAtCursor]);
 end;
+
+procedure TFormMain.ZoomMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  Control: TControl;
+  LocalX, ChartLeft, ChartRight, W: Integer;
+  Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
+begin
+  if FSpecgram = nil then
+    Exit;
+  Control := Sender as TControl;
+  ChartLeft := LEFT_MARGIN;
+  ChartRight := Control.Width - RIGHT_MARGIN;
+  W := ChartRight - ChartLeft;
+  if W <= 0 then
+    Exit;
+  LocalX := Max(ChartLeft, Min(ChartRight, Control.ScreenToClient(MousePos).X));
+  Frac := (LocalX - ChartLeft) / W;
+  T := FZoomStart + Frac * (FZoomEnd - FZoomStart);
+  Span := FZoomEnd - FZoomStart;
+  ZoomFactor := Power(0.8, WheelDelta / 120.0);
+  NewSpan := Max(0.001, Min(1.0, Span * ZoomFactor));
+  NewStart := T - Frac * NewSpan;
+  NewEnd := NewStart + NewSpan;
+  if NewStart < 0.0 then begin
+    NewStart := 0.0;
+    NewEnd := NewSpan;
+  end;
+  if NewEnd > 1.0 then begin
+    NewEnd := 1.0;
+    NewStart := 1.0 - NewSpan;
+  end;
+  FZoomStart := Max(0.0, NewStart);
+  FZoomEnd := Min(1.0, NewEnd);
+  UpdateZoomBar;
+  RenderSpectrogram;
+  PaintBox.Invalidate;
+  WaveformBox.Invalidate;
+  Handled := True;
+end;
+
+
 
 procedure TFormMain.WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
