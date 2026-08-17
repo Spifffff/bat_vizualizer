@@ -318,6 +318,7 @@ begin
   FZoomStart := 0.0;
   FZoomEnd := 1.0;
   FDragging := False;
+  PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar;
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open a WAV file.';

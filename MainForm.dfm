@@ -255,6 +255,8 @@ object FormMain: TFormMain
     Height = 727
     Align = alClient
     BevelOuter = bvNone
+    DoubleBuffered = True
+    ParentDoubleBuffered = False
     TabOrder = 1
     object WaveformBox: TPaintBox
       Left = 0
