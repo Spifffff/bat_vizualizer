@@ -20,8 +20,8 @@ type
     FSampleRate: Cardinal;
     FBgSpectrum: TArray<Double>;
     FHasBg:      Boolean;
-    procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
   public
+    procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
     { Call when file / FFT size / window changes.  Fast — only computes
       background spectrum from a non-overlapping coarse pass. }
     procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);

@@ -439,6 +439,7 @@ begin
   if FSpecgram = nil then Exit;
   RenderSpectrogram;
   PaintBox.Invalidate;
+  WaveformBox.Invalidate;
 end;
 
 procedure TFormMain.TrkFloorChange(Sender: TObject);
@@ -571,11 +572,10 @@ end;
 
 procedure TFormMain.WaveformBoxPaint(Sender: TObject);
 const
-  WAVE_COLOR  = $00BBBBBB;
   GRID_COLOR  = $00444444;
   AXIS_COLOR  = clWhite;
-  OUTER_COLOR = $00202020;  // same grey as spectrogram outer area
-  WAVE_VPAD   = 12;         // top/bottom margin so labels have clearance
+  OUTER_COLOR = $00202020;
+  WAVE_VPAD   = 12;
 var
   C:            TCanvas;
   Samples:      TArray<Single>;
@@ -591,8 +591,27 @@ var
   TextH, TextW: Integer;
   Lbl:          string;
   LblY:         Integer;
+  Scheme:       TColorScheme;
+  VR, VG, VB:  Byte;
+  BgColor:      TColor;
+  WaveColor:    TColor;
 begin
   C := WaveformBox.Canvas;
+
+  { Derive background (T=0) and wave (T=1) colors from the active scheme }
+  Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
+  if FSpecgram <> nil then
+  begin
+    FSpecgram.GetColor(0.0, Scheme, VR, VG, VB);
+    BgColor   := RGB(VR, VG, VB);
+    FSpecgram.GetColor(1.0, Scheme, VR, VG, VB);
+    WaveColor := RGB(VR, VG, VB);
+  end
+  else
+  begin
+    BgColor   := clBlack;
+    WaveColor := $00BBBBBB;
+  end;
 
   { Outer panel: grey (matches spectrogram background) }
   C.Brush.Color := OUTER_COLOR;
@@ -604,8 +623,8 @@ begin
   MidY := R.Top + H div 2;
   if (W <= 0) or (H <= 0) then Exit;
 
-  { Chart area: black }
-  C.Brush.Color := clBlack;
+  { Chart area: scheme minimum color }
+  C.Brush.Color := BgColor;
   C.FillRect(R);
   C.Brush.Style := bsClear;
 
@@ -642,7 +661,7 @@ begin
   if TotalSamples = 0 then Exit;
 
   { Waveform: min/max envelope per pixel column }
-  C.Pen.Color := WAVE_COLOR;
+  C.Pen.Color := WaveColor;
   for X := 0 to W - 1 do
   begin
     Frac0 := FZoomStart + X       / W * (FZoomEnd - FZoomStart);
