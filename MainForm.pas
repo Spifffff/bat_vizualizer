@@ -68,7 +68,7 @@ type
     procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure ZoomMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+    procedure AppMouseWheel(var Msg: TMsg; var Handled: Boolean);
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
@@ -319,6 +319,7 @@ begin
   FZoomEnd := 1.0;
   FDragging := False;
   UpdateZoomBar;
+  Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open a WAV file.';
 end;
 
@@ -326,6 +327,7 @@ end;
 
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
+  Application.OnMessage := nil;
   Timer.Enabled := False;
   FWavePlayer.Stop;
   FWavePlayer.Free;
@@ -672,21 +674,32 @@ begin
   StatusBar.Panels[2].Text := Format('%.4f s  |  %.1f kHz', [TimeAtCursor, FreqAtCursor]);
 end;
 
-procedure TFormMain.ZoomMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+procedure TFormMain.AppMouseWheel(var Msg: TMsg; var Handled: Boolean);
 var
-  Control: TControl;
+  MousePos: TPoint;
+  LocalPos: TPoint;
   LocalX, ChartLeft, ChartRight, W: Integer;
+  WheelDelta: Integer;
   Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
 begin
+  if Msg.message <> WM_MOUSEWHEEL then
+    Exit;
   if FSpecgram = nil then
     Exit;
-  Control := Sender as TControl;
+  MousePos := Point(SmallInt(Msg.lParam and $FFFF), SmallInt(Msg.lParam shr 16));
+  LocalPos := PaintBox.ScreenToClient(MousePos);
+  if not PtInRect(PaintBox.ClientRect, LocalPos) then begin
+    LocalPos := WaveformBox.ScreenToClient(MousePos);
+    if not PtInRect(WaveformBox.ClientRect, LocalPos) then
+      Exit;
+  end;
+  WheelDelta := SmallInt(Msg.wParam shr 16);
   ChartLeft := LEFT_MARGIN;
-  ChartRight := Control.Width - RIGHT_MARGIN;
+  ChartRight := PaintBox.Width - RIGHT_MARGIN;
   W := ChartRight - ChartLeft;
   if W <= 0 then
     Exit;
-  LocalX := Max(ChartLeft, Min(ChartRight, Control.ScreenToClient(MousePos).X));
+  LocalX := Max(ChartLeft, Min(ChartRight, LocalPos.X));
   Frac := (LocalX - ChartLeft) / W;
   T := FZoomStart + Frac * (FZoomEnd - FZoomStart);
   Span := FZoomEnd - FZoomStart;

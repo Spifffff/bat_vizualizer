@@ -265,7 +265,6 @@ object FormMain: TFormMain
       OnMouseDown = WaveformBoxMouseDown
       OnMouseMove = WaveformBoxMouseMove
       OnMouseUp = WaveformBoxMouseUp
-      OnMouseWheel = ZoomMouseWheel
       OnPaint = WaveformBoxPaint
     end
     object Splitter1: TSplitter
@@ -287,7 +286,6 @@ object FormMain: TFormMain
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove
       OnMouseUp = PaintBoxMouseUp
-      OnMouseWheel = ZoomMouseWheel
       OnPaint = PaintBoxPaint
     end
     object ZoomBar: TScrollBar
