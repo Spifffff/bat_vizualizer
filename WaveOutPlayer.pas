@@ -21,6 +21,7 @@ type
     FWaveHdrBuf: array [0 .. 63] of Byte; // enough for WAVEHDR on 32-bit
     FBuffer: TArray<SmallInt>;
     FTotalSamples: Integer;
+    FSeekOffset: Integer;
     FActualRate: Cardinal;
     FLoaded: Boolean;
     FSubmitted: Boolean;
@@ -40,6 +41,10 @@ type
     procedure Pause;
     procedure Resume;
     procedure Stop;
+
+    { Seek to a normalised position 0..1; restarts playback from that point
+      if the device was playing or paused. }
+    procedure SeekToNormalized(Pos: Double);
 
     { Normalised position 0..1 (samples consumed / total samples). }
     function GetNormalizedPosition: Double;
@@ -240,6 +245,7 @@ begin
 
   FActualRate := Rate;
   ActualRate := Rate;
+  FSeekOffset := 0;
 
   { Prepare the header for the entire buffer. }
   H := PWaveHdr(@FWaveHdrBuf);
@@ -312,7 +318,7 @@ begin
   FillChar(MMT, SizeOf(MMT), 0);
   MMT.wType := TIME_SAMPLES;
   waveOutGetPosition(FDevHandle, @MMT, SizeOf(TMMTime));
-  Result := MMT.sample / FTotalSamples;
+  Result := (FSeekOffset + MMT.sample) / FTotalSamples;
   if Result > 1.0 then
     Result := 1.0;
 end;
@@ -336,6 +342,41 @@ end;
 function TWaveOutPlayer.HasEnded: Boolean;
 begin
   Result := FSubmitted and (not FPaused) and ((WavHdrFlags and WHDR_DONE) <> 0);
+end;
+
+
+
+procedure TWaveOutPlayer.SeekToNormalized(Pos: Double);
+var
+  H: PWaveHdr;
+  Offset: Integer;
+  WasActive: Boolean;
+begin
+  if (FDevHandle = 0) or not FLoaded then
+    Exit;
+  WasActive := IsPlaying or IsPaused;
+  H := PWaveHdr(@FWaveHdrBuf);
+  waveOutReset(FDevHandle);
+  waveOutUnprepareHeader(FDevHandle, H, SizeOf(TWaveHdr));
+  FSubmitted := False;
+  FPaused := False;
+
+  if Pos < 0.0 then Pos := 0.0;
+  if Pos > 1.0 then Pos := 1.0;
+  Offset := Round(Pos * FTotalSamples);
+  if Offset >= FTotalSamples then
+    Offset := FTotalSamples - 1;
+  FSeekOffset := Offset;
+
+  FillChar(H^, SizeOf(TWaveHdr), 0);
+  H^.lpData := PAnsiChar(@FBuffer[Offset]);
+  H^.dwBufferLength := DWORD((FTotalSamples - Offset) * SizeOf(SmallInt));
+  waveOutPrepareHeader(FDevHandle, H, SizeOf(TWaveHdr));
+
+  if WasActive then begin
+    waveOutWrite(FDevHandle, H, SizeOf(TWaveHdr));
+    FSubmitted := True;
+  end;
 end;
 
 

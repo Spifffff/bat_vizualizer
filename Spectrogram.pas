@@ -26,6 +26,7 @@ type
     FNoiseFloor: TArray<TArray<Double>>;
     FNoiseFramePos: TArray<Double>;
     FHasBg: Boolean;
+    FFilteredSamples: TArray<Single>;
   public
     procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
     { Call when file / FFT size / window changes.  Computes a rolling-median
@@ -35,7 +36,8 @@ type
     { Render the visible zoom window at display resolution.  Each pixel column
       gets its own FFT so there is no block artefact when zoomed in. }
     procedure Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
-      MinDB: Double = -100.0; MaxDB: Double = 0.0; ColorScheme: TColorScheme = csViridis; MaxFreqHz: Double = 0.0);
+      MinDB: Double = -100.0; MaxDB: Double = 0.0; ColorScheme: TColorScheme = csViridis; MaxFreqHz: Double = 0.0;
+      UseHighPass: Boolean = False; UseEnergyGate: Boolean = False);
 
     property NumBins: Integer read FNumBins;
     property SampleRate: Cardinal read FSampleRate;
@@ -159,6 +161,42 @@ end;
 
 
 
+const
+  HP_CUTOFF_HZ   = 15000.0;  // high-pass cutoff — adjust to suit recording setup
+  GATE_ON_THRESH  = 3.0e-5;  // RMS of mag spectrum to open gate
+  GATE_OFF_THRESH = 1.5e-5;  // RMS of mag spectrum to close gate (hysteresis)
+
+
+
+procedure BiquadHighPass(const Src: TArray<Single>; SampleRate: Cardinal; CutoffHz: Double; out Dst: TArray<Single>);
+var
+  W0, Alpha, Cos0, A0, NB0, NB1, NB2, NA1, NA2: Double;
+  X1, X2, Y1, Y2, Y: Double;
+  I: Integer;
+begin
+  SetLength(Dst, Length(Src));
+  if (Length(Src) = 0) or (SampleRate = 0) then
+    Exit;
+  W0 := 2.0 * Pi * CutoffHz / SampleRate;
+  Cos0 := Cos(W0);
+  Alpha := Sin(W0) / (2.0 * 0.7071); // Q = 1/sqrt(2) Butterworth
+  A0 := 1.0 + Alpha;
+  NB0 := (1.0 + Cos0) / (2.0 * A0);
+  NB1 := -(1.0 + Cos0) / A0;
+  NB2 := NB0;
+  NA1 := -2.0 * Cos0 / A0;
+  NA2 := (1.0 - Alpha) / A0;
+  X1 := 0; X2 := 0; Y1 := 0; Y2 := 0;
+  for I := 0 to Length(Src) - 1 do begin
+    Y := NB0 * Src[I] + NB1 * X1 + NB2 * X2 - NA1 * Y1 - NA2 * Y2;
+    X2 := X1; X1 := Src[I];
+    Y2 := Y1; Y1 := Y;
+    Dst[I] := Single(Y);
+  end;
+end;
+
+
+
 procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
 const
   MAX_NOISE_FRAMES = 256;
@@ -239,12 +277,14 @@ begin
   end;
 
   FHasBg := True;
+  BiquadHighPass(Samples, FSampleRate, HP_CUTOFF_HZ, FFilteredSamples);
 end;
 
 
 
 procedure TSpectrogramData.Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
-  MinDB: Double; MaxDB: Double; ColorScheme: TColorScheme; MaxFreqHz: Double);
+  MinDB: Double; MaxDB: Double; ColorScheme: TColorScheme; MaxFreqHz: Double;
+  UseHighPass: Boolean; UseEnergyGate: Boolean);
 var
   Samples: TArray<Single>;
   TotalSamples: Integer;
@@ -259,17 +299,22 @@ var
   UseBg: Boolean;
   NoiseBuf: TArray<Double>;
   NoiseF0, NoiseF1, BIdx: Integer;
-  Alpha: Double;
+  Alpha, Energy, RMS: Double;
+  GateOpen: Boolean;
 begin
   if (FWavFile = nil) or (FNumBins = 0) or (DestWidth <= 0) or (DestHeight <= 0) then
     Exit;
 
-  Samples := FWavFile.Samples;
+  if UseHighPass and (Length(FFilteredSamples) = Length(FWavFile.Samples)) then
+    Samples := FFilteredSamples
+  else
+    Samples := FWavFile.Samples;
   TotalSamples := Length(Samples);
   UseBg := BgSubtract and FHasBg;
   NoiseF0 := 0;
   if UseBg then
     SetLength(NoiseBuf, FNumBins);
+  GateOpen := False;
 
   MaxBin := FNumBins - 1;
   if (MaxFreqHz > 0) and (MaxFreqHz < FSampleRate / 2.0) then
@@ -291,6 +336,28 @@ begin
     // ComputeWindowedFFT uses Offset as start of window; we center it on
     // CenterSample.  FFT.pas handles out-of-range indices with zero-padding.
     ComputeWindowedFFT(Samples, CenterSample - (FFFTSize shr 1), FFFTSize, FWindow, Mags);
+
+    if UseEnergyGate then begin
+      Energy := 0.0;
+      for BIdx := 0 to MaxBin do
+        Energy := Energy + Sqr(Mags[BIdx]);
+      RMS := Sqrt(Energy / (MaxBin + 1));
+      if GateOpen then begin
+        if RMS < GATE_OFF_THRESH then
+          GateOpen := False;
+      end else begin
+        if RMS >= GATE_ON_THRESH then
+          GateOpen := True;
+      end;
+      if not GateOpen then begin
+        for Y := 0 to DestHeight - 1 do begin
+          Rows[Y]^[X].R := 0;
+          Rows[Y]^[X].G := 0;
+          Rows[Y]^[X].B := 0;
+        end;
+        Continue;
+      end;
+    end;
 
     if UseBg then begin
       while (NoiseF0 < Length(FNoiseFloor) - 2) and (FNoiseFramePos[NoiseF0 + 1] <= ZFrac) do

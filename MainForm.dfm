@@ -51,31 +51,45 @@ object FormMain: TFormMain
     end
     object LblColorScheme: TLabel
       Left = 8
-      Top = 256
+      Top = 276
       Width = 72
       Height = 13
       Caption = 'Color scheme:'
     end
     object LblFloor: TLabel
       Left = 8
-      Top = 308
+      Top = 328
       Width = 71
       Height = 13
       Caption = 'Floor: -100 dB'
     end
     object LblCeiling: TLabel
       Left = 8
-      Top = 358
+      Top = 378
       Width = 64
       Height = 13
       Caption = 'Ceiling: 0 dB'
+    end
+    object LblMaxFreq: TLabel
+      Left = 8
+      Top = 428
+      Width = 61
+      Height = 13
+      Caption = 'Max: 96 kHz'
+    end
+    object LblSave: TLabel
+      Left = 8
+      Top = 480
+      Width = 65
+      Height = 13
+      Caption = 'Save as PNG:'
     end
     object BtnOpen: TButton
       Left = 8
       Top = 10
       Width = 164
       Height = 28
-      Caption = 'Open WAV'
+      Caption = 'Open audio'
       TabOrder = 0
       OnClick = BtnOpenClick
     end
@@ -132,11 +146,14 @@ object FormMain: TFormMain
       Width = 164
       Height = 21
       Style = csDropDownList
-      ItemIndex = 3
+      ItemIndex = 6
       TabOrder = 5
       Text = '4096'
       OnChange = CbxFFTSizeChange
       Items.Strings = (
+        '64'
+        '128'
+        '256'
         '512'
         '1024'
         '2048'
@@ -164,9 +181,18 @@ object FormMain: TFormMain
       TabOrder = 7
       OnClick = ChkBGSubChange
     end
+    object ChkFilter: TCheckBox
+      Left = 8
+      Top = 244
+      Width = 164
+      Height = 17
+      Caption = 'High-pass + gate'
+      TabOrder = 12
+      OnClick = ChkFilterChange
+    end
     object CbxColorScheme: TComboBox
       Left = 8
-      Top = 272
+      Top = 292
       Width = 164
       Height = 21
       Style = csDropDownList
@@ -187,7 +213,7 @@ object FormMain: TFormMain
     end
     object TrkFloor: TTrackBar
       Left = 4
-      Top = 324
+      Top = 344
       Width = 172
       Height = 26
       Max = -20
@@ -200,7 +226,7 @@ object FormMain: TFormMain
     end
     object TrkCeiling: TTrackBar
       Left = 4
-      Top = 374
+      Top = 394
       Width = 172
       Height = 26
       Max = 40
@@ -210,16 +236,9 @@ object FormMain: TFormMain
       TickStyle = tsNone
       OnChange = TrkCeilingChange
     end
-    object LblMaxFreq: TLabel
-      Left = 8
-      Top = 408
-      Width = 63
-      Height = 13
-      Caption = 'Max: 96 kHz'
-    end
     object TrkMaxFreq: TTrackBar
       Left = 4
-      Top = 424
+      Top = 444
       Width = 172
       Height = 26
       Max = 96
@@ -229,6 +248,30 @@ object FormMain: TFormMain
       TabOrder = 11
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
+    end
+    object CbxSaveTarget: TComboBox
+      Left = 8
+      Top = 496
+      Width = 164
+      Height = 21
+      Style = csDropDownList
+      ItemIndex = 2
+      TabOrder = 13
+      Text = 'Combined'
+      Items.Strings = (
+        'Waveform'
+        'Spectrogram'
+        'Combined')
+    end
+    object BtnSavePNG: TButton
+      Left = 8
+      Top = 522
+      Width = 164
+      Height = 26
+      Caption = 'Save PNG...'
+      Enabled = False
+      TabOrder = 14
+      OnClick = BtnSavePNGClick
     end
   end
   object StatusBar: TStatusBar
@@ -303,9 +346,18 @@ object FormMain: TFormMain
     end
   end
   object OpenDialog: TOpenDialog
-    Filter = 'WAV files|*.wav|All files|*.*'
+    Filter = 
+      'Audio files|*.wav;*.mp3|WAV files|*.wav|MP3 files|*.mp3|All file' +
+      's|*.*'
     Left = 1080
     Top = 8
+  end
+  object SaveDialog: TSaveDialog
+    DefaultExt = 'png'
+    Filter = 'PNG image|*.png'
+    Options = [ofOverwritePrompt, ofPathMustExist]
+    Left = 1080
+    Top = 40
   end
   object Timer: TTimer
     Enabled = False
