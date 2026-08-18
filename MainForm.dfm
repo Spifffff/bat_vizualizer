@@ -21,65 +21,72 @@ object FormMain: TFormMain
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
+    object LblSpeed: TLabel
+      Left = 8
+      Top = 74
+      Width = 38
+      Height = 13
+      Caption = 'Speed:'
+    end
     object LblWindow: TLabel
       Left = 8
-      Top = 82
+      Top = 122
       Width = 61
       Height = 13
       Caption = 'Window fn:'
     end
     object LblFFTSize: TLabel
       Left = 8
-      Top = 128
+      Top = 168
       Width = 43
       Height = 13
       Caption = 'FFT size:'
     end
     object LblGainCaption: TLabel
       Left = 8
-      Top = 174
+      Top = 214
       Width = 27
       Height = 13
       Caption = 'Gain:'
     end
     object LblGainVal: TLabel
       Left = 50
-      Top = 174
+      Top = 214
       Width = 22
       Height = 13
       Caption = '0 dB'
     end
     object LblColorScheme: TLabel
       Left = 8
-      Top = 276
+      Top = 316
       Width = 72
       Height = 13
       Caption = 'Color scheme:'
     end
     object LblFloor: TLabel
       Left = 8
-      Top = 328
+      Top = 368
       Width = 71
       Height = 13
       Caption = 'Floor: -100 dB'
     end
     object LblCeiling: TLabel
       Left = 8
-      Top = 378
+      Top = 418
       Width = 64
       Height = 13
       Caption = 'Ceiling: 0 dB'
     end
     object LblMaxFreq: TLabel
       Left = 8
-      Top = 428
+      Top = 468
       Width = 61
       Height = 13
       Caption = 'Max: 96 kHz'
     end
     object LblSave: TLabel
       Left = 8
-      Top = 480
+      Top = 520
       Width = 65
       Height = 13
       Caption = 'Save as PNG:'
@@ -123,14 +130,32 @@ object FormMain: TFormMain
       TabOrder = 3
       OnClick = BtnStopClick
     end
-    object CbxWindow: TComboBox
+    object CbxSpeed: TComboBox
       Left = 8
-      Top = 98
+      Top = 90
       Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 1
       TabOrder = 4
+      Text = '10%'
+      Items.Strings = (
+        '5%'
+        '10%'
+        '12.5%'
+        '20%'
+        '25%'
+        '50%'
+        '100%')
+    end
+    object CbxWindow: TComboBox
+      Left = 8
+      Top = 138
+      Width = 164
+      Height = 21
+      Style = csDropDownList
+      ItemIndex = 1
+      TabOrder = 5
       Text = 'Hann'
       OnChange = CbxWindowChange
       Items.Strings = (
@@ -142,12 +167,12 @@ object FormMain: TFormMain
     end
     object CbxFFTSize: TComboBox
       Left = 8
-      Top = 144
+      Top = 184
       Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 6
-      TabOrder = 5
+      TabOrder = 6
       Text = '4096'
       OnChange = CbxFFTSizeChange
       Items.Strings = (
@@ -163,41 +188,41 @@ object FormMain: TFormMain
     end
     object TrkGain: TTrackBar
       Left = 4
-      Top = 190
+      Top = 230
       Width = 172
       Height = 26
       Max = 80
       Frequency = 10
-      TabOrder = 6
+      TabOrder = 7
       TickStyle = tsNone
       OnChange = TrkGainChange
     end
     object ChkBGSub: TCheckBox
       Left = 8
-      Top = 224
+      Top = 264
       Width = 164
       Height = 17
       Caption = 'Reduce noise'
-      TabOrder = 7
+      TabOrder = 8
       OnClick = ChkBGSubChange
     end
     object ChkFilter: TCheckBox
       Left = 8
-      Top = 244
+      Top = 284
       Width = 164
       Height = 17
       Caption = 'High-pass + gate'
-      TabOrder = 12
+      TabOrder = 13
       OnClick = ChkFilterChange
     end
     object CbxColorScheme: TComboBox
       Left = 8
-      Top = 292
+      Top = 332
       Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 0
-      TabOrder = 8
+      TabOrder = 9
       Text = 'Viridis'
       OnChange = CbxColorSchemeChange
       Items.Strings = (
@@ -213,50 +238,50 @@ object FormMain: TFormMain
     end
     object TrkFloor: TTrackBar
       Left = 4
-      Top = 344
+      Top = 384
       Width = 172
       Height = 26
       Max = -20
       Min = -120
       Frequency = 10
       Position = -100
-      TabOrder = 9
+      TabOrder = 10
       TickStyle = tsNone
       OnChange = TrkFloorChange
     end
     object TrkCeiling: TTrackBar
       Left = 4
-      Top = 394
+      Top = 434
       Width = 172
       Height = 26
       Max = 40
       Min = -60
       Frequency = 10
-      TabOrder = 10
+      TabOrder = 11
       TickStyle = tsNone
       OnChange = TrkCeilingChange
     end
     object TrkMaxFreq: TTrackBar
       Left = 4
-      Top = 444
+      Top = 484
       Width = 172
       Height = 26
       Max = 96
       Min = 1
       Frequency = 10
       Position = 96
-      TabOrder = 11
+      TabOrder = 12
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
     end
     object CbxSaveTarget: TComboBox
       Left = 8
-      Top = 496
+      Top = 536
       Width = 164
       Height = 21
       Style = csDropDownList
       ItemIndex = 2
-      TabOrder = 13
+      TabOrder = 14
       Text = 'Combined'
       Items.Strings = (
         'Waveform'
@@ -265,12 +290,12 @@ object FormMain: TFormMain
     end
     object BtnSavePNG: TButton
       Left = 8
-      Top = 522
+      Top = 562
       Width = 164
       Height = 26
       Caption = 'Save PNG...'
       Enabled = False
-      TabOrder = 14
+      TabOrder = 15
       OnClick = BtnSavePNGClick
     end
   end
@@ -346,7 +371,7 @@ object FormMain: TFormMain
     end
   end
   object OpenDialog: TOpenDialog
-    Filter = 
+    Filter =
       'Audio files|*.wav;*.mp3|WAV files|*.wav|MP3 files|*.mp3|All file' +
       's|*.*'
     Left = 1080

@@ -14,7 +14,6 @@ uses
   FFT, WavReader, Spectrogram, WaveOutPlayer;
 
 const
-  PLAYBACK_RATE = 0.1;
   LEFT_MARGIN = 65;
   BOTTOM_MARGIN = 35;
   TOP_MARGIN = 8;
@@ -56,6 +55,8 @@ type
     SaveDialog: TSaveDialog;
     Timer: TTimer;
     RenderTimer: TTimer;
+    LblSpeed: TLabel;
+    CbxSpeed: TComboBox;
     LblSave: TLabel;
     CbxSaveTarget: TComboBox;
     BtnSavePNG: TButton;
@@ -106,6 +107,7 @@ type
     function WaveRect: TRect;
     function GetFFTSize: Integer;
     function GetWindowType: TWindowType;
+    function GetPlaybackRate: Double;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
@@ -205,6 +207,23 @@ begin
       Result := wtFlatTop;
   else
     Result := wtHann;
+  end;
+end;
+
+
+
+function TFormMain.GetPlaybackRate: Double;
+begin
+  case CbxSpeed.ItemIndex of
+    0: Result := 0.05;
+    1: Result := 0.10;
+    2: Result := 0.125;
+    3: Result := 0.20;
+    4: Result := 0.25;
+    5: Result := 0.50;
+    6: Result := 1.00;
+  else
+    Result := 0.10;
   end;
 end;
 
@@ -465,7 +484,7 @@ begin
     if FWavePlayer.IsPaused() then
       FWavePlayer.Resume()
     else begin
-      OutRate := Round(FWavFile.Info.SampleRate * PLAYBACK_RATE);
+      OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
       FWavePlayer.Load(FWavFile.Samples, OutRate, ActualRate);
       FWavePlayer.Play();
       if FZoomStart > 0.0 then begin
@@ -477,7 +496,7 @@ begin
       if ActualRate <> OutRate then
         StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
       else
-        StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, PLAYBACK_RATE * 100]);
+        StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, GetPlaybackRate() * 100]);
     end;
   except
     on E: Exception do begin
