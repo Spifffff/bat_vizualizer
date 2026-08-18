@@ -35,7 +35,7 @@ var
   W, TwoPi: Double;
 begin
   if Window = wtRectangular then
-    Exit;
+    Exit();
   TwoPi := 2.0 * Pi / (N - 1);
   for I := 0 to N - 1 do begin
     case Window of

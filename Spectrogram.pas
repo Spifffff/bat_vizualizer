@@ -104,7 +104,7 @@ begin
     R := V;
     G := V;
     B := V;
-    Exit;
+    Exit();
   end;
   Frac := T * 7.0;
   Seg := Trunc(Frac);
@@ -176,7 +176,7 @@ var
 begin
   SetLength(Dst, Length(Src));
   if (Length(Src) = 0) or (SampleRate = 0) then
-    Exit;
+    Exit();
   W0 := 2.0 * Pi * CutoffHz / SampleRate;
   Cos0 := Cos(W0);
   Alpha := Sin(W0) / (2.0 * 0.7071); // Q = 1/sqrt(2) Butterworth
@@ -222,7 +222,7 @@ begin
   Samples := AWavFile.Samples;
   TotalSamples := Length(Samples);
   if TotalSamples < AFFTSize then
-    Exit;
+    Exit();
 
   // Evenly-spaced noise frames, at most MAX_NOISE_FRAMES
   Hop := Max(AFFTSize, TotalSamples div MAX_NOISE_FRAMES);
@@ -234,7 +234,7 @@ begin
   end;
   N := Min(N, MAX_NOISE_FRAMES);
   if N = 0 then
-    Exit;
+    Exit();
 
   // Window half-width: aim for ~1 second each side, capped at NOISE_HALF_WIN
   HalfW := Min(NOISE_HALF_WIN, Max(1, Round(FSampleRate / (2.0 * Hop))));
@@ -303,7 +303,7 @@ var
   GateOpen: Boolean;
 begin
   if (FWavFile = nil) or (FNumBins = 0) or (DestWidth <= 0) or (DestHeight <= 0) then
-    Exit;
+    Exit();
 
   if UseHighPass and (Length(FFilteredSamples) = Length(FWavFile.Samples)) then
     Samples := FFilteredSamples

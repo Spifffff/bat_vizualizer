@@ -215,8 +215,8 @@ var
   SI: TScrollInfo;
   PageSz, Pos: Integer;
 begin
-  if not ZoomBar.HandleAllocated then
-    Exit;
+  if not ZoomBar.HandleAllocated() then
+    Exit();
 
   PageSz := Max(1, Min(1000, Round((FZoomEnd - FZoomStart) * 1000)));
   Pos := Round(FZoomStart * 1000);
@@ -250,12 +250,12 @@ begin
   RenderTimer.Enabled := False;
   FreeAndNil(FSpecgram);
   if FWavFile = nil then
-    Exit;
-  FSpecgram := TSpectrogramData.Create;
-  FSpecgram.Prepare(FWavFile, GetFFTSize, GetWindowType);
-  RenderSpectrogram;
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+    Exit();
+  FSpecgram := TSpectrogramData.Create();
+  FSpecgram.Prepare(FWavFile, GetFFTSize(), GetWindowType());
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 
@@ -266,14 +266,14 @@ var
   W, H: Integer;
 begin
   if FSpecgram = nil then
-    Exit;
-  R := SpectRect;
+    Exit();
+  R := SpectRect();
   W := R.Right - R.Left;
   H := R.Bottom - R.Top;
   if (W <= 0) or (H <= 0) then
-    Exit;
+    Exit();
   if FDisplayBmp = nil then
-    FDisplayBmp := TBitmap.Create;
+    FDisplayBmp := TBitmap.Create();
   FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd, ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA, TrkFloor.Position, TrkCeiling.Position,
     IdxToColorScheme(CbxColorScheme.ItemIndex), FMaxPlotHz, ChkFilter.Checked, ChkFilter.Checked);
 end;
@@ -292,9 +292,9 @@ procedure TFormMain.RenderTimerTick(Sender: TObject);
 begin
   RenderTimer.Enabled := False;
   if FSpecgram = nil then
-    Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+    Exit();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
 end;
 
 
@@ -319,12 +319,12 @@ begin
   FSpecgram := nil;
   FDisplayBmp := nil;
   FCursorPos := 0;
-  FWavePlayer := TWaveOutPlayer.Create;
+  FWavePlayer := TWaveOutPlayer.Create();
   FZoomStart := 0.0;
   FZoomEnd := 1.0;
   FDragging := False;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
-  UpdateZoomBar;
+  UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
 end;
@@ -335,11 +335,11 @@ procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   Application.OnMessage := nil;
   Timer.Enabled := False;
-  FWavePlayer.Stop;
-  FWavePlayer.Free;
-  FDisplayBmp.Free;
-  FSpecgram.Free;
-  FWavFile.Free;
+  FWavePlayer.Stop();
+  FWavePlayer.Free();
+  FDisplayBmp.Free();
+  FSpecgram.Free();
+  FWavFile.Free();
 end;
 
 { ---- file loading ---------------------------------------------------------- }
@@ -348,11 +348,11 @@ end;
 
 procedure TFormMain.BtnOpenClick(Sender: TObject);
 begin
-  if not OpenDialog.Execute then
-    Exit;
+  if not OpenDialog.Execute() then
+    Exit();
 
   Timer.Enabled := False;
-  FWavePlayer.Stop;
+  FWavePlayer.Stop();
   FCursorPos := 0;
   FreeAndNil(FSpecgram);
   FreeAndNil(FWavFile);
@@ -361,7 +361,7 @@ begin
   BtnStop.Enabled := False;
 
   try
-    FWavFile := TWavFile.Create;
+    FWavFile := TWavFile.Create();
     FWavFile.LoadFromFile(OpenDialog.FileName);
 
     FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch', [ExtractFileName(OpenDialog.FileName), FWavFile.Info.DurationSec,
@@ -370,14 +370,14 @@ begin
 
     Screen.Cursor := crHourGlass;
     try
-      RecomputeSpectrogram;
+      RecomputeSpectrogram();
     finally
       Screen.Cursor := crDefault;
     end;
 
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
-    UpdateZoomBar;
+    UpdateZoomBar();
 
     TrkMaxFreq.Max := FWavFile.Info.SampleRate div 2000;
     TrkMaxFreq.Min := 1;
@@ -407,13 +407,13 @@ var
   Png: TPngImage;
 begin
   if FSpecgram = nil then
-    Exit;
-  if not SaveDialog.Execute then
-    Exit;
+    Exit();
+  if not SaveDialog.Execute() then
+    Exit();
 
-  WavBmp   := TBitmap.Create;
-  SpectBmp := TBitmap.Create;
-  Bmp      := TBitmap.Create;
+  WavBmp   := TBitmap.Create();
+  SpectBmp := TBitmap.Create();
+  Bmp      := TBitmap.Create();
   try
     WavBmp.PixelFormat := pf24bit;
     WavBmp.Width  := WaveformBox.Width;
@@ -425,7 +425,7 @@ begin
     SpectBmp.Height := PaintBox.Height;
     PaintBox.Perform(WM_PAINT, WPARAM(SpectBmp.Canvas.Handle), 0);
 
-    Png := TPngImage.Create;
+    Png := TPngImage.Create();
     try
       case CbxSaveTarget.ItemIndex of
         0: Png.Assign(WavBmp);
@@ -440,12 +440,12 @@ begin
       end;
       Png.SaveToFile(SaveDialog.FileName);
     finally
-      Png.Free;
+      Png.Free();
     end;
   finally
-    WavBmp.Free;
-    SpectBmp.Free;
-    Bmp.Free;
+    WavBmp.Free();
+    SpectBmp.Free();
+    Bmp.Free();
   end;
 end;
 
@@ -460,14 +460,14 @@ var
   OutRate, ActualRate: Cardinal;
 begin
   if FWavFile = nil then
-    Exit;
+    Exit();
   try
-    if FWavePlayer.IsPaused then
-      FWavePlayer.Resume
+    if FWavePlayer.IsPaused() then
+      FWavePlayer.Resume()
     else begin
       OutRate := Round(FWavFile.Info.SampleRate * PLAYBACK_RATE);
       FWavePlayer.Load(FWavFile.Samples, OutRate, ActualRate);
-      FWavePlayer.Play;
+      FWavePlayer.Play();
       if FZoomStart > 0.0 then begin
         FWavePlayer.SeekToNormalized(FZoomStart);
         FCursorPos := FZoomStart;
@@ -482,7 +482,7 @@ begin
   except
     on E: Exception do begin
       ShowMessage('Audio playback failed:'#13#10 + E.Message);
-      Exit;
+      Exit();
     end;
   end;
   Timer.Enabled := True;
@@ -496,7 +496,7 @@ end;
 procedure TFormMain.BtnPauseClick(Sender: TObject);
 begin
   Timer.Enabled := False;
-  FWavePlayer.Pause;
+  FWavePlayer.Pause();
   BtnPlay.Enabled := True;
   BtnPause.Enabled := False;
 end;
@@ -506,11 +506,11 @@ end;
 procedure TFormMain.BtnStopClick(Sender: TObject);
 begin
   Timer.Enabled := False;
-  FWavePlayer.Stop;
+  FWavePlayer.Stop();
   FCursorPos := 0;
-  ResetPlaybackUI;
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+  ResetPlaybackUI();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 { ---- playback timer -------------------------------------------------------- }
@@ -522,20 +522,20 @@ var
   Pos: Double;
   DurSec: Double;
 begin
-  if FWavePlayer.HasEnded then begin
+  if FWavePlayer.HasEnded() then begin
     Timer.Enabled := False;
-    FWavePlayer.Stop;
+    FWavePlayer.Stop();
     FCursorPos := 0;
-    ResetPlaybackUI;
-    PaintBox.Invalidate;
-    WaveformBox.Invalidate;
-    Exit;
+    ResetPlaybackUI();
+    PaintBox.Invalidate();
+    WaveformBox.Invalidate();
+    Exit();
   end;
 
-  if not(FWavePlayer.IsPlaying or FWavePlayer.IsPaused) then
-    Exit;
+  if not(FWavePlayer.IsPlaying() or FWavePlayer.IsPaused()) then
+    Exit();
 
-  Pos := FWavePlayer.GetNormalizedPosition;
+  Pos := FWavePlayer.GetNormalizedPosition();
   FCursorPos := Pos;
 
   if FWavFile <> nil then begin
@@ -543,8 +543,8 @@ begin
     StatusBar.Panels[1].Text := Format('%.3f / %.3f s', [Pos * DurSec, DurSec]);
   end;
 
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 { ---- settings -------------------------------------------------------------- }
@@ -554,10 +554,10 @@ end;
 procedure TFormMain.CbxWindowChange(Sender: TObject);
 begin
   if FWavFile = nil then
-    Exit;
+    Exit();
   Screen.Cursor := crHourGlass;
   try
-    RecomputeSpectrogram;
+    RecomputeSpectrogram();
   finally
     Screen.Cursor := crDefault;
   end;
@@ -581,7 +581,7 @@ begin
     LblGainVal.Caption := '0 dB'
   else
     LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
-  ScheduleRender;
+  ScheduleRender();
 end;
 
 
@@ -589,9 +589,9 @@ end;
 procedure TFormMain.ChkBGSubChange(Sender: TObject);
 begin
   if FSpecgram = nil then
-    Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+    Exit();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
 end;
 
 
@@ -599,9 +599,9 @@ end;
 procedure TFormMain.ChkFilterChange(Sender: TObject);
 begin
   if FSpecgram = nil then
-    Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
+    Exit();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
 end;
 
 
@@ -609,10 +609,10 @@ end;
 procedure TFormMain.CbxColorSchemeChange(Sender: TObject);
 begin
   if FSpecgram = nil then
-    Exit;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+    Exit();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 
@@ -620,7 +620,7 @@ end;
 procedure TFormMain.TrkFloorChange(Sender: TObject);
 begin
   LblFloor.Caption := Format('Floor: %d dB', [TrkFloor.Position]);
-  ScheduleRender;
+  ScheduleRender();
 end;
 
 
@@ -628,7 +628,7 @@ end;
 procedure TFormMain.TrkCeilingChange(Sender: TObject);
 begin
   LblCeiling.Caption := Format('Ceiling: %d dB', [TrkCeiling.Position]);
-  ScheduleRender;
+  ScheduleRender();
 end;
 
 
@@ -637,7 +637,7 @@ procedure TFormMain.TrkMaxFreqChange(Sender: TObject);
 begin
   FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
   LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
-  ScheduleRender;
+  ScheduleRender();
 end;
 
 
@@ -660,9 +660,9 @@ begin
     if FZoomStart < 0.0 then
       FZoomStart := 0.0;
   end;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 { ---- zoom drag ------------------------------------------------------------- }
@@ -674,10 +674,10 @@ var
   R: TRect;
 begin
   if (Button <> mbLeft) or (FSpecgram = nil) then
-    Exit;
-  R := SpectRect;
+    Exit();
+  R := SpectRect();
   if not PtInRect(R, Point(X, Y)) then
-    Exit;
+    Exit();
   FDragging := True;
   FDragStartX := X;
   FDragCurrentX := X;
@@ -692,19 +692,19 @@ var
   Frac1, Frac2, ClickFrac: Double;
 begin
   if not FDragging then
-    Exit;
+    Exit();
   FDragging := False;
-  R := SpectRect;
+  R := SpectRect();
   W := Max(1, R.Right - R.Left);
 
   if Abs(FDragCurrentX - FDragStartX) < 4 then begin
     // Click: move playback position
     ClickFrac := FZoomStart + (Max(R.Left, Min(R.Right, FDragStartX)) - R.Left) / W * (FZoomEnd - FZoomStart);
     FCursorPos := ClickFrac;
-    if FWavePlayer.IsPlaying or FWavePlayer.IsPaused then
+    if FWavePlayer.IsPlaying() or FWavePlayer.IsPaused() then
       FWavePlayer.SeekToNormalized(ClickFrac);
-    PaintBox.Invalidate;
-    WaveformBox.Invalidate;
+    PaintBox.Invalidate();
+    WaveformBox.Invalidate();
   end
   else if FDragCurrentX > FDragStartX then begin
     // Zoom into selected region
@@ -716,19 +716,19 @@ begin
     FZoomEnd := Min(1.0, Frac2);
     if FZoomEnd <= FZoomStart then
       FZoomEnd := FZoomStart + 0.001;
-    UpdateZoomBar;
-    RenderSpectrogram;
-    PaintBox.Invalidate;
-    WaveformBox.Invalidate;
+    UpdateZoomBar();
+    RenderSpectrogram();
+    PaintBox.Invalidate();
+    WaveformBox.Invalidate();
   end
   else begin
     // Drag left: zoom out completely
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
-    UpdateZoomBar;
-    RenderSpectrogram;
-    PaintBox.Invalidate;
-    WaveformBox.Invalidate;
+    UpdateZoomBar();
+    RenderSpectrogram();
+    PaintBox.Invalidate();
+    WaveformBox.Invalidate();
   end;
 end;
 
@@ -741,19 +741,19 @@ var
   TimeAtCursor: Double;
   FreqAtCursor: Double;
 begin
-  R := SpectRect;
+  R := SpectRect();
 
   if FDragging then begin
     FDragCurrentX := X;
-    PaintBox.Invalidate;
-    WaveformBox.Invalidate;
+    PaintBox.Invalidate();
+    WaveformBox.Invalidate();
   end;
 
   if (FSpecgram = nil) or (FWavFile = nil) then
-    Exit;
+    Exit();
   if not PtInRect(R, Point(X, Y)) then begin
     StatusBar.Panels[2].Text := '';
-    Exit;
+    Exit();
   end;
 
   DurSec := FWavFile.Info.DurationSec;
@@ -771,22 +771,22 @@ var
   Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
 begin
   if Msg.message <> WM_MOUSEWHEEL then
-    Exit;
+    Exit();
   if FSpecgram = nil then
-    Exit;
+    Exit();
   MousePos := Point(SmallInt(Msg.lParam and $FFFF), SmallInt(Msg.lParam shr 16));
   LocalPos := PaintBox.ScreenToClient(MousePos);
   if not PtInRect(PaintBox.ClientRect, LocalPos) then begin
     LocalPos := WaveformBox.ScreenToClient(MousePos);
     if not PtInRect(WaveformBox.ClientRect, LocalPos) then
-      Exit;
+      Exit();
   end;
   WheelDelta := SmallInt(Msg.wParam shr 16);
   ChartLeft := LEFT_MARGIN;
   ChartRight := PaintBox.Width - RIGHT_MARGIN;
   W := ChartRight - ChartLeft;
   if W <= 0 then
-    Exit;
+    Exit();
   LocalX := Max(ChartLeft, Min(ChartRight, LocalPos.X));
   Frac := (LocalX - ChartLeft) / W;
   T := FZoomStart + Frac * (FZoomEnd - FZoomStart);
@@ -805,10 +805,10 @@ begin
   end;
   FZoomStart := Max(0.0, NewStart);
   FZoomEnd := Min(1.0, NewEnd);
-  UpdateZoomBar;
-  RenderSpectrogram;
-  PaintBox.Invalidate;
-  WaveformBox.Invalidate;
+  UpdateZoomBar();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
   Handled := True;
 end;
 
@@ -819,10 +819,10 @@ var
   R: TRect;
 begin
   if (Button <> mbLeft) or (FSpecgram = nil) then
-    Exit;
-  R := WaveRect;
+    Exit();
+  R := WaveRect();
   if not PtInRect(R, Point(X, Y)) then
-    Exit;
+    Exit();
   FDragging := True;
   FDragStartX := X;
   FDragCurrentX := X;
@@ -834,8 +834,8 @@ procedure TFormMain.WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X,
 begin
   if FDragging then begin
     FDragCurrentX := X;
-    WaveformBox.Invalidate;
-    PaintBox.Invalidate;
+    WaveformBox.Invalidate();
+    PaintBox.Invalidate();
   end;
 end;
 
@@ -905,7 +905,7 @@ begin
   H := R.Bottom - R.Top;
   MidY := R.Top + H div 2;
   if (W <= 0) or (H <= 0) then
-    Exit;
+    Exit();
 
   C.Brush.Color := BgColor;
   C.FillRect(R);
@@ -941,12 +941,12 @@ begin
   end;
 
   if FWavFile = nil then
-    Exit;
+    Exit();
 
   Samples := FWavFile.Samples;
   TotalSamples := Length(Samples);
   if TotalSamples = 0 then
-    Exit;
+    Exit();
 
   C.Pen.Color := WaveColor;
   for X := 0 to W - 1 do begin
@@ -990,7 +990,7 @@ begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
     if SelX2 > SelX1 then begin
-      OverBmp := TBitmap.Create;
+      OverBmp := TBitmap.Create();
       try
         OverBmp.PixelFormat := pf24bit;
         OverBmp.Width := SelX2 - SelX1;
@@ -1004,7 +1004,7 @@ begin
         Winapi.Windows.AlphaBlend(C.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
           OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
       finally
-        OverBmp.Free;
+        OverBmp.Free();
       end;
     end;
   end;
@@ -1027,7 +1027,7 @@ var
   Lbl: string;
 begin
   if FWavFile = nil then
-    Exit;
+    Exit();
 
   if FMaxPlotHz > 0 then
     MaxHz := FMaxPlotHz
@@ -1075,7 +1075,7 @@ begin
   EndTime := FZoomEnd * DurSec;
   ZoomDur := EndTime - StartTime;
   if ZoomDur < 1.0E-9 then
-    Exit;
+    Exit();
 
   if ZoomDur >= 8.0 then
     TimeStep := 2.0
@@ -1128,10 +1128,10 @@ var
   X: Integer;
 begin
   if (FCursorPos <= 0.0) or (FZoomEnd <= FZoomStart) then
-    Exit;
+    Exit();
   VisFrac := (FCursorPos - FZoomStart) / (FZoomEnd - FZoomStart);
   if (VisFrac < 0.0) or (VisFrac > 1.0) then
-    Exit;
+    Exit();
   X := R.Left + Round(VisFrac * (R.Right - R.Left));
   C.Pen.Color := clWhite;
   C.Pen.Width := 2;
@@ -1151,7 +1151,7 @@ var
   OverBmp: TBitmap;
   BF: TBlendFunction;
 begin
-  R := SpectRect;
+  R := SpectRect();
   W := R.Right - R.Left;
   H := R.Bottom - R.Top;
 
@@ -1164,11 +1164,11 @@ begin
     PaintBox.Canvas.Font.Size := 12;
     PaintBox.Canvas.Brush.Style := bsClear;
     PaintBox.Canvas.TextOut(PaintBox.Width div 2 - PaintBox.Canvas.TextWidth(Msg) div 2, PaintBox.Height div 2 - PaintBox.Canvas.TextHeight(Msg) div 2, Msg);
-    Exit;
+    Exit();
   end;
 
   if (FDisplayBmp = nil) or (FDisplayBmp.Width <> W) or (FDisplayBmp.Height <> H) then
-    RenderSpectrogram;
+    RenderSpectrogram();
 
   if (FDisplayBmp <> nil) and (FDisplayBmp.Width > 0) then
     BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H, FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
@@ -1181,7 +1181,7 @@ begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
     if SelX2 > SelX1 then begin
-      OverBmp := TBitmap.Create;
+      OverBmp := TBitmap.Create();
       try
         OverBmp.PixelFormat := pf24bit;
         OverBmp.Width := SelX2 - SelX1;
@@ -1195,7 +1195,7 @@ begin
         Winapi.Windows.AlphaBlend(PaintBox.Canvas.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
           OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
       finally
-        OverBmp.Free;
+        OverBmp.Free();
       end;
     end;
   end;

@@ -168,7 +168,7 @@ var
   H: PWaveHdr;
 begin
   if FDevHandle = 0 then
-    Exit;
+    Exit();
   H := PWaveHdr(@FWaveHdrBuf);
   waveOutReset(FDevHandle);
   if FLoaded then begin
@@ -185,7 +185,7 @@ end;
 
 destructor TWaveOutPlayer.Destroy;
 begin
-  CloseDevice;
+  CloseDevice();
   inherited;
 end;
 
@@ -201,7 +201,7 @@ var
   I, V: Integer;
   Rate: Cardinal;
 begin
-  CloseDevice;
+  CloseDevice();
 
   FTotalSamples := Length(Samples);
   if FTotalSamples = 0 then
@@ -255,7 +255,7 @@ begin
 
   Res := waveOutPrepareHeader(FDevHandle, H, SizeOf(TWaveHdr));
   if Res <> MMSYSERR_NOERROR then begin
-    CloseDevice;
+    CloseDevice();
     raise Exception.CreateFmt('waveOutPrepareHeader failed (error %d).', [Res]);
   end;
   FLoaded := True;
@@ -268,7 +268,7 @@ var
   Res: MMRESULT;
 begin
   if not FLoaded then
-    Exit;
+    Exit();
   Res := waveOutWrite(FDevHandle, PWaveHdr(@FWaveHdrBuf), SizeOf(TWaveHdr));
   if Res <> MMSYSERR_NOERROR then
     raise Exception.CreateFmt('waveOutWrite failed (error %d).', [Res]);
@@ -281,7 +281,7 @@ end;
 procedure TWaveOutPlayer.Pause;
 begin
   if FDevHandle = 0 then
-    Exit;
+    Exit();
   waveOutPause(FDevHandle);
   FPaused := True;
 end;
@@ -291,7 +291,7 @@ end;
 procedure TWaveOutPlayer.Resume;
 begin
   if FDevHandle = 0 then
-    Exit;
+    Exit();
   waveOutRestart(FDevHandle);
   FPaused := False;
 end;
@@ -300,7 +300,7 @@ end;
 
 procedure TWaveOutPlayer.Stop;
 begin
-  CloseDevice;
+  CloseDevice();
   SetLength(FBuffer, 0);
   FTotalSamples := 0;
   FActualRate := 0;
@@ -314,7 +314,7 @@ var
 begin
   Result := 0.0;
   if (FDevHandle = 0) or (FTotalSamples = 0) then
-    Exit;
+    Exit();
   FillChar(MMT, SizeOf(MMT), 0);
   MMT.wType := TIME_SAMPLES;
   waveOutGetPosition(FDevHandle, @MMT, SizeOf(TMMTime));
@@ -327,7 +327,7 @@ end;
 
 function TWaveOutPlayer.IsPlaying: Boolean;
 begin
-  Result := FSubmitted and (not FPaused) and ((WavHdrFlags and WHDR_DONE) = 0);
+  Result := FSubmitted and (not FPaused) and ((WavHdrFlags() and WHDR_DONE) = 0);
 end;
 
 
@@ -341,7 +341,7 @@ end;
 
 function TWaveOutPlayer.HasEnded: Boolean;
 begin
-  Result := FSubmitted and (not FPaused) and ((WavHdrFlags and WHDR_DONE) <> 0);
+  Result := FSubmitted and (not FPaused) and ((WavHdrFlags() and WHDR_DONE) <> 0);
 end;
 
 
@@ -353,8 +353,8 @@ var
   WasActive: Boolean;
 begin
   if (FDevHandle = 0) or not FLoaded then
-    Exit;
-  WasActive := IsPlaying or IsPaused;
+    Exit();
+  WasActive := IsPlaying() or IsPaused();
   H := PWaveHdr(@FWaveHdrBuf);
   waveOutReset(FDevHandle);
   waveOutUnprepareHeader(FDevHandle, H, SizeOf(TWaveHdr));

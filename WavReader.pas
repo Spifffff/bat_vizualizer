@@ -272,7 +272,7 @@ begin
     end;
 
   finally
-    F.Free;
+    F.Free();
   end;
 end;
 
@@ -365,7 +365,7 @@ begin
         end;
         Inc(Count, FrameN);
       finally
-        MBuf.Unlock;
+        MBuf.Unlock();
       end;
     end;
 
@@ -375,7 +375,7 @@ begin
     FInfo.NumSamples  := Count;
     FInfo.DurationSec := Count / Rate;
   finally
-    MFShutdown;
+    MFShutdown();
   end;
 end;
 
