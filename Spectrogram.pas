@@ -12,7 +12,7 @@ uses
   FFT, WavReader;
 
 type
-  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale, csPlasma, csCividis, csMako, csRocket, csSpectral);
+  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale, csGrayscaleInv, csPlasma, csCividis, csMako, csRocket, csSpectral);
 
 
 
@@ -101,6 +101,13 @@ begin
   T := Min(1.0, Max(0.0, T));
   if Scheme = csGrayscale then begin
     V := Round(T * 255);
+    R := V;
+    G := V;
+    B := V;
+    Exit();
+  end;
+  if Scheme = csGrayscaleInv then begin
+    V := 255 - Round(T * 255);
     R := V;
     G := V;
     B := V;

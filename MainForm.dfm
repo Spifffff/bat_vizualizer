@@ -230,6 +230,7 @@ object FormMain: TFormMain
         'Inferno'
         'Magma'
         'Grayscale'
+        'Grayscale (inv)'
         'Plasma'
         'Cividis'
         'Mako'

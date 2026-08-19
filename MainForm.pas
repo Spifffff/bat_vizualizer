@@ -141,14 +141,16 @@ begin
     3:
       Result := csGrayscale;
     4:
-      Result := csPlasma;
+      Result := csGrayscaleInv;
     5:
-      Result := csCividis;
+      Result := csPlasma;
     6:
-      Result := csMako;
+      Result := csCividis;
     7:
-      Result := csRocket;
+      Result := csMako;
     8:
+      Result := csRocket;
+    9:
       Result := csSpectral;
   else
     Result := csViridis;
