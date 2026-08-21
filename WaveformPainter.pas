@@ -24,6 +24,10 @@ implementation
 
 
 
+uses System.Types;
+
+
+
 var
   GOverlayBmp: TBitmap;
 
