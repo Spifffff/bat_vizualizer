@@ -137,6 +137,9 @@
         <DCCReference Include="WavReader.pas"/>
         <DCCReference Include="Spectrogram.pas"/>
         <DCCReference Include="WaveOutPlayer.pas"/>
+        <DCCReference Include="WaveformPainter.pas"/>
+        <DCCReference Include="SpectrogramPainter.pas"/>
+        <DCCReference Include="PngExport.pas"/>
         <DCCReference Include="Mp3Writer.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

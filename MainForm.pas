@@ -9,9 +9,10 @@ interface
 uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.Math,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Imaging.PngImage,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer;
+  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
+  WaveformPainter, SpectrogramPainter, PngExport;
 
 const
   LEFT_MARGIN = 65;
@@ -114,9 +115,6 @@ type
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
-    procedure DrawAxes(C: TCanvas; const R: TRect);
-    procedure DrawCursor(C: TCanvas; const R: TRect);
-    procedure RenderWaveform(C: TCanvas; PxW, PxH: Integer);
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
   end;
@@ -428,49 +426,39 @@ end;
 
 procedure TFormMain.BtnSavePNGClick(Sender: TObject);
 var
-  WavBmp, SpectBmp, Bmp: TBitmap;
-  Png: TPngImage;
+  WavBmp, SpectBmp: TBitmap;
+  Scheme: TColorScheme;
+  VR, VG, VB: Byte;
+  BgColor, WaveColor: TColor;
+  Samples: TArray<Single>;
 begin
   if FSpecgram = nil then
     Exit();
   if not SaveDialog.Execute() then
     Exit();
-
-  WavBmp   := TBitmap.Create();
+  Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
+  FSpecgram.GetColor(0.0, Scheme, VR, VG, VB);
+  BgColor := RGB(VR, VG, VB);
+  FSpecgram.GetColor(1.0, Scheme, VR, VG, VB);
+  WaveColor := RGB(VR, VG, VB);
+  Samples := FWavFile.Samples;
+  WavBmp := TBitmap.Create();
   SpectBmp := TBitmap.Create();
-  Bmp      := TBitmap.Create();
   try
     WavBmp.PixelFormat := pf24bit;
     WavBmp.Width  := WaveformBox.Width;
     WavBmp.Height := WaveformBox.Height;
-    RenderWaveform(WavBmp.Canvas, WavBmp.Width, WavBmp.Height);
-
+    PaintWaveform(WavBmp.Canvas, WavBmp.Width, WavBmp.Height,
+      Rect(LEFT_MARGIN, WAVE_VPAD, WavBmp.Width - RIGHT_MARGIN, WavBmp.Height - WAVE_VPAD),
+      Samples, FZoomStart, FZoomEnd, FCursorPos, BgColor, WaveColor);
     SpectBmp.PixelFormat := pf24bit;
     SpectBmp.Width  := PaintBox.Width;
     SpectBmp.Height := PaintBox.Height;
     PaintBox.Perform(WM_PAINT, WPARAM(SpectBmp.Canvas.Handle), 0);
-
-    Png := TPngImage.Create();
-    try
-      case CbxSaveTarget.ItemIndex of
-        0: Png.Assign(WavBmp);
-        1: Png.Assign(SpectBmp);
-      else
-        Bmp.PixelFormat := pf24bit;
-        Bmp.Width  := Max(WavBmp.Width, SpectBmp.Width);
-        Bmp.Height := WavBmp.Height + SpectBmp.Height;
-        Bmp.Canvas.Draw(0, 0, WavBmp);
-        Bmp.Canvas.Draw(0, WavBmp.Height, SpectBmp);
-        Png.Assign(Bmp);
-      end;
-      Png.SaveToFile(SaveDialog.FileName);
-    finally
-      Png.Free();
-    end;
+    SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
   finally
     WavBmp.Free();
     SpectBmp.Free();
-    Bmp.Free();
   end;
 end;
 
@@ -908,38 +896,13 @@ end;
 
 
 procedure TFormMain.WaveformBoxPaint(Sender: TObject);
-begin
-  RenderWaveform(WaveformBox.Canvas, WaveformBox.Width, WaveformBox.Height);
-end;
-
-
-
-procedure TFormMain.RenderWaveform(C: TCanvas; PxW, PxH: Integer);
-const
-  GRID_COLOR = $00444444;
-  AXIS_COLOR = clWhite;
-  OUTER_COLOR = $00202020;
 var
-  Samples: TArray<Single>;
-  TotalSamples: Integer;
-  R: TRect;
-  W, H, MidY: Integer;
-  X, S0, S1, I: Integer;
-  Frac0, Frac1: Double;
-  MinVal, MaxVal, V: Single;
-  YHi, YLo: Integer;
-  VisFrac: Double;
-  CurX: Integer;
-  TextH, TextW: Integer;
-  Lbl: string;
-  LblY: Integer;
   Scheme: TColorScheme;
   VR, VG, VB: Byte;
-  BgColor: TColor;
-  WaveColor: TColor;
+  BgColor, WaveColor: TColor;
+  Samples: TArray<Single>;
+  R: TRect;
   SelX1, SelX2: Integer;
-  OverBmp: TBitmap;
-  BF: TBlendFunction;
 begin
   Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
   if FSpecgram <> nil then begin
@@ -951,248 +914,16 @@ begin
     BgColor := clBlack;
     WaveColor := $00BBBBBB;
   end;
-
-  C.Brush.Color := OUTER_COLOR;
-  C.FillRect(Rect(0, 0, PxW, PxH));
-
-  R := Rect(LEFT_MARGIN, WAVE_VPAD, PxW - RIGHT_MARGIN, PxH - WAVE_VPAD);
-  W := R.Right - R.Left;
-  H := R.Bottom - R.Top;
-  MidY := R.Top + H div 2;
-  if (W <= 0) or (H <= 0) then
-    Exit();
-
-  C.Brush.Color := BgColor;
-  C.FillRect(R);
-  C.Brush.Style := bsClear;
-
-  C.Font.Size := 8;
-  C.Font.Color := AXIS_COLOR;
-  C.Pen.Width := 1;
-  TextH := C.TextHeight('0');
-
-  for I := 0 to 2 do begin
-    case I of
-      0: begin
-          Lbl := '100%';
-          LblY := R.Top;
-        end;
-      1: begin
-          Lbl := '0%';
-          LblY := MidY;
-        end;
-    else
-      Lbl := '-100%';
-      LblY := R.Bottom;
-    end;
-    C.Pen.Color := GRID_COLOR;
-    C.MoveTo(R.Left, LblY);
-    C.LineTo(R.Right, LblY);
-    C.Pen.Color := AXIS_COLOR;
-    C.MoveTo(R.Left - 4, LblY);
-    C.LineTo(R.Left, LblY);
-    TextW := C.TextWidth(Lbl);
-    C.TextOut(R.Left - TextW - 6, LblY - TextH div 2, Lbl);
-  end;
-
-  if FWavFile = nil then
-    Exit();
-
-  Samples := FWavFile.Samples;
-  TotalSamples := Length(Samples);
-  if TotalSamples = 0 then
-    Exit();
-
-  C.Pen.Color := WaveColor;
-  for X := 0 to W - 1 do begin
-    Frac0 := FZoomStart + X / W * (FZoomEnd - FZoomStart);
-    Frac1 := FZoomStart + (X + 1) / W * (FZoomEnd - FZoomStart);
-    S0 := Max(0, Min(TotalSamples - 1, Round(Frac0 * TotalSamples)));
-    S1 := Max(S0 + 1, Min(TotalSamples, Round(Frac1 * TotalSamples)));
-
-    MinVal := 1.0;
-    MaxVal := -1.0;
-    for I := S0 to S1 - 1 do begin
-      V := Samples[I];
-      if V < MinVal then
-        MinVal := V;
-      if V > MaxVal then
-        MaxVal := V;
-    end;
-
-    YHi := MidY - Round(MaxVal * (H div 2));
-    YLo := MidY - Round(MinVal * (H div 2));
-    if YHi = YLo then
-      Inc(YLo);
-
-    C.MoveTo(R.Left + X, YHi);
-    C.LineTo(R.Left + X, YLo);
-  end;
-
-  if (FCursorPos > 0.0) and (FZoomEnd > FZoomStart) then begin
-    VisFrac := (FCursorPos - FZoomStart) / (FZoomEnd - FZoomStart);
-    if (VisFrac >= 0.0) and (VisFrac <= 1.0) then begin
-      CurX := R.Left + Round(VisFrac * W);
-      C.Pen.Color := clWhite;
-      C.Pen.Width := 2;
-      C.MoveTo(CurX, R.Top);
-      C.LineTo(CurX, R.Bottom);
-      C.Pen.Width := 1;
-    end;
-  end;
-
+  if FWavFile <> nil then
+    Samples := FWavFile.Samples;
+  R := WaveRect();
+  PaintWaveform(WaveformBox.Canvas, WaveformBox.Width, WaveformBox.Height, R,
+    Samples, FZoomStart, FZoomEnd, FCursorPos, BgColor, WaveColor);
   if FDragging and (FDragCurrentX > FDragStartX) then begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
-    if SelX2 > SelX1 then begin
-      OverBmp := TBitmap.Create();
-      try
-        OverBmp.PixelFormat := pf24bit;
-        OverBmp.Width := SelX2 - SelX1;
-        OverBmp.Height := R.Bottom - R.Top;
-        OverBmp.Canvas.Brush.Color := clWhite;
-        OverBmp.Canvas.FillRect(Rect(0, 0, OverBmp.Width, OverBmp.Height));
-        BF.BlendOp := AC_SRC_OVER;
-        BF.BlendFlags := 0;
-        BF.SourceConstantAlpha := 60;
-        BF.AlphaFormat := 0;
-        Winapi.Windows.AlphaBlend(C.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
-          OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
-      finally
-        OverBmp.Free();
-      end;
-    end;
+    DrawSelectionOverlay(WaveformBox.Canvas, R, SelX1, SelX2);
   end;
-end;
-
-
-
-procedure TFormMain.DrawAxes(C: TCanvas; const R: TRect);
-const
-  CLR_AXIS = clWhite;
-  CLR_GRID = $00444444;
-var
-  MaxHz, DurSec: Double;
-  StartTime, EndTime, ZoomDur: Double;
-  FreqStep, TimeStep: Double;
-  Freq, T: Double;
-  FirstTick: Double;
-  I, X, Y, TextH, TextW: Integer;
-  NumTicks: Integer;
-  Lbl: string;
-begin
-  if FWavFile = nil then
-    Exit();
-
-  if FMaxPlotHz > 0 then
-    MaxHz := FMaxPlotHz
-  else
-    MaxHz := FWavFile.Info.SampleRate / 2.0;
-  DurSec := FWavFile.Info.DurationSec;
-
-  C.Font.Size := 8;
-  C.Font.Color := CLR_AXIS;
-  C.Brush.Style := bsClear;
-
-  if MaxHz >= 40000 then
-    FreqStep := 10000
-  else if MaxHz >= 10000 then
-    FreqStep := 5000
-  else
-    FreqStep := 1000;
-
-  NumTicks := Floor(MaxHz / FreqStep);
-  TextH := C.TextHeight('0');
-
-  for I := 0 to NumTicks do begin
-    Freq := I * FreqStep;
-    Y := R.Bottom - Round(Freq / MaxHz * (R.Bottom - R.Top));
-
-    C.Pen.Color := CLR_AXIS;
-    C.Pen.Width := 1;
-    C.MoveTo(R.Left - 4, Y);
-    C.LineTo(R.Left, Y);
-
-    C.Pen.Color := CLR_GRID;
-    C.MoveTo(R.Left, Y);
-    C.LineTo(R.Right, Y);
-
-    if Freq >= 1000 then
-      Lbl := Format('%gk', [Freq / 1000])
-    else
-      Lbl := Format('%g', [Freq]);
-    TextW := C.TextWidth(Lbl);
-    C.Font.Color := CLR_AXIS;
-    C.TextOut(R.Left - TextW - 6, Y - TextH div 2, Lbl);
-  end;
-
-  StartTime := FZoomStart * DurSec;
-  EndTime := FZoomEnd * DurSec;
-  ZoomDur := EndTime - StartTime;
-  if ZoomDur < 1.0E-9 then
-    Exit();
-
-  if ZoomDur >= 8.0 then
-    TimeStep := 2.0
-  else if ZoomDur >= 4.0 then
-    TimeStep := 1.0
-  else if ZoomDur >= 2.0 then
-    TimeStep := 0.5
-  else if ZoomDur >= 0.8 then
-    TimeStep := 0.2
-  else if ZoomDur >= 0.3 then
-    TimeStep := 0.1
-  else if ZoomDur >= 0.08 then
-    TimeStep := 0.02
-  else if ZoomDur >= 0.03 then
-    TimeStep := 0.01
-  else
-    TimeStep := 0.002;
-
-  FirstTick := Ceil(StartTime / TimeStep - 1.0E-9) * TimeStep;
-
-  T := FirstTick;
-  while T <= EndTime + TimeStep * 1.0E-6 do begin
-    X := R.Left + Round((T - StartTime) / ZoomDur * (R.Right - R.Left));
-    if (X >= R.Left) and (X <= R.Right) then begin
-      C.Pen.Color := CLR_AXIS;
-      C.MoveTo(X, R.Bottom);
-      C.LineTo(X, R.Bottom + 4);
-
-      C.Pen.Color := CLR_GRID;
-      C.MoveTo(X, R.Top);
-      C.LineTo(X, R.Bottom);
-
-      if ZoomDur < 0.5 then
-        Lbl := Format('%.3f s', [T])
-      else
-        Lbl := Format('%.2g s', [T]);
-      TextW := C.TextWidth(Lbl);
-      C.Font.Color := CLR_AXIS;
-      C.TextOut(X - TextW div 2, R.Bottom + 5, Lbl);
-    end;
-    T := T + TimeStep;
-  end;
-end;
-
-
-
-procedure TFormMain.DrawCursor(C: TCanvas; const R: TRect);
-var
-  VisFrac: Double;
-  X: Integer;
-begin
-  if (FCursorPos <= 0.0) or (FZoomEnd <= FZoomStart) then
-    Exit();
-  VisFrac := (FCursorPos - FZoomStart) / (FZoomEnd - FZoomStart);
-  if (VisFrac < 0.0) or (VisFrac > 1.0) then
-    Exit();
-  X := R.Left + Round(VisFrac * (R.Right - R.Left));
-  C.Pen.Color := clWhite;
-  C.Pen.Width := 2;
-  C.MoveTo(X, R.Top);
-  C.LineTo(X, R.Bottom);
-  C.Pen.Width := 1;
 end;
 
 
@@ -1203,8 +934,6 @@ var
   W, H: Integer;
   Msg: string;
   SelX1, SelX2: Integer;
-  OverBmp: TBitmap;
-  BF: TBlendFunction;
 begin
   R := SpectRect();
   W := R.Right - R.Left;
@@ -1228,31 +957,14 @@ begin
   if (FDisplayBmp <> nil) and (FDisplayBmp.Width > 0) then
     BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H, FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
 
-  DrawAxes(PaintBox.Canvas, R);
-  DrawCursor(PaintBox.Canvas, R);
+  if FWavFile <> nil then
+    DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd);
+  DrawSpectCursor(PaintBox.Canvas, R, FCursorPos, FZoomStart, FZoomEnd);
 
-  // Rubber-band selection overlay when dragging right
   if FDragging and (FDragCurrentX > FDragStartX) then begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
-    if SelX2 > SelX1 then begin
-      OverBmp := TBitmap.Create();
-      try
-        OverBmp.PixelFormat := pf24bit;
-        OverBmp.Width := SelX2 - SelX1;
-        OverBmp.Height := R.Bottom - R.Top;
-        OverBmp.Canvas.Brush.Color := clWhite;
-        OverBmp.Canvas.FillRect(Rect(0, 0, OverBmp.Width, OverBmp.Height));
-        BF.BlendOp := AC_SRC_OVER;
-        BF.BlendFlags := 0;
-        BF.SourceConstantAlpha := 60;
-        BF.AlphaFormat := 0;
-        Winapi.Windows.AlphaBlend(PaintBox.Canvas.Handle, SelX1, R.Top, SelX2 - SelX1, R.Bottom - R.Top,
-          OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
-      finally
-        OverBmp.Free();
-      end;
-    end;
+    DrawSelectionOverlay(PaintBox.Canvas, R, SelX1, SelX2);
   end;
 end;
 
