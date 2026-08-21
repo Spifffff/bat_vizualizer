@@ -6,7 +6,7 @@ interface
 
 
 
-uses Vcl.Graphics;
+uses Vcl.Graphics, System.Types;
 
 // Draws frequency (Y) and time (X) axis labels and grid lines inside R.
 // MaxPlotHz: the caller passes FMaxPlotHz (always valid when a file is loaded).
