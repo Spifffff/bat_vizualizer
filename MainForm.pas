@@ -341,7 +341,7 @@ begin
   FWavFile := nil;
   FSpecgram := nil;
   FDisplayBmp := nil;
-  FCursorPos := 0;
+  FCursorPos := -1;
   FWavePlayer := TWaveOutPlayer.Create();
   FZoomStart := 0.0;
   FZoomEnd := 1.0;
@@ -376,7 +376,7 @@ begin
 
   Timer.Enabled := False;
   FWavePlayer.Stop();
-  FCursorPos := 0;
+  FCursorPos := -1;
   FreeAndNil(FSpecgram);
   FreeAndNil(FWavFile);
   BtnPlay.Enabled := False;
@@ -557,7 +557,7 @@ procedure TFormMain.BtnStopClick(Sender: TObject);
 begin
   Timer.Enabled := False;
   FWavePlayer.Stop();
-  FCursorPos := 0;
+  FCursorPos := -1;
   ResetPlaybackUI();
   PaintBox.Invalidate();
   WaveformBox.Invalidate();
@@ -575,7 +575,7 @@ begin
   if FWavePlayer.HasEnded() then begin
     Timer.Enabled := False;
     FWavePlayer.Stop();
-    FCursorPos := 0;
+    FCursorPos := -1;
     ResetPlaybackUI();
     PaintBox.Invalidate();
     WaveformBox.Invalidate();

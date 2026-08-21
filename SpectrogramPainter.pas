@@ -6,7 +6,7 @@ interface
 
 
 
-uses Vcl.Graphics, System.Math;
+uses Vcl.Graphics;
 
 // Draws frequency (Y) and time (X) axis labels and grid lines inside R.
 // MaxPlotHz: the caller passes FMaxPlotHz (always valid when a file is loaded).
@@ -15,6 +15,7 @@ procedure DrawSpectAxes(C: TCanvas; const R: TRect;
   DurationSec, MaxPlotHz, ZoomStart, ZoomEnd: Double);
 
 // Draws the playback-cursor line inside R.
+// CursorPos < 0 means unset (no cursor drawn).
 procedure DrawSpectCursor(C: TCanvas; const R: TRect;
   CursorPos, ZoomStart, ZoomEnd: Double);
 
@@ -24,7 +25,7 @@ implementation
 
 
 
-uses System.SysUtils;
+uses System.SysUtils, System.Math;
 
 
 
@@ -135,7 +136,7 @@ var
   VisFrac: Double;
   X: Integer;
 begin
-  if (CursorPos <= 0.0) or (ZoomEnd <= ZoomStart) then
+  if (CursorPos < 0.0) or (ZoomEnd <= ZoomStart) then
     Exit();
   VisFrac := (CursorPos - ZoomStart) / (ZoomEnd - ZoomStart);
   if (VisFrac < 0.0) or (VisFrac > 1.0) then

@@ -125,7 +125,7 @@ begin
     C.LineTo(R.Left + X, YLo);
   end;
 
-  if (CursorPos > 0.0) and (ZoomEnd > ZoomStart) then begin
+  if (CursorPos >= 0.0) and (ZoomEnd > ZoomStart) then begin
     VisFrac := (CursorPos - ZoomStart) / (ZoomEnd - ZoomStart);
     if (VisFrac >= 0.0) and (VisFrac <= 1.0) then begin
       CurX := R.Left + Round(VisFrac * W);
