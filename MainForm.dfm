@@ -299,6 +299,16 @@ object FormMain: TFormMain
       TabOrder = 15
       OnClick = BtnSavePNGClick
     end
+    object BtnSaveMp3: TButton
+      Left = 8
+      Top = 592
+      Width = 164
+      Height = 26
+      Caption = 'Save MP3...'
+      Enabled = False
+      TabOrder = 16
+      OnClick = BtnSaveMp3Click
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -384,6 +394,13 @@ object FormMain: TFormMain
     Options = [ofOverwritePrompt, ofPathMustExist]
     Left = 1080
     Top = 40
+  end
+  object SaveDialogMp3: TSaveDialog
+    DefaultExt = 'mp3'
+    Filter = 'MP3 audio|*.mp3'
+    Options = [ofOverwritePrompt, ofPathMustExist]
+    Left = 1080
+    Top = 72
   end
   object Timer: TTimer
     Enabled = False

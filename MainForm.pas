@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Classes, System.Math,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Imaging.PngImage,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  FFT, WavReader, Spectrogram, WaveOutPlayer;
+  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer;
 
 const
   LEFT_MARGIN = 65;
@@ -60,6 +60,8 @@ type
     LblSave: TLabel;
     CbxSaveTarget: TComboBox;
     BtnSavePNG: TButton;
+    BtnSaveMp3: TButton;
+    SaveDialogMp3: TSaveDialog;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenClick(Sender: TObject);
@@ -88,6 +90,7 @@ type
     procedure TrkMaxFreqChange(Sender: TObject);
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
+    procedure BtnSaveMp3Click(Sender: TObject);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -408,6 +411,7 @@ begin
 
     BtnPlay.Enabled := True;
     BtnSavePNG.Enabled := True;
+    BtnSaveMp3.Enabled := True;
 
   except
     on E: Exception do begin
@@ -467,6 +471,36 @@ begin
     WavBmp.Free();
     SpectBmp.Free();
     Bmp.Free();
+  end;
+end;
+
+
+
+{ ---- MP3 export ------------------------------------------------------------ }
+
+
+
+procedure TFormMain.BtnSaveMp3Click(Sender: TObject);
+var
+  DesiredRate, ActualRate: Cardinal;
+begin
+  if FWavFile = nil then
+    Exit();
+  if not SaveDialogMp3.Execute() then
+    Exit();
+  DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+  Screen.Cursor := crHourGlass;
+  try
+    try
+      SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, ActualRate);
+      StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
+        [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+    except
+      on E: Exception do
+        ShowMessage('Error saving MP3:'#13#10 + E.Message);
+    end;
+  finally
+    Screen.Cursor := crDefault;
   end;
 end;
 
