@@ -109,6 +109,7 @@ type
 
     function SpectRect: TRect;
     function WaveRect: TRect;
+    procedure ApplyZoomDrag(const ChartR: TRect);
     function GetFFTSize: Integer;
     function GetWindowType: TWindowType;
     function GetPlaybackRate: Double;
@@ -454,8 +455,14 @@ begin
     SpectBmp.PixelFormat := pf24bit;
     SpectBmp.Width  := PaintBox.Width;
     SpectBmp.Height := PaintBox.Height;
+    FDragging := False;
     PaintBox.Perform(WM_PAINT, WPARAM(SpectBmp.Canvas.Handle), 0);
-    SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
+    try
+      SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
+    except
+      on E: Exception do
+        ShowMessage('Error saving PNG:'#13#10 + E.Message);
+    end;
   finally
     WavBmp.Free();
     SpectBmp.Free();
@@ -728,21 +735,15 @@ end;
 
 
 
-procedure TFormMain.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TFormMain.ApplyZoomDrag(const ChartR: TRect);
 var
-  R: TRect;
   W, SelX1, SelX2: Integer;
   Frac1, Frac2, ClickFrac: Double;
 begin
-  if not FDragging then
-    Exit();
-  FDragging := False;
-  R := SpectRect();
-  W := Max(1, R.Right - R.Left);
+  W := Max(1, ChartR.Right - ChartR.Left);
 
   if Abs(FDragCurrentX - FDragStartX) < 4 then begin
-    // Click: move playback position
-    ClickFrac := FZoomStart + (Max(R.Left, Min(R.Right, FDragStartX)) - R.Left) / W * (FZoomEnd - FZoomStart);
+    ClickFrac := FZoomStart + (Max(ChartR.Left, Min(ChartR.Right, FDragStartX)) - ChartR.Left) / W * (FZoomEnd - FZoomStart);
     FCursorPos := ClickFrac;
     if FWavePlayer.IsPlaying() or FWavePlayer.IsPaused() then
       FWavePlayer.SeekToNormalized(ClickFrac);
@@ -750,11 +751,10 @@ begin
     WaveformBox.Invalidate();
   end
   else if FDragCurrentX > FDragStartX then begin
-    // Zoom into selected region
-    SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
-    SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
-    Frac1 := FZoomStart + (SelX1 - R.Left) / W * (FZoomEnd - FZoomStart);
-    Frac2 := FZoomStart + (SelX2 - R.Left) / W * (FZoomEnd - FZoomStart);
+    SelX1 := Max(ChartR.Left, Min(ChartR.Right, FDragStartX));
+    SelX2 := Max(ChartR.Left, Min(ChartR.Right, FDragCurrentX));
+    Frac1 := FZoomStart + (SelX1 - ChartR.Left) / W * (FZoomEnd - FZoomStart);
+    Frac2 := FZoomStart + (SelX2 - ChartR.Left) / W * (FZoomEnd - FZoomStart);
     FZoomStart := Max(0.0, Frac1);
     FZoomEnd := Min(1.0, Frac2);
     if FZoomEnd <= FZoomStart then
@@ -765,7 +765,6 @@ begin
     WaveformBox.Invalidate();
   end
   else begin
-    // Drag left: zoom out completely
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
     UpdateZoomBar();
@@ -773,6 +772,16 @@ begin
     PaintBox.Invalidate();
     WaveformBox.Invalidate();
   end;
+end;
+
+
+
+procedure TFormMain.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if not FDragging then
+    Exit();
+  FDragging := False;
+  ApplyZoomDrag(SpectRect());
 end;
 
 
@@ -826,7 +835,10 @@ begin
   end;
   WheelDelta := SmallInt(Msg.wParam shr 16);
   ChartLeft := LEFT_MARGIN;
-  ChartRight := PaintBox.Width - RIGHT_MARGIN;
+  if PtInRect(PaintBox.ClientRect, PaintBox.ScreenToClient(MousePos)) then
+    ChartRight := PaintBox.Width - RIGHT_MARGIN
+  else
+    ChartRight := WaveformBox.Width - RIGHT_MARGIN;
   W := ChartRight - ChartLeft;
   if W <= 0 then
     Exit();
@@ -886,7 +898,10 @@ end;
 
 procedure TFormMain.WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  PaintBoxMouseUp(Sender, Button, Shift, X, Y);
+  if not FDragging then
+    Exit();
+  FDragging := False;
+  ApplyZoomDrag(WaveRect());
 end;
 
 
