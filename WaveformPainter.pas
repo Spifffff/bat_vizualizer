@@ -144,7 +144,7 @@ procedure DrawSelectionOverlay(C: TCanvas; const R: TRect; X1, X2: Integer);
 var
   BF: TBlendFunction;
 begin
-  if X2 <= X1 then
+  if (X2 <= X1) or (R.Bottom <= R.Top) then
     Exit();
   BF.BlendOp := AC_SRC_OVER;
   BF.BlendFlags := 0;

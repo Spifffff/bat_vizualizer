@@ -456,6 +456,7 @@ begin
     SpectBmp.Width  := PaintBox.Width;
     SpectBmp.Height := PaintBox.Height;
     FDragging := False;
+    WaveformBox.Invalidate();
     PaintBox.Perform(WM_PAINT, WPARAM(SpectBmp.Canvas.Handle), 0);
     try
       SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
@@ -747,8 +748,6 @@ begin
     FCursorPos := ClickFrac;
     if FWavePlayer.IsPlaying() or FWavePlayer.IsPaused() then
       FWavePlayer.SeekToNormalized(ClickFrac);
-    PaintBox.Invalidate();
-    WaveformBox.Invalidate();
   end
   else if FDragCurrentX > FDragStartX then begin
     SelX1 := Max(ChartR.Left, Min(ChartR.Right, FDragStartX));
@@ -761,24 +760,22 @@ begin
       FZoomEnd := FZoomStart + 0.001;
     UpdateZoomBar();
     RenderSpectrogram();
-    PaintBox.Invalidate();
-    WaveformBox.Invalidate();
   end
   else begin
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
     UpdateZoomBar();
     RenderSpectrogram();
-    PaintBox.Invalidate();
-    WaveformBox.Invalidate();
   end;
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 
 
 procedure TFormMain.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  if not FDragging then
+  if (Button <> mbLeft) or not FDragging then
     Exit();
   FDragging := False;
   ApplyZoomDrag(SpectRect());
@@ -820,6 +817,7 @@ var
   LocalPos: TPoint;
   LocalX, ChartLeft, ChartRight, W: Integer;
   WheelDelta: Integer;
+  InPaintBox: Boolean;
   Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
 begin
   if Msg.message <> WM_MOUSEWHEEL then
@@ -828,14 +826,15 @@ begin
     Exit();
   MousePos := Point(SmallInt(Msg.lParam and $FFFF), SmallInt(Msg.lParam shr 16));
   LocalPos := PaintBox.ScreenToClient(MousePos);
-  if not PtInRect(PaintBox.ClientRect, LocalPos) then begin
+  InPaintBox := PtInRect(PaintBox.ClientRect, LocalPos);
+  if not InPaintBox then begin
     LocalPos := WaveformBox.ScreenToClient(MousePos);
     if not PtInRect(WaveformBox.ClientRect, LocalPos) then
       Exit();
   end;
   WheelDelta := SmallInt(Msg.wParam shr 16);
   ChartLeft := LEFT_MARGIN;
-  if PtInRect(PaintBox.ClientRect, PaintBox.ScreenToClient(MousePos)) then
+  if InPaintBox then
     ChartRight := PaintBox.Width - RIGHT_MARGIN
   else
     ChartRight := WaveformBox.Width - RIGHT_MARGIN;
@@ -898,7 +897,7 @@ end;
 
 procedure TFormMain.WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  if not FDragging then
+  if (Button <> mbLeft) or not FDragging then
     Exit();
   FDragging := False;
   ApplyZoomDrag(WaveRect());
@@ -972,9 +971,11 @@ begin
   if (FDisplayBmp <> nil) and (FDisplayBmp.Width > 0) then
     BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H, FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
 
-  if FWavFile <> nil then
-    DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd);
-  DrawSpectCursor(PaintBox.Canvas, R, FCursorPos, FZoomStart, FZoomEnd);
+  if (W > 0) and (H > 0) then begin
+    if FWavFile <> nil then
+      DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd);
+    DrawSpectCursor(PaintBox.Canvas, R, FCursorPos, FZoomStart, FZoomEnd);
+  end;
 
   if FDragging and (FDragCurrentX > FDragStartX) then begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
