@@ -24,6 +24,11 @@ implementation
 
 
 
+var
+  GOverlayBmp: TBitmap;
+
+
+
 procedure PaintWaveform(C: TCanvas; PxW, PxH: Integer; const InnerR: TRect;
   const Samples: TArray<Single>; ZoomStart, ZoomEnd, CursorPos: Double;
   BgColor, WaveColor: TColor);
@@ -76,7 +81,7 @@ begin
         end;
     else
       Lbl := '-100%';
-      LblY := R.Bottom;
+      LblY := R.Bottom - 1;
     end;
     C.Pen.Color := GRID_COLOR;
     C.MoveTo(R.Left, LblY);
@@ -90,6 +95,8 @@ begin
 
   TotalSamples := Length(Samples);
   if TotalSamples = 0 then
+    Exit();
+  if ZoomEnd <= ZoomStart then
     Exit();
 
   C.Pen.Color := WaveColor;
@@ -135,29 +142,29 @@ end;
 
 procedure DrawSelectionOverlay(C: TCanvas; const R: TRect; X1, X2: Integer);
 var
-  OverBmp: TBitmap;
   BF: TBlendFunction;
 begin
   if X2 <= X1 then
     Exit();
-  OverBmp := TBitmap.Create();
-  try
-    OverBmp.PixelFormat := pf24bit;
-    OverBmp.Width := X2 - X1;
-    OverBmp.Height := R.Bottom - R.Top;
-    OverBmp.Canvas.Brush.Color := clWhite;
-    OverBmp.Canvas.FillRect(Rect(0, 0, OverBmp.Width, OverBmp.Height));
-    BF.BlendOp := AC_SRC_OVER;
-    BF.BlendFlags := 0;
-    BF.SourceConstantAlpha := 60;
-    BF.AlphaFormat := 0;
-    Winapi.Windows.AlphaBlend(C.Handle, X1, R.Top, X2 - X1, R.Bottom - R.Top,
-      OverBmp.Canvas.Handle, 0, 0, OverBmp.Width, OverBmp.Height, BF);
-  finally
-    OverBmp.Free();
-  end;
+  BF.BlendOp := AC_SRC_OVER;
+  BF.BlendFlags := 0;
+  BF.SourceConstantAlpha := 60;
+  BF.AlphaFormat := 0;
+  Winapi.Windows.AlphaBlend(C.Handle, X1, R.Top, X2 - X1, R.Bottom - R.Top,
+    GOverlayBmp.Canvas.Handle, 0, 0, 1, 1, BF);
 end;
 
 
+
+initialization
+  GOverlayBmp := TBitmap.Create();
+  GOverlayBmp.PixelFormat := pf24bit;
+  GOverlayBmp.Width := 1;
+  GOverlayBmp.Height := 1;
+  GOverlayBmp.Canvas.Brush.Color := clWhite;
+  GOverlayBmp.Canvas.FillRect(Rect(0, 0, 1, 1));
+
+finalization
+  GOverlayBmp.Free();
 
 end.
