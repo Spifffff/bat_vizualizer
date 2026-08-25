@@ -327,6 +327,85 @@ object FormMain: TFormMain
         Width = 200
       end>
   end
+  object PanelRight: TPanel
+    Left = 882
+    Top = 0
+    Width = 318
+    Height = 727
+    Align = alRight
+    BevelOuter = bvNone
+    TabOrder = 2
+    object PanelToggle: TPanel
+      Left = 0
+      Top = 0
+      Width = 18
+      Height = 727
+      Align = alLeft
+      BevelOuter = bvNone
+      TabOrder = 0
+      object BtnTogglePanel: TButton
+        Left = 0
+        Top = 0
+        Width = 18
+        Height = 727
+        Align = alClient
+        Caption = '<'
+        TabOrder = 0
+        OnClick = BtnTogglePanelClick
+      end
+    end
+    object PanelFileContent: TPanel
+      Left = 18
+      Top = 0
+      Width = 300
+      Height = 727
+      Align = alClient
+      BevelOuter = bvNone
+      TabOrder = 1
+      object BtnSelectFolder: TButton
+        Left = 0
+        Top = 0
+        Width = 300
+        Height = 28
+        Align = alTop
+        Caption = 'Select folder...'
+        TabOrder = 0
+        OnClick = BtnSelectFolderClick
+      end
+      object FileListView: TListView
+        Left = 0
+        Top = 28
+        Width = 300
+        Height = 699
+        Align = alClient
+        Columns = <
+          item
+            Caption = 'Species'
+            Width = 175
+          end
+          item
+            Caption = 'Confidence'
+            Width = 80
+          end>
+        HideSelection = False
+        ReadOnly = True
+        RowSelect = True
+        TabOrder = 1
+        ViewStyle = vsReport
+        OnClick = FileListViewClick
+        OnCustomDrawItem = FileListViewCustomDrawItem
+      end
+    end
+  end
+  object SplitterRight: TSplitter
+    Left = 878
+    Top = 0
+    Width = 4
+    Height = 727
+    Align = alRight
+    MinSize = 118
+    ResizeStyle = rsUpdate
+  end
   object PanelMain: TPanel
     Left = 180
     Top = 0

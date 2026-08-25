@@ -21,6 +21,7 @@ const
   RIGHT_MARGIN = 10;
   SPECTROGRAM_GAMMA = 2.5;
   WAVE_VPAD = 12;
+  PANEL_TOGGLE_WIDTH = 18;
 
 type
   TFormMain = class(TForm)
@@ -63,6 +64,13 @@ type
     BtnSavePNG: TButton;
     BtnSaveMp3: TButton;
     SaveDialogMp3: TSaveDialog;
+    PanelRight: TPanel;
+    PanelToggle: TPanel;
+    BtnTogglePanel: TButton;
+    PanelFileContent: TPanel;
+    BtnSelectFolder: TButton;
+    FileListView: TListView;
+    SplitterRight: TSplitter;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenClick(Sender: TObject);
@@ -92,6 +100,11 @@ type
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
     procedure BtnSaveMp3Click(Sender: TObject);
+    procedure BtnTogglePanelClick(Sender: TObject);
+    procedure BtnSelectFolderClick(Sender: TObject);
+    procedure FileListViewClick(Sender: TObject);
+    procedure FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
+      State: TCustomDrawState; var DefaultDraw: Boolean);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -118,6 +131,36 @@ type
     procedure ScheduleRender;
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
+    type
+      TRowKind = (rkFile, rkDetection);
+      TRowData = record
+        Kind: TRowKind;
+        FileIdx: Integer;
+        DetIdx: Integer;
+      end;
+      PRowData = ^TRowData;
+      TBatDetection = record
+        CommonName: string;
+        Confidence: Double;
+        StartSec: Double;
+        EndSec: Double;
+      end;
+      TBatFileEntry = record
+        FilePath: string;
+        FileName: string;
+        HasCsv: Boolean;
+        Detections: TArray<TBatDetection>;
+        Expanded: Boolean;
+      end;
+    var
+      FCurrentFilePath: string;
+      FFileEntries: TArray<TBatFileEntry>;
+      FRightPanelWidth: Integer;
+    procedure LoadFile(const AFilePath: string);
+    function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
+    procedure ScanFolderForFiles(const AFolder: string);
+    procedure BuildFileList;
+    procedure ClearFileListRowData;
   end;
 
 var
@@ -130,6 +173,10 @@ implementation
 
 
 {$R *.dfm}
+
+
+
+uses System.Generics.Collections, System.Generics.Defaults;
 
 
 
@@ -346,6 +393,8 @@ begin
   FZoomStart := 0.0;
   FZoomEnd := 1.0;
   FDragging := False;
+  FCurrentFilePath := '';
+  FRightPanelWidth := PanelRight.Width;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
@@ -363,17 +412,15 @@ begin
   FDisplayBmp.Free();
   FSpecgram.Free();
   FWavFile.Free();
+  ClearFileListRowData();
 end;
 
 { ---- file loading ---------------------------------------------------------- }
 
 
 
-procedure TFormMain.BtnOpenClick(Sender: TObject);
+procedure TFormMain.LoadFile(const AFilePath: string);
 begin
-  if not OpenDialog.Execute() then
-    Exit();
-
   Timer.Enabled := False;
   FWavePlayer.Stop();
   FCursorPos := -1;
@@ -382,44 +429,295 @@ begin
   BtnPlay.Enabled := False;
   BtnPause.Enabled := False;
   BtnStop.Enabled := False;
-
+  FCurrentFilePath := '';
   try
     FWavFile := TWavFile.Create();
-    FWavFile.LoadFromFile(OpenDialog.FileName);
-
-    FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch', [ExtractFileName(OpenDialog.FileName), FWavFile.Info.DurationSec,
-      FWavFile.Info.SampleRate, FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
+    FWavFile.LoadFromFile(AFilePath);
+    FCurrentFilePath := AFilePath;
+    FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
+      [ExtractFileName(AFilePath), FWavFile.Info.DurationSec,
+       FWavFile.Info.SampleRate, FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
     StatusBar.Panels[0].Text := FFileInfo;
-
     Screen.Cursor := crHourGlass;
     try
       RecomputeSpectrogram();
     finally
       Screen.Cursor := crDefault;
     end;
-
     FZoomStart := 0.0;
     FZoomEnd := 1.0;
     UpdateZoomBar();
-
     TrkMaxFreq.Max := FWavFile.Info.SampleRate div 2000;
     TrkMaxFreq.Min := 1;
     TrkMaxFreq.Position := TrkMaxFreq.Max;
     FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
     LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
-
     BtnPlay.Enabled := True;
     BtnSavePNG.Enabled := True;
     BtnSaveMp3.Enabled := True;
-
   except
     on E: Exception do begin
       FreeAndNil(FWavFile);
       FreeAndNil(FSpecgram);
+      FCurrentFilePath := '';
       ShowMessage('Error loading file:'#13#10 + E.Message);
     end;
   end;
 end;
+
+
+
+procedure TFormMain.BtnOpenClick(Sender: TObject);
+begin
+  if not OpenDialog.Execute() then
+    Exit();
+  LoadFile(OpenDialog.FileName);
+end;
+
+{ ---- file browser panel ---------------------------------------------------- }
+
+
+
+procedure TFormMain.ClearFileListRowData;
+var
+  I: Integer;
+begin
+  for I := 0 to FileListView.Items.Count - 1 do
+    if FileListView.Items[I].Data <> nil then
+      Dispose(PRowData(FileListView.Items[I].Data));
+  FileListView.Items.Clear;
+end;
+
+
+
+function TFormMain.ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
+var
+  Lines: TStringList;
+  I, K: Integer;
+  Parts: TArray<string>;
+  Det: TBatDetection;
+  FS: TFormatSettings;
+  Name: string;
+begin
+  Result := [];
+  FS := TFormatSettings.Invariant;
+  Lines := TStringList.Create;
+  try
+    Lines.LoadFromFile(ACsvPath);
+    for I := 1 to Lines.Count - 1 do begin
+      if Trim(Lines[I]) = '' then
+        Continue;
+      Parts := Lines[I].Split([',']);
+      if Length(Parts) < 5 then
+        Continue;
+      Det.StartSec := StrToFloatDef(Trim(Parts[0]), 0, FS);
+      Det.EndSec := StrToFloatDef(Trim(Parts[1]), 0, FS);
+      Det.Confidence := StrToFloatDef(Trim(Parts[High(Parts)]), 0, FS);
+      Name := '';
+      for K := 3 to High(Parts) - 1 do begin
+        if K > 3 then Name := Name + ',';
+        Name := Name + Trim(Parts[K]);
+      end;
+      Det.CommonName := Name;
+      Result := Result + [Det];
+    end;
+  finally
+    Lines.Free;
+  end;
+end;
+
+
+
+procedure TFormMain.ScanFolderForFiles(const AFolder: string);
+var
+  SR: TSearchRec;
+  Entry: TBatFileEntry;
+  CsvPath: string;
+begin
+  SetLength(FFileEntries, 0);
+  if FindFirst(AFolder + '\*.wav', faAnyFile, SR) = 0 then begin
+    try
+      repeat
+        if (SR.Attr and faDirectory) <> 0 then
+          Continue;
+        Entry.FilePath := AFolder + '\' + SR.Name;
+        Entry.FileName := SR.Name;
+        Entry.Expanded := True;
+        CsvPath := ChangeFileExt(Entry.FilePath, '.bat.results.csv');
+        Entry.HasCsv := FileExists(CsvPath);
+        if Entry.HasCsv then
+          Entry.Detections := ParseBatResults(CsvPath)
+        else
+          Entry.Detections := [];
+        if Entry.HasCsv then
+          TArray.Sort<TBatDetection>(Entry.Detections,
+            TComparer<TBatDetection>.Construct(
+              function(const A, B: TBatDetection): Integer
+              begin
+                Result := CompareText(A.CommonName, B.CommonName);
+                if Result = 0 then
+                  if A.Confidence > B.Confidence then Result := -1
+                  else if A.Confidence < B.Confidence then Result := 1;
+              end));
+        FFileEntries := FFileEntries + [Entry];
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  end;
+  TArray.Sort<TBatFileEntry>(FFileEntries,
+    TComparer<TBatFileEntry>.Construct(
+      function(const A, B: TBatFileEntry): Integer
+      begin
+        Result := CompareText(A.FileName, B.FileName);
+      end));
+  BuildFileList;
+end;
+
+
+
+procedure TFormMain.BuildFileList;
+var
+  I, J: Integer;
+  Item: TListItem;
+  Entry: TBatFileEntry;
+  Det: TBatDetection;
+  RD: PRowData;
+  Cap: string;
+begin
+  ClearFileListRowData;
+  FileListView.Items.BeginUpdate;
+  try
+    for I := 0 to High(FFileEntries) do begin
+      Entry := FFileEntries[I];
+      if Entry.HasCsv then begin
+        if Entry.Expanded then
+          Cap := #$25BC + ' ' + Entry.FileName
+        else
+          Cap := #$25B6 + ' ' + Entry.FileName;
+      end else
+        Cap := Entry.FileName;
+      Item := FileListView.Items.Add;
+      Item.Caption := Cap;
+      Item.SubItems.Add('');
+      New(RD);
+      RD^.Kind := rkFile;
+      RD^.FileIdx := I;
+      RD^.DetIdx := -1;
+      Item.Data := RD;
+      if Entry.HasCsv and Entry.Expanded then begin
+        for J := 0 to High(Entry.Detections) do begin
+          Det := Entry.Detections[J];
+          Item := FileListView.Items.Add;
+          Item.Caption := '    ' + Det.CommonName;
+          Item.SubItems.Add(Format('%.1f%%', [Det.Confidence * 100]));
+          New(RD);
+          RD^.Kind := rkDetection;
+          RD^.FileIdx := I;
+          RD^.DetIdx := J;
+          Item.Data := RD;
+        end;
+      end;
+    end;
+  finally
+    FileListView.Items.EndUpdate;
+  end;
+end;
+
+
+
+procedure TFormMain.BtnTogglePanelClick(Sender: TObject);
+begin
+  if PanelFileContent.Visible then begin
+    FRightPanelWidth := PanelRight.Width;
+    PanelFileContent.Visible := False;
+    SplitterRight.Visible := False;
+    PanelRight.Width := PANEL_TOGGLE_WIDTH;
+    BtnTogglePanel.Caption := '>';
+  end else begin
+    PanelRight.Width := FRightPanelWidth;
+    PanelFileContent.Visible := True;
+    SplitterRight.Visible := True;
+    BtnTogglePanel.Caption := '<';
+  end;
+end;
+
+
+
+procedure TFormMain.BtnSelectFolderClick(Sender: TObject);
+var
+  D: TFileOpenDialog;
+begin
+  D := TFileOpenDialog.Create(nil);
+  try
+    D.Options := [fdoPickFolders, fdoPathMustExist];
+    if D.Execute then
+      ScanFolderForFiles(ExcludeTrailingPathDelimiter(D.FileName));
+  finally
+    D.Free;
+  end;
+end;
+
+
+
+procedure TFormMain.FileListViewClick(Sender: TObject);
+var
+  Item: TListItem;
+  RD: PRowData;
+  Entry: TBatFileEntry;
+  Det: TBatDetection;
+  ZStart, ZEnd: Double;
+begin
+  Item := FileListView.Selected;
+  if Item = nil then
+    Exit();
+  RD := PRowData(Item.Data);
+  if RD = nil then
+    Exit();
+  case RD^.Kind of
+    rkFile: begin
+      if not FFileEntries[RD^.FileIdx].HasCsv then
+        Exit();
+      FFileEntries[RD^.FileIdx].Expanded := not FFileEntries[RD^.FileIdx].Expanded;
+      BuildFileList;
+    end;
+    rkDetection: begin
+      Entry := FFileEntries[RD^.FileIdx];
+      Det := Entry.Detections[RD^.DetIdx];
+      if FCurrentFilePath <> Entry.FilePath then
+        LoadFile(Entry.FilePath);
+      if FWavFile = nil then
+        Exit();
+      ZStart := (Det.StartSec - 0.5) / FWavFile.Info.DurationSec;
+      ZEnd := (Det.EndSec + 0.5) / FWavFile.Info.DurationSec;
+      FZoomStart := Max(0.0, ZStart);
+      FZoomEnd := Min(1.0, ZEnd);
+      if FZoomEnd <= FZoomStart then
+        FZoomEnd := Min(1.0, FZoomStart + 0.01);
+      UpdateZoomBar();
+      RenderSpectrogram();
+      PaintBox.Invalidate();
+      WaveformBox.Invalidate();
+    end;
+  end;
+end;
+
+
+
+procedure TFormMain.FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
+  State: TCustomDrawState; var DefaultDraw: Boolean);
+var
+  RD: PRowData;
+begin
+  DefaultDraw := True;
+  RD := PRowData(Item.Data);
+  if (RD <> nil) and (RD^.Kind = rkFile) and not FFileEntries[RD^.FileIdx].HasCsv then
+    Sender.Canvas.Font.Color := clGrayText
+  else
+    Sender.Canvas.Font.Color := clWindowText;
+end;
+
+
 
 { ---- PNG export ------------------------------------------------------------ }
 
