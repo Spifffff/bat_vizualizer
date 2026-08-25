@@ -116,10 +116,7 @@ begin
       C.MoveTo(X, R.Top);
       C.LineTo(X, R.Bottom);
 
-      if ZoomDur < 0.5 then
-        Lbl := Format('%.3f s', [T])
-      else
-        Lbl := Format('%.2g s', [T]);
+      Lbl := Format('%.3f s', [T]);
       TextW := C.TextWidth(Lbl);
       C.Font.Color := CLR_AXIS;
       C.TextOut(X - TextW div 2, R.Bottom + 5, Lbl);
