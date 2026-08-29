@@ -12,7 +12,7 @@ uses
   FFT, WavReader;
 
 type
-  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale, csGrayscaleInv, csPlasma, csCividis, csMako, csRocket, csSpectral);
+  TColorScheme = (csViridis, csInferno, csMagma, csGrayscale, csGrayscaleInv, csPlasma, csCividis, csMako, csRocket, csSpectral, csTurbo, csHot);
 
 
 
@@ -104,6 +104,14 @@ const
   SpR: array [0 .. 7] of Integer = (94, 50, 171, 230, 254, 253, 213, 158);
   SpG: array [0 .. 7] of Integer = (79, 136, 221, 245, 224, 174, 62, 1);
   SpB: array [0 .. 7] of Integer = (162, 189, 164, 152, 139, 97, 79, 66);
+  // Turbo (Google)
+  TuR: array [0 .. 7] of Integer = (48, 64, 43, 35, 117, 220, 240, 122);
+  TuG: array [0 .. 7] of Integer = (18, 84, 155, 197, 220, 205, 110, 4);
+  TuB: array [0 .. 7] of Integer = (59, 196, 232, 168, 90, 45, 30, 3);
+  // Hot (matplotlib, black-body style)
+  HtR: array [0 .. 7] of Integer = (0, 97, 194, 255, 255, 255, 255, 255);
+  HtG: array [0 .. 7] of Integer = (0, 0, 0, 37, 133, 230, 255, 255);
+  HtB: array [0 .. 7] of Integer = (0, 0, 0, 0, 0, 0, 109, 255);
 var
   Seg: Integer;
   Frac: Double;
@@ -169,6 +177,16 @@ begin
         R := Byte(Round(SpR[Seg] + (SpR[Seg + 1] - SpR[Seg]) * Frac));
         G := Byte(Round(SpG[Seg] + (SpG[Seg + 1] - SpG[Seg]) * Frac));
         B := Byte(Round(SpB[Seg] + (SpB[Seg + 1] - SpB[Seg]) * Frac));
+      end;
+    csTurbo: begin
+        R := Byte(Round(TuR[Seg] + (TuR[Seg + 1] - TuR[Seg]) * Frac));
+        G := Byte(Round(TuG[Seg] + (TuG[Seg + 1] - TuG[Seg]) * Frac));
+        B := Byte(Round(TuB[Seg] + (TuB[Seg + 1] - TuB[Seg]) * Frac));
+      end;
+    csHot: begin
+        R := Byte(Round(HtR[Seg] + (HtR[Seg + 1] - HtR[Seg]) * Frac));
+        G := Byte(Round(HtG[Seg] + (HtG[Seg + 1] - HtG[Seg]) * Frac));
+        B := Byte(Round(HtB[Seg] + (HtB[Seg + 1] - HtB[Seg]) * Frac));
       end;
   else
     R := 0;

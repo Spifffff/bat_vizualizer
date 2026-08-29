@@ -228,6 +228,10 @@ begin
       Result := csRocket;
     9:
       Result := csSpectral;
+    10:
+      Result := csTurbo;
+    11:
+      Result := csHot;
   else
     Result := csViridis;
   end;

@@ -248,7 +248,9 @@ object FormMain: TFormMain
         'Cividis'
         'Mako'
         'Rocket'
-        'Spectral')
+        'Spectral'
+        'Turbo'
+        'Hot')
     end
     object TrkFloor: TTrackBar
       Left = 4
