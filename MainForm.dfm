@@ -393,6 +393,7 @@ object FormMain: TFormMain
         TabOrder = 1
         ViewStyle = vsReport
         OnClick = FileListViewClick
+        OnColumnClick = FileListViewColumnClick
         OnResize = FileListViewResize
       end
     end

@@ -104,6 +104,7 @@ type
     procedure BtnSelectFolderClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
+    procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -167,11 +168,14 @@ type
         Expanded: Boolean;
         Refs: TArray<TDetRef>;
       end;
+      TResultSortColumn = (rscTimestamp, rscConfidence);
     var
       FCurrentFilePath: string;
       FFileEntries: TArray<TBatFileEntry>;
       FSpeciesEntries: TArray<TSpeciesEntry>;
       FRightPanelWidth: Integer;
+      FSortColumn: TResultSortColumn;
+      FSortAscending: Boolean;
     procedure LoadFile(const AFilePath: string);
     function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
     procedure ScanFolderForFiles(const AFolder: string);
@@ -414,6 +418,8 @@ begin
   FZoomEnd := 1.0;
   FDragging := False;
   FCurrentFilePath := '';
+  FSortColumn := rscConfidence;
+  FSortAscending := False;
   FRightPanelWidth := PanelRight.Width;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
@@ -526,6 +532,23 @@ end;
 procedure TFormMain.FileListViewResize(Sender: TObject);
 begin
   FitResultsColumns();
+end;
+
+
+
+procedure TFormMain.FileListViewColumnClick(Sender: TObject; Column: TListColumn);
+var
+  NewSortColumn: TResultSortColumn;
+begin
+  NewSortColumn := TResultSortColumn(Column.Index);
+  if NewSortColumn = FSortColumn then
+    FSortAscending := not FSortAscending
+  else begin
+    FSortColumn := NewSortColumn;
+    FSortAscending := FSortColumn = rscTimestamp;
+  end;
+  BuildSpeciesEntries;
+  BuildResultsList;
 end;
 
 
@@ -663,12 +686,20 @@ begin
   TArray.Sort<TFlatDet>(Flat,
     TComparer<TFlatDet>.Construct(
       function(const A, B: TFlatDet): Integer
+      var
+        DA, DB: TBatDetection;
       begin
         Result := CompareText(A.CommonName, B.CommonName);
-        if Result = 0 then
-          Result := CompareValue(
-            FFileEntries[A.FileIdx].Detections[A.DetIdx].DateTime,
-            FFileEntries[B.FileIdx].Detections[B.DetIdx].DateTime);
+        if Result <> 0 then
+          Exit;
+        DA := FFileEntries[A.FileIdx].Detections[A.DetIdx];
+        DB := FFileEntries[B.FileIdx].Detections[B.DetIdx];
+        if FSortColumn = rscTimestamp then
+          Result := CompareValue(DA.DateTime, DB.DateTime)
+        else
+          Result := CompareValue(DA.Confidence, DB.Confidence);
+        if not FSortAscending then
+          Result := -Result;
       end));
   SetLength(FSpeciesEntries, 0);
   I := 0;
