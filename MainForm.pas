@@ -184,6 +184,7 @@ type
     procedure BuildSpeciesEntries;
     procedure BuildResultsList;
     procedure ClearFileListRowData;
+    procedure ApplyResultsColumnWidths;
     procedure FitResultsColumns;
   end;
 
@@ -517,7 +518,7 @@ end;
 
 
 
-procedure TFormMain.FitResultsColumns;
+procedure TFormMain.ApplyResultsColumnWidths;
 const
   CONFIDENCE_COL_WIDTH = 80;
   MIN_TIMESTAMP_COL_WIDTH = 60;
@@ -525,6 +526,23 @@ begin
   FileListView.Columns[1].Width := CONFIDENCE_COL_WIDTH;
   FileListView.Columns[0].Width :=
     Max(MIN_TIMESTAMP_COL_WIDTH, FileListView.ClientWidth - CONFIDENCE_COL_WIDTH);
+end;
+
+
+
+procedure TFormMain.FitResultsColumns;
+begin
+  ApplyResultsColumnWidths();
+  { The vertical scrollbar's presence isn't reflected in ClientWidth until
+    Windows finishes its own layout pass, so a column fit computed right after
+    adding/removing items can be stale (causing a spurious horizontal
+    scrollbar). Re-apply once more on the next message-loop iteration. }
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      if not (csDestroying in ComponentState) then
+        ApplyResultsColumnWidths();
+    end);
 end;
 
 
