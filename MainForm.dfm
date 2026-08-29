@@ -437,6 +437,7 @@ object FormMain: TFormMain
         ViewStyle = vsReport
         OnClick = FileListViewClick
         OnColumnClick = FileListViewColumnClick
+        OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
       end
     end

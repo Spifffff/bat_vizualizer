@@ -106,6 +106,7 @@ type
     procedure BtnTogglePanelClick(Sender: TObject);
     procedure BtnSelectFolderClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
+    procedure FileListViewDblClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
     procedure CbxLanguageChange(Sender: TObject);
@@ -859,6 +860,25 @@ procedure TFormMain.FileListViewClick(Sender: TObject);
 var
   Item: TListItem;
   RD: PRowData;
+begin
+  Item := FileListView.Selected;
+  if Item = nil then
+    Exit();
+  RD := PRowData(Item.Data);
+  if RD = nil then
+    Exit();
+  if RD^.Kind = rkSpecies then begin
+    FSpeciesEntries[RD^.SpeciesIdx].Expanded := not FSpeciesEntries[RD^.SpeciesIdx].Expanded;
+    BuildResultsList;
+  end;
+end;
+
+
+
+procedure TFormMain.FileListViewDblClick(Sender: TObject);
+var
+  Item: TListItem;
+  RD: PRowData;
   Entry: TBatFileEntry;
   Det: TBatDetection;
   ZStart, ZEnd: Double;
@@ -867,32 +887,24 @@ begin
   if Item = nil then
     Exit();
   RD := PRowData(Item.Data);
-  if RD = nil then
+  if (RD = nil) or (RD^.Kind <> rkDetection) then
     Exit();
-  case RD^.Kind of
-    rkSpecies: begin
-      FSpeciesEntries[RD^.SpeciesIdx].Expanded := not FSpeciesEntries[RD^.SpeciesIdx].Expanded;
-      BuildResultsList;
-    end;
-    rkDetection: begin
-      Entry := FFileEntries[RD^.FileIdx];
-      Det := Entry.Detections[RD^.DetIdx];
-      if FCurrentFilePath <> Entry.FilePath then
-        LoadFile(Entry.FilePath);
-      if FWavFile = nil then
-        Exit();
-      ZStart := (Det.StartSec - 0.5) / FWavFile.Info.DurationSec;
-      ZEnd := (Det.EndSec + 0.5) / FWavFile.Info.DurationSec;
-      FZoomStart := Max(0.0, ZStart);
-      FZoomEnd := Min(1.0, ZEnd);
-      if FZoomEnd <= FZoomStart then
-        FZoomEnd := Min(1.0, FZoomStart + 0.01);
-      UpdateZoomBar();
-      RenderSpectrogram();
-      PaintBox.Invalidate();
-      WaveformBox.Invalidate();
-    end;
-  end;
+  Entry := FFileEntries[RD^.FileIdx];
+  Det := Entry.Detections[RD^.DetIdx];
+  if FCurrentFilePath <> Entry.FilePath then
+    LoadFile(Entry.FilePath);
+  if FWavFile = nil then
+    Exit();
+  ZStart := (Det.StartSec - 0.5) / FWavFile.Info.DurationSec;
+  ZEnd := (Det.EndSec + 0.5) / FWavFile.Info.DurationSec;
+  FZoomStart := Max(0.0, ZStart);
+  FZoomEnd := Min(1.0, ZEnd);
+  if FZoomEnd <= FZoomStart then
+    FZoomEnd := Min(1.0, FZoomStart + 0.01);
+  UpdateZoomBar();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 
