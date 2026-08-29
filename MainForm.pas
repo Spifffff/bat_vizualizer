@@ -458,38 +458,40 @@ begin
   BtnPause.Enabled := False;
   BtnStop.Enabled := False;
   FCurrentFilePath := '';
+  Screen.Cursor := crHourGlass;
+  Enabled := False;
   try
-    FWavFile := TWavFile.Create();
-    FWavFile.LoadFromFile(AFilePath);
-    FCurrentFilePath := AFilePath;
-    FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
-      [ExtractFileName(AFilePath), FWavFile.Info.DurationSec,
-       FWavFile.Info.SampleRate, FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
-    StatusBar.Panels[0].Text := FFileInfo;
-    Screen.Cursor := crHourGlass;
     try
+      FWavFile := TWavFile.Create();
+      FWavFile.LoadFromFile(AFilePath);
+      FCurrentFilePath := AFilePath;
+      FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
+        [ExtractFileName(AFilePath), FWavFile.Info.DurationSec,
+         FWavFile.Info.SampleRate, FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
+      StatusBar.Panels[0].Text := FFileInfo;
       RecomputeSpectrogram();
-    finally
-      Screen.Cursor := crDefault;
+      FZoomStart := 0.0;
+      FZoomEnd := 1.0;
+      UpdateZoomBar();
+      TrkMaxFreq.Max := FWavFile.Info.SampleRate div 2000;
+      TrkMaxFreq.Min := 1;
+      TrkMaxFreq.Position := TrkMaxFreq.Max;
+      FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
+      LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+      BtnPlay.Enabled := True;
+      BtnSavePNG.Enabled := True;
+      BtnSaveMp3.Enabled := True;
+    except
+      on E: Exception do begin
+        FreeAndNil(FWavFile);
+        FreeAndNil(FSpecgram);
+        FCurrentFilePath := '';
+        ShowMessage('Error loading file:'#13#10 + E.Message);
+      end;
     end;
-    FZoomStart := 0.0;
-    FZoomEnd := 1.0;
-    UpdateZoomBar();
-    TrkMaxFreq.Max := FWavFile.Info.SampleRate div 2000;
-    TrkMaxFreq.Min := 1;
-    TrkMaxFreq.Position := TrkMaxFreq.Max;
-    FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
-    LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
-    BtnPlay.Enabled := True;
-    BtnSavePNG.Enabled := True;
-    BtnSaveMp3.Enabled := True;
-  except
-    on E: Exception do begin
-      FreeAndNil(FWavFile);
-      FreeAndNil(FSpecgram);
-      FCurrentFilePath := '';
-      ShowMessage('Error loading file:'#13#10 + E.Message);
-    end;
+  finally
+    Enabled := True;
+    Screen.Cursor := crDefault;
   end;
 end;
 
