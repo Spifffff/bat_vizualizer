@@ -234,23 +234,23 @@ object FormMain: TFormMain
       Width = 164
       Height = 21
       Style = csDropDownList
-      ItemIndex = 2
+      ItemIndex = 3
       TabOrder = 9
       Text = 'Magma'
       OnChange = CbxColorSchemeChange
       Items.Strings = (
         'Viridis'
+        'Plasma'
         'Inferno'
         'Magma'
-        'Grayscale'
-        'Grayscale (inv)'
-        'Plasma'
         'Cividis'
         'Mako'
         'Rocket'
-        'Spectral'
+        'Grayscale'
+        'Grayscale (inv)'
         'Turbo'
-        'Hot')
+        'Hot'
+        'Spectral')
     end
     object TrkFloor: TTrackBar
       Left = 4

@@ -214,27 +214,27 @@ function IdxToColorScheme(Idx: Integer): TColorScheme; inline;
 begin
   case Idx of
     1:
-      Result := csInferno;
-    2:
-      Result := csMagma;
-    3:
-      Result := csGrayscale;
-    4:
-      Result := csGrayscaleInv;
-    5:
       Result := csPlasma;
-    6:
+    2:
+      Result := csInferno;
+    3:
+      Result := csMagma;
+    4:
       Result := csCividis;
-    7:
+    5:
       Result := csMako;
-    8:
+    6:
       Result := csRocket;
+    7:
+      Result := csGrayscale;
+    8:
+      Result := csGrayscaleInv;
     9:
-      Result := csSpectral;
-    10:
       Result := csTurbo;
-    11:
+    10:
       Result := csHot;
+    11:
+      Result := csSpectral;
   else
     Result := csViridis;
   end;
