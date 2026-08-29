@@ -174,12 +174,15 @@ end;
 
 
 procedure TWavFile.LoadWavFromFile(const FileName: string);
+const
+  STREAM_BUF_BYTES = 1 shl 20; // 1 MB read buffer
 var
   F: TFileStream;
   Tag: array [0 .. 3] of AnsiChar;
   ChunkSize, DataSize, FmtSize: Cardinal;
-  Raw: TBytes;
-  BytesPerSample, TotalSamples, I, Ch, Idx: Integer;
+  Buf: TBytes;
+  BytesPerSample, FrameBytes, FramesPerBuf, BufFrames, BufBytes: Integer;
+  TotalSamples, Remaining, OutIdx, I, Ch, Idx: Integer;
   Sum: Double;
   S8: ShortInt;
   S16: SmallInt;
@@ -215,8 +218,6 @@ begin
           F.Seek(FmtSize - 16, soFromCurrent);
       end else if (Tag[0] = 'd') and (Tag[1] = 'a') and (Tag[2] = 't') and (Tag[3] = 'a') then begin
         DataSize := ChunkSize;
-        SetLength(Raw, DataSize);
-        F.ReadBuffer(Raw[0], DataSize);
         Break;
       end
       else
@@ -229,48 +230,70 @@ begin
       raise Exception.Create('Invalid WAV format chunk');
 
     BytesPerSample := FInfo.BitsPerSample div 8;
-    TotalSamples := Integer(DataSize) div (BytesPerSample * FInfo.Channels);
+    FrameBytes := BytesPerSample * FInfo.Channels;
+    if FrameBytes = 0 then
+      raise Exception.Create('Invalid WAV format chunk');
+    TotalSamples := Integer(DataSize) div FrameBytes;
 
     FInfo.NumSamples := TotalSamples;
     FInfo.DurationSec := TotalSamples / FInfo.SampleRate;
 
     SetLength(FSamples, TotalSamples);
-    Idx := 0;
 
-    for I := 0 to TotalSamples - 1 do begin
-      Sum := 0.0;
-      for Ch := 0 to FInfo.Channels - 1 do begin
-        case FInfo.BitsPerSample of
-          8: begin
-              S8 := ShortInt(Integer(Raw[Idx]) - 128);
-              Sum := Sum + S8 / 128.0;
-              Inc(Idx, 1);
-            end;
-          16: begin
-              S16 := SmallInt(Word(Raw[Idx]) or (Word(Raw[Idx + 1]) shl 8));
-              Sum := Sum + S16 / 32768.0;
-              Inc(Idx, 2);
-            end;
-          24: begin
-              S24 := Integer(Cardinal(Raw[Idx]) or (Cardinal(Raw[Idx + 1]) shl 8) or (Cardinal(Raw[Idx + 2]) shl 16));
-              if S24 > $7FFFFF then
-                S24 := S24 - $1000000;
-              Sum := Sum + S24 / 8388608.0;
-              Inc(Idx, 3);
-            end;
-          32: begin
-              if FInfo.AudioFormat = 3 then begin
-                Move(Raw[Idx], SF, 4);
-                Sum := Sum + SF;
-              end else begin
-                S32 := Integer(Cardinal(Raw[Idx]) or (Cardinal(Raw[Idx + 1]) shl 8) or (Cardinal(Raw[Idx + 2]) shl 16) or (Cardinal(Raw[Idx + 3]) shl 24));
-                Sum := Sum + S32 / 2147483648.0;
+    { Stream the data chunk through a fixed-size buffer instead of loading
+      the whole chunk into memory at once -- for a long, high-sample-rate
+      recording that raw-bytes copy used to roughly double the peak memory
+      needed (raw bytes + decoded float samples), which is what triggered
+      out-of-memory on large files. }
+    FramesPerBuf := Max(1, STREAM_BUF_BYTES div FrameBytes);
+    SetLength(Buf, FramesPerBuf * FrameBytes);
+    OutIdx := 0;
+    Remaining := TotalSamples;
+
+    while Remaining > 0 do begin
+      BufFrames := Min(FramesPerBuf, Remaining);
+      BufBytes := BufFrames * FrameBytes;
+      F.ReadBuffer(Buf[0], BufBytes);
+
+      Idx := 0;
+      for I := 0 to BufFrames - 1 do begin
+        Sum := 0.0;
+        for Ch := 0 to FInfo.Channels - 1 do begin
+          case FInfo.BitsPerSample of
+            8: begin
+                S8 := ShortInt(Integer(Buf[Idx]) - 128);
+                Sum := Sum + S8 / 128.0;
+                Inc(Idx, 1);
               end;
-              Inc(Idx, 4);
-            end;
+            16: begin
+                S16 := SmallInt(Word(Buf[Idx]) or (Word(Buf[Idx + 1]) shl 8));
+                Sum := Sum + S16 / 32768.0;
+                Inc(Idx, 2);
+              end;
+            24: begin
+                S24 := Integer(Cardinal(Buf[Idx]) or (Cardinal(Buf[Idx + 1]) shl 8) or (Cardinal(Buf[Idx + 2]) shl 16));
+                if S24 > $7FFFFF then
+                  S24 := S24 - $1000000;
+                Sum := Sum + S24 / 8388608.0;
+                Inc(Idx, 3);
+              end;
+            32: begin
+                if FInfo.AudioFormat = 3 then begin
+                  Move(Buf[Idx], SF, 4);
+                  Sum := Sum + SF;
+                end else begin
+                  S32 := Integer(Cardinal(Buf[Idx]) or (Cardinal(Buf[Idx + 1]) shl 8) or (Cardinal(Buf[Idx + 2]) shl 16) or (Cardinal(Buf[Idx + 3]) shl 24));
+                  Sum := Sum + S32 / 2147483648.0;
+                end;
+                Inc(Idx, 4);
+              end;
+          end;
         end;
+        FSamples[OutIdx] := Single(Sum / FInfo.Channels);
+        Inc(OutIdx);
       end;
-      FSamples[I] := Single(Sum / FInfo.Channels);
+
+      Dec(Remaining, BufFrames);
     end;
 
   finally
