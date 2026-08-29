@@ -1,4 +1,4 @@
-unit MainForm;
+﻿unit MainForm;
 
 
 
@@ -47,6 +47,7 @@ type
     TrkCeiling: TTrackBar;
     LblMaxFreq: TLabel;
     TrkMaxFreq: TTrackBar;
+    BtnAutoLevels: TButton;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -97,6 +98,7 @@ type
     procedure TrkFloorChange(Sender: TObject);
     procedure TrkCeilingChange(Sender: TObject);
     procedure TrkMaxFreqChange(Sender: TObject);
+    procedure BtnAutoLevelsClick(Sender: TObject);
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
     procedure BtnSaveMp3Click(Sender: TObject);
@@ -481,6 +483,7 @@ begin
       BtnPlay.Enabled := True;
       BtnSavePNG.Enabled := True;
       BtnSaveMp3.Enabled := True;
+      BtnAutoLevels.Enabled := True;
     except
       on E: Exception do begin
         FreeAndNil(FWavFile);
@@ -1143,6 +1146,20 @@ begin
   FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
   LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
   ScheduleRender();
+end;
+
+
+
+procedure TFormMain.BtnAutoLevelsClick(Sender: TObject);
+begin
+  if (FWavFile = nil) or (FSpecgram = nil) then
+    Exit();
+  TrkFloor.Position := EnsureRange(Round(FSpecgram.AutoFloorDB), TrkFloor.Min, TrkFloor.Max);
+  TrkCeiling.Position := EnsureRange(Round(FSpecgram.AutoCeilingDB), TrkCeiling.Min, TrkCeiling.Max);
+  TrkMaxFreq.Position := EnsureRange(Round(FSpecgram.AutoMaxFreqHz / 1000.0), TrkMaxFreq.Min, TrkMaxFreq.Max);
+  TrkFloorChange(TrkFloor);
+  TrkCeilingChange(TrkCeiling);
+  TrkMaxFreqChange(TrkMaxFreq);
 end;
 
 

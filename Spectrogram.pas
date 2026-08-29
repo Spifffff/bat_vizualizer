@@ -8,7 +8,7 @@ interface
 
 uses
   Vcl.Graphics,
-  System.SysUtils, System.Math,
+  System.SysUtils, System.Math, System.Generics.Collections, System.Generics.Defaults,
   FFT, WavReader;
 
 type
@@ -27,10 +27,14 @@ type
     FNoiseFramePos: TArray<Double>;
     FHasBg: Boolean;
     FFilteredSamples: TArray<Single>;
+    FAutoFloorDB: Double;
+    FAutoCeilingDB: Double;
+    FAutoMaxFreqHz: Double;
   public
     procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
     { Call when file / FFT size / window changes.  Computes a rolling-median
-      noise floor used by Render when BgSubtract is True. }
+      noise floor used by Render when BgSubtract is True, and suggested
+      auto floor/ceiling/max-frequency values (see Auto*** properties). }
     procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
 
     { Render the visible zoom window at display resolution.  Each pixel column
@@ -41,6 +45,13 @@ type
 
     property NumBins: Integer read FNumBins;
     property SampleRate: Cardinal read FSampleRate;
+    { Suggested display range computed by Prepare from the 5th/99.5th
+      percentile of the file's dB distribution. }
+    property AutoFloorDB: Double read FAutoFloorDB;
+    property AutoCeilingDB: Double read FAutoCeilingDB;
+    { Suggested max frequency: the highest bin whose peak level clears the
+      noise floor by a margin, with a little headroom, capped at Nyquist. }
+    property AutoMaxFreqHz: Double read FAutoMaxFreqHz;
   end;
 
 
@@ -208,6 +219,9 @@ procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindo
 const
   MAX_NOISE_FRAMES = 256;
   NOISE_HALF_WIN = 16;
+  AUTO_MIN_DB = -160.0;
+  AUTO_SIGNAL_SNR_DB = 22.5;
+  AUTO_MAXFREQ_HEADROOM = 1.15;
 var
   Samples: TArray<Single>;
   TotalSamples, Hop, N, HalfW: Integer;
@@ -216,6 +230,9 @@ var
   RawMags: TArray<TArray<Double>>;
   Scratch: array [0 .. 2 * NOISE_HALF_WIN] of Double;
   Tmp: Double;
+  AllDB, NoiseDBFlat, PeakMag: TArray<Double>;
+  Idx, SignalBin: Integer;
+  Mag, NoiseMag, NoiseBaselineDB: Double;
 begin
   FWavFile := AWavFile;
   FFFTSize := AFFTSize;
@@ -225,6 +242,9 @@ begin
   FHasBg := False;
   SetLength(FNoiseFloor, 0);
   SetLength(FNoiseFramePos, 0);
+  FAutoFloorDB := -100.0;
+  FAutoCeilingDB := 0.0;
+  FAutoMaxFreqHz := FSampleRate / 2.0;
 
   Samples := AWavFile.Samples;
   TotalSamples := Length(Samples);
@@ -282,6 +302,54 @@ begin
       FNoiseFloor[Frame][B] := Scratch[WinLen div 2];
     end;
   end;
+
+  // Auto floor/ceiling: 5th/99.5th percentile of the dB distribution over
+  // all sampled frames and bins, and track each bin's peak magnitude.
+  SetLength(AllDB, N * FNumBins);
+  SetLength(PeakMag, FNumBins);
+  for B := 0 to FNumBins - 1 do
+    PeakMag[B] := 0.0;
+  Idx := 0;
+  for Frame := 0 to N - 1 do
+    for B := 0 to FNumBins - 1 do begin
+      Mag := RawMags[Frame][B];
+      if Mag > 1.0E-12 then
+        AllDB[Idx] := 20.0 * Log10(Mag)
+      else
+        AllDB[Idx] := AUTO_MIN_DB;
+      Inc(Idx);
+      if Mag > PeakMag[B] then
+        PeakMag[B] := Mag;
+    end;
+  TArray.Sort<Double>(AllDB);
+  FAutoFloorDB := AllDB[EnsureRange(Ceil(Length(AllDB) * 0.4), 0, High(AllDB))];
+  FAutoCeilingDB := AllDB[EnsureRange(Floor(Length(AllDB) * 0.99996), 0, High(AllDB))];
+
+  // Auto max-frequency: highest bin whose peak clears the median noise floor
+  // by a margin, with a little headroom, capped at Nyquist.
+  SetLength(NoiseDBFlat, N * FNumBins);
+  Idx := 0;
+  for Frame := 0 to N - 1 do
+    for B := 0 to FNumBins - 1 do begin
+      NoiseMag := FNoiseFloor[Frame][B];
+      if NoiseMag > 1.0E-12 then
+        NoiseDBFlat[Idx] := 20.0 * Log10(NoiseMag)
+      else
+        NoiseDBFlat[Idx] := AUTO_MIN_DB;
+      Inc(Idx);
+    end;
+  TArray.Sort<Double>(NoiseDBFlat);
+  NoiseBaselineDB := NoiseDBFlat[Length(NoiseDBFlat) div 2];
+
+  SignalBin := -1;
+  for B := FNumBins - 1 downto 0 do
+    if (PeakMag[B] > 1.0E-12) and (20.0 * Log10(PeakMag[B]) >= NoiseBaselineDB + AUTO_SIGNAL_SNR_DB) then begin
+      SignalBin := B;
+      Break;
+    end;
+  if SignalBin >= 0 then
+    FAutoMaxFreqHz := Min(FSampleRate / 2.0,
+      (SignalBin / (FNumBins - 1)) * (FSampleRate / 2.0) * AUTO_MAXFREQ_HEADROOM);
 
   FHasBg := True;
   BiquadHighPass(Samples, FSampleRate, HP_CUTOFF_HZ, FFilteredSamples);

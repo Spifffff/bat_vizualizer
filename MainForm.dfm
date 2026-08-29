@@ -13,6 +13,15 @@ object FormMain: TFormMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   TextHeight = 13
+  object SplitterRight: TSplitter
+    Left = 878
+    Top = 0
+    Width = 4
+    Height = 727
+    Align = alRight
+    MinSize = 118
+    ResizeStyle = rsUpdate
+  end
   object PanelLeft: TPanel
     Left = 0
     Top = 0
@@ -24,7 +33,7 @@ object FormMain: TFormMain
     object LblSpeed: TLabel
       Left = 8
       Top = 74
-      Width = 38
+      Width = 35
       Height = 13
       Caption = 'Speed:'
     end
@@ -86,7 +95,7 @@ object FormMain: TFormMain
     end
     object LblSave: TLabel
       Left = 8
-      Top = 520
+      Top = 554
       Width = 65
       Height = 13
       Caption = 'Save as PNG:'
@@ -203,6 +212,8 @@ object FormMain: TFormMain
       Width = 164
       Height = 17
       Caption = 'Reduce noise'
+      Checked = True
+      State = cbChecked
       TabOrder = 8
       OnClick = ChkBGSubChange
     end
@@ -212,6 +223,8 @@ object FormMain: TFormMain
       Width = 164
       Height = 17
       Caption = 'High-pass + gate'
+      Checked = True
+      State = cbChecked
       TabOrder = 13
       OnClick = ChkFilterChange
     end
@@ -275,9 +288,19 @@ object FormMain: TFormMain
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
     end
+    object BtnAutoLevels: TButton
+      Left = 8
+      Top = 514
+      Width = 164
+      Height = 26
+      Caption = 'Auto floor / ceiling / freq'
+      Enabled = False
+      TabOrder = 17
+      OnClick = BtnAutoLevelsClick
+    end
     object CbxSaveTarget: TComboBox
       Left = 8
-      Top = 536
+      Top = 570
       Width = 164
       Height = 21
       Style = csDropDownList
@@ -291,7 +314,7 @@ object FormMain: TFormMain
     end
     object BtnSavePNG: TButton
       Left = 8
-      Top = 562
+      Top = 596
       Width = 164
       Height = 26
       Caption = 'Save PNG...'
@@ -301,7 +324,7 @@ object FormMain: TFormMain
     end
     object BtnSaveMp3: TButton
       Left = 8
-      Top = 592
+      Top = 626
       Width = 164
       Height = 26
       Caption = 'Save MP3...'
@@ -398,19 +421,10 @@ object FormMain: TFormMain
       end
     end
   end
-  object SplitterRight: TSplitter
-    Left = 878
-    Top = 0
-    Width = 4
-    Height = 727
-    Align = alRight
-    MinSize = 118
-    ResizeStyle = rsUpdate
-  end
   object PanelMain: TPanel
     Left = 180
     Top = 0
-    Width = 1020
+    Width = 698
     Height = 727
     Align = alClient
     BevelOuter = bvNone
@@ -420,39 +434,42 @@ object FormMain: TFormMain
     object WaveformBox: TPaintBox
       Left = 0
       Top = 0
-      Width = 1020
+      Width = 698
       Height = 120
       Align = alTop
       OnMouseDown = WaveformBoxMouseDown
       OnMouseMove = WaveformBoxMouseMove
       OnMouseUp = WaveformBoxMouseUp
       OnPaint = WaveformBoxPaint
+      ExplicitWidth = 1020
     end
     object Splitter1: TSplitter
       Left = 0
       Top = 120
-      Width = 1020
+      Width = 698
       Height = 4
       Cursor = crVSplit
       Align = alTop
       MinSize = 40
       ResizeStyle = rsUpdate
+      ExplicitWidth = 1020
     end
     object PaintBox: TPaintBox
       Left = 0
       Top = 124
-      Width = 1020
+      Width = 698
       Height = 583
       Align = alClient
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove
       OnMouseUp = PaintBoxMouseUp
       OnPaint = PaintBoxPaint
+      ExplicitWidth = 1020
     end
     object ZoomBar: TScrollBar
       Left = 0
       Top = 707
-      Width = 1020
+      Width = 698
       Height = 20
       Align = alBottom
       Max = 1000
@@ -462,7 +479,7 @@ object FormMain: TFormMain
     end
   end
   object OpenDialog: TOpenDialog
-    Filter =
+    Filter = 
       'Audio files|*.wav;*.mp3|WAV files|*.wav|MP3 files|*.mp3|All file' +
       's|*.*'
     Left = 1080
