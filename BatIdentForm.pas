@@ -177,22 +177,22 @@ begin
   Result := False;
   if EdtWavFolder.Text = '' then
   begin
-    ShowMessage('Please select a WAV folder.');
+    MessageDlg('Please select a WAV folder.', mtError, [mbOK], 0);
     Exit();
   end;
   if not DirectoryExists(EdtWavFolder.Text) then
   begin
-    ShowMessage('WAV folder does not exist.');
+    MessageDlg('WAV folder does not exist.', mtError, [mbOK], 0);
     Exit();
   end;
   if EdtBattyFolder.Text = '' then
   begin
-    ShowMessage('Please select the BattyBirdNET folder.');
+    MessageDlg('Please select the BattyBirdNET folder.', mtError, [mbOK], 0);
     Exit();
   end;
   if not FileExists(EdtBattyFolder.Text + '\bat_ident.py') then
   begin
-    ShowMessage('bat_ident.py not found in the BattyBirdNET folder.');
+    MessageDlg('bat_ident.py not found in the BattyBirdNET folder.', mtError, [mbOK], 0);
     Exit();
   end;
   Result := True;
@@ -408,7 +408,7 @@ begin
   end;
   if FPendingFiles.Count = 0 then
   begin
-    ShowMessage('No WAV files found in the selected folder.');
+    MessageDlg('No WAV files found in the selected folder.', mtError, [mbOK], 0);
     Exit();
   end;
   FTotalFiles := FPendingFiles.Count;

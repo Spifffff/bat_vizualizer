@@ -498,7 +498,7 @@ begin
         FreeAndNil(FWavFile);
         FreeAndNil(FSpecgram);
         FCurrentFilePath := '';
-        ShowMessage('Error loading file:'#13#10 + E.Message);
+        MessageDlg('Error loading file:'#13#10 + E.Message, mtError, [mbOK], 0);
       end;
     end;
   finally
@@ -950,7 +950,7 @@ begin
       SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
     except
       on E: Exception do
-        ShowMessage('Error saving PNG:'#13#10 + E.Message);
+        MessageDlg('Error saving PNG:'#13#10 + E.Message, mtError, [mbOK], 0);
     end;
   finally
     WavBmp.Free();
@@ -981,7 +981,7 @@ begin
         [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
     except
       on E: Exception do
-        ShowMessage('Error saving MP3:'#13#10 + E.Message);
+        MessageDlg('Error saving MP3:'#13#10 + E.Message, mtError, [mbOK], 0);
     end;
   finally
     Screen.Cursor := crDefault;
@@ -1020,7 +1020,7 @@ begin
     end;
   except
     on E: Exception do begin
-      ShowMessage('Audio playback failed:'#13#10 + E.Message);
+      MessageDlg('Audio playback failed:'#13#10 + E.Message, mtError, [mbOK], 0);
       Exit();
     end;
   end;
