@@ -381,11 +381,19 @@ object FormMain: TFormMain
         Columns = <
           item
             Caption = 'Species'
-            Width = 175
+            Width = 150
+          end
+          item
+            Caption = 'Date & Time'
+            Width = 95
           end
           item
             Caption = 'Confidence'
-            Width = 80
+            Width = 70
+          end
+          item
+            Caption = 'Duration'
+            Width = 60
           end>
         HideSelection = False
         ReadOnly = True
@@ -393,7 +401,6 @@ object FormMain: TFormMain
         TabOrder = 1
         ViewStyle = vsReport
         OnClick = FileListViewClick
-        OnCustomDrawItem = FileListViewCustomDrawItem
       end
     end
   end

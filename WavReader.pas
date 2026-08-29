@@ -30,6 +30,8 @@ type
     property Samples: TArray<Single> read FSamples;
   end;
 
+function GetWavDurationSec(const FileName: string): Double;
+
 
 
 implementation
@@ -271,6 +273,62 @@ begin
       FSamples[I] := Single(Sum / FInfo.Channels);
     end;
 
+  finally
+    F.Free();
+  end;
+end;
+
+
+
+function GetWavDurationSec(const FileName: string): Double;
+var
+  F: TFileStream;
+  Tag: array [0 .. 3] of AnsiChar;
+  ChunkSize, DataSize: Cardinal;
+  SampleRate: Cardinal;
+  Channels, BitsPerSample: Word;
+  BytesPerSample, TotalSamples: Integer;
+begin
+  Result := 0;
+  SampleRate := 0;
+  Channels := 0;
+  BitsPerSample := 0;
+  DataSize := 0;
+  F := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  try
+    F.ReadBuffer(Tag, 4);
+    if (Tag[0] <> 'R') or (Tag[1] <> 'I') or (Tag[2] <> 'F') or (Tag[3] <> 'F') then
+      Exit;
+    F.ReadBuffer(ChunkSize, 4);
+    F.ReadBuffer(Tag, 4);
+    if (Tag[0] <> 'W') or (Tag[1] <> 'A') or (Tag[2] <> 'V') or (Tag[3] <> 'E') then
+      Exit;
+    while F.Position + 8 <= F.Size do begin
+      if F.Read(Tag, 4) < 4 then
+        Break;
+      F.ReadBuffer(ChunkSize, 4);
+      if (Tag[0] = 'f') and (Tag[1] = 'm') and (Tag[2] = 't') and (Tag[3] = ' ') then begin
+        F.Seek(2, soFromCurrent); // AudioFormat
+        F.ReadBuffer(Channels, 2);
+        F.ReadBuffer(SampleRate, 4);
+        F.Seek(4, soFromCurrent); // ByteRate
+        F.Seek(2, soFromCurrent); // BlockAlign
+        F.ReadBuffer(BitsPerSample, 2);
+        if ChunkSize > 16 then
+          F.Seek(ChunkSize - 16, soFromCurrent);
+      end else if (Tag[0] = 'd') and (Tag[1] = 'a') and (Tag[2] = 't') and (Tag[3] = 'a') then begin
+        DataSize := ChunkSize;
+        Break;
+      end else
+        F.Seek(ChunkSize, soFromCurrent);
+    end;
+    if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
+      Exit;
+    BytesPerSample := BitsPerSample div 8;
+    if BytesPerSample = 0 then
+      Exit;
+    TotalSamples := Integer(DataSize) div (BytesPerSample * Channels);
+    Result := TotalSamples / SampleRate;
   finally
     F.Free();
   end;

@@ -8,7 +8,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages,
-  System.SysUtils, System.Classes, System.Math,
+  System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
@@ -103,8 +103,6 @@ type
     procedure BtnTogglePanelClick(Sender: TObject);
     procedure BtnSelectFolderClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
-    procedure FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
-      State: TCustomDrawState; var DefaultDraw: Boolean);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -132,9 +130,10 @@ type
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
     type
-      TRowKind = (rkFile, rkDetection);
+      TRowKind = (rkSpecies, rkDetection);
       TRowData = record
         Kind: TRowKind;
+        SpeciesIdx: Integer;
         FileIdx: Integer;
         DetIdx: Integer;
       end;
@@ -144,22 +143,41 @@ type
         Confidence: Double;
         StartSec: Double;
         EndSec: Double;
+        DateTime: TDateTime;
       end;
       TBatFileEntry = record
         FilePath: string;
         FileName: string;
         HasCsv: Boolean;
         Detections: TArray<TBatDetection>;
+        RecordedAt: TDateTime;
+      end;
+      TFlatDet = record
+        CommonName: string;
+        FileIdx: Integer;
+        DetIdx: Integer;
+      end;
+      TDetRef = record
+        FileIdx: Integer;
+        DetIdx: Integer;
+      end;
+      TSpeciesEntry = record
+        CommonName: string;
         Expanded: Boolean;
+        Refs: TArray<TDetRef>;
       end;
     var
       FCurrentFilePath: string;
       FFileEntries: TArray<TBatFileEntry>;
+      FSpeciesEntries: TArray<TSpeciesEntry>;
       FRightPanelWidth: Integer;
     procedure LoadFile(const AFilePath: string);
     function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
     procedure ScanFolderForFiles(const AFolder: string);
-    procedure BuildFileList;
+    function TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
+    function GetFileFallbackDateTime(const AFilePath: string): TDateTime;
+    procedure BuildSpeciesEntries;
+    procedure BuildResultsList;
     procedure ClearFileListRowData;
   end;
 
@@ -528,11 +546,50 @@ end;
 
 
 
+function TFormMain.TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
+var
+  Y, Mo, D, H, Mi, S: Integer;
+begin
+  Result := False;
+  if (Length(ABaseName) <> 15) or (ABaseName[9] <> '_') then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 1, 4), Y) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 5, 2), Mo) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 7, 2), D) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 10, 2), H) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 12, 2), Mi) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 14, 2), S) then Exit();
+  Result := TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime);
+end;
+
+
+
+function TFormMain.GetFileFallbackDateTime(const AFilePath: string): TDateTime;
+const
+  SECONDS_PER_DAY = 86400.0;
+var
+  Created, Modified: TDateTime;
+  DurSec: Double;
+begin
+  Created := TFile.GetCreationTime(AFilePath);
+  Modified := TFile.GetLastWriteTime(AFilePath);
+  if Modified <= Created then begin
+    DurSec := GetWavDurationSec(AFilePath);
+    Result := Modified - (DurSec / SECONDS_PER_DAY);
+  end else
+    Result := Created;
+end;
+
+
+
 procedure TFormMain.ScanFolderForFiles(const AFolder: string);
+const
+  SECONDS_PER_DAY = 86400.0;
 var
   SR: TSearchRec;
   Entry: TBatFileEntry;
-  CsvPath: string;
+  CsvPath, BaseName: string;
+  K: Integer;
 begin
   SetLength(FFileEntries, 0);
   if FindFirst(AFolder + '\*.wav', faAnyFile, SR) = 0 then begin
@@ -542,44 +599,85 @@ begin
           Continue;
         Entry.FilePath := AFolder + '\' + SR.Name;
         Entry.FileName := SR.Name;
-        Entry.Expanded := True;
+        BaseName := ChangeFileExt(SR.Name, '');
+        if not TryParseFileNameDateTime(BaseName, Entry.RecordedAt) then
+          Entry.RecordedAt := GetFileFallbackDateTime(Entry.FilePath);
         CsvPath := ChangeFileExt(Entry.FilePath, '.bat.results.csv');
         Entry.HasCsv := FileExists(CsvPath);
         if Entry.HasCsv then
           Entry.Detections := ParseBatResults(CsvPath)
         else
           Entry.Detections := [];
-        if Entry.HasCsv then
-          TArray.Sort<TBatDetection>(Entry.Detections,
-            TComparer<TBatDetection>.Construct(
-              function(const A, B: TBatDetection): Integer
-              begin
-                Result := CompareText(A.CommonName, B.CommonName);
-                if Result = 0 then
-                  if A.Confidence > B.Confidence then Result := -1
-                  else if A.Confidence < B.Confidence then Result := 1;
-              end));
+        for K := 0 to High(Entry.Detections) do
+          Entry.Detections[K].DateTime := Entry.RecordedAt + (Entry.Detections[K].StartSec / SECONDS_PER_DAY);
         FFileEntries := FFileEntries + [Entry];
       until FindNext(SR) <> 0;
     finally
       FindClose(SR);
     end;
   end;
-  TArray.Sort<TBatFileEntry>(FFileEntries,
-    TComparer<TBatFileEntry>.Construct(
-      function(const A, B: TBatFileEntry): Integer
-      begin
-        Result := CompareText(A.FileName, B.FileName);
-      end));
-  BuildFileList;
+  BuildSpeciesEntries;
+  BuildResultsList;
 end;
 
 
 
-procedure TFormMain.BuildFileList;
+procedure TFormMain.BuildSpeciesEntries;
+var
+  Flat: TArray<TFlatDet>;
+  I, J, StartIdx: Integer;
+  FD: TFlatDet;
+  Species: TSpeciesEntry;
+begin
+  Flat := [];
+  for I := 0 to High(FFileEntries) do
+    if FFileEntries[I].HasCsv then
+      for J := 0 to High(FFileEntries[I].Detections) do begin
+        FD.CommonName := FFileEntries[I].Detections[J].CommonName;
+        FD.FileIdx := I;
+        FD.DetIdx := J;
+        Flat := Flat + [FD];
+      end;
+  TArray.Sort<TFlatDet>(Flat,
+    TComparer<TFlatDet>.Construct(
+      function(const A, B: TFlatDet): Integer
+      begin
+        Result := CompareText(A.CommonName, B.CommonName);
+        if Result = 0 then
+          Result := CompareValue(
+            FFileEntries[A.FileIdx].Detections[A.DetIdx].DateTime,
+            FFileEntries[B.FileIdx].Detections[B.DetIdx].DateTime);
+      end));
+  SetLength(FSpeciesEntries, 0);
+  I := 0;
+  while I <= High(Flat) do begin
+    StartIdx := I;
+    while (I <= High(Flat)) and SameText(Flat[I].CommonName, Flat[StartIdx].CommonName) do
+      Inc(I);
+    Species.CommonName := Flat[StartIdx].CommonName;
+    Species.Expanded := True;
+    SetLength(Species.Refs, I - StartIdx);
+    for J := StartIdx to I - 1 do begin
+      Species.Refs[J - StartIdx].FileIdx := Flat[J].FileIdx;
+      Species.Refs[J - StartIdx].DetIdx := Flat[J].DetIdx;
+    end;
+    FSpeciesEntries := FSpeciesEntries + [Species];
+  end;
+  TArray.Sort<TSpeciesEntry>(FSpeciesEntries,
+    TComparer<TSpeciesEntry>.Construct(
+      function(const A, B: TSpeciesEntry): Integer
+      begin
+        Result := CompareText(A.CommonName, B.CommonName);
+      end));
+end;
+
+
+
+procedure TFormMain.BuildResultsList;
 var
   I, J: Integer;
   Item: TListItem;
+  Species: TSpeciesEntry;
   Entry: TBatFileEntry;
   Det: TBatDetection;
   RD: PRowData;
@@ -588,33 +686,37 @@ begin
   ClearFileListRowData;
   FileListView.Items.BeginUpdate;
   try
-    for I := 0 to High(FFileEntries) do begin
-      Entry := FFileEntries[I];
-      if Entry.HasCsv then begin
-        if Entry.Expanded then
-          Cap := #$25BC + ' ' + Entry.FileName
-        else
-          Cap := #$25B6 + ' ' + Entry.FileName;
-      end else
-        Cap := Entry.FileName;
+    for I := 0 to High(FSpeciesEntries) do begin
+      Species := FSpeciesEntries[I];
+      if Species.Expanded then
+        Cap := #$25BC + ' ' + Species.CommonName
+      else
+        Cap := #$25B6 + ' ' + Species.CommonName;
       Item := FileListView.Items.Add;
       Item.Caption := Cap;
       Item.SubItems.Add('');
+      Item.SubItems.Add('');
+      Item.SubItems.Add('');
       New(RD);
-      RD^.Kind := rkFile;
-      RD^.FileIdx := I;
+      RD^.Kind := rkSpecies;
+      RD^.SpeciesIdx := I;
+      RD^.FileIdx := -1;
       RD^.DetIdx := -1;
       Item.Data := RD;
-      if Entry.HasCsv and Entry.Expanded then begin
-        for J := 0 to High(Entry.Detections) do begin
-          Det := Entry.Detections[J];
+      if Species.Expanded then begin
+        for J := 0 to High(Species.Refs) do begin
+          Entry := FFileEntries[Species.Refs[J].FileIdx];
+          Det := Entry.Detections[Species.Refs[J].DetIdx];
           Item := FileListView.Items.Add;
-          Item.Caption := '    ' + Det.CommonName;
+          Item.Caption := '    ' + Entry.FileName;
+          Item.SubItems.Add(FormatDateTime('dd/mm hh:nn', Det.DateTime));
           Item.SubItems.Add(Format('%.1f%%', [Det.Confidence * 100]));
+          Item.SubItems.Add(Format('%.2f s', [Det.EndSec - Det.StartSec]));
           New(RD);
           RD^.Kind := rkDetection;
-          RD^.FileIdx := I;
-          RD^.DetIdx := J;
+          RD^.SpeciesIdx := I;
+          RD^.FileIdx := Species.Refs[J].FileIdx;
+          RD^.DetIdx := Species.Refs[J].DetIdx;
           Item.Data := RD;
         end;
       end;
@@ -675,11 +777,9 @@ begin
   if RD = nil then
     Exit();
   case RD^.Kind of
-    rkFile: begin
-      if not FFileEntries[RD^.FileIdx].HasCsv then
-        Exit();
-      FFileEntries[RD^.FileIdx].Expanded := not FFileEntries[RD^.FileIdx].Expanded;
-      BuildFileList;
+    rkSpecies: begin
+      FSpeciesEntries[RD^.SpeciesIdx].Expanded := not FSpeciesEntries[RD^.SpeciesIdx].Expanded;
+      BuildResultsList;
     end;
     rkDetection: begin
       Entry := FFileEntries[RD^.FileIdx];
@@ -700,21 +800,6 @@ begin
       WaveformBox.Invalidate();
     end;
   end;
-end;
-
-
-
-procedure TFormMain.FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
-  State: TCustomDrawState; var DefaultDraw: Boolean);
-var
-  RD: PRowData;
-begin
-  DefaultDraw := True;
-  RD := PRowData(Item.Data);
-  if (RD <> nil) and (RD^.Kind = rkFile) and not FFileEntries[RD^.FileIdx].HasCsv then
-    Sender.Canvas.Font.Color := clGrayText
-  else
-    Sender.Canvas.Font.Color := clWindowText;
 end;
 
 
