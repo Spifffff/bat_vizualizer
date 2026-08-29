@@ -85,7 +85,23 @@ begin
   if ZoomDur < 1.0E-9 then
     Exit();
 
-  if ZoomDur >= 8.0 then
+  if ZoomDur >= 7200.0 then
+    TimeStep := 1200.0
+  else if ZoomDur >= 3600.0 then
+    TimeStep := 600.0
+  else if ZoomDur >= 1800.0 then
+    TimeStep := 300.0
+  else if ZoomDur >= 600.0 then
+    TimeStep := 120.0
+  else if ZoomDur >= 240.0 then
+    TimeStep := 60.0
+  else if ZoomDur >= 120.0 then
+    TimeStep := 30.0
+  else if ZoomDur >= 60.0 then
+    TimeStep := 15.0
+  else if ZoomDur >= 30.0 then
+    TimeStep := 5.0
+  else if ZoomDur >= 8.0 then
     TimeStep := 2.0
   else if ZoomDur >= 4.0 then
     TimeStep := 1.0
