@@ -381,11 +381,11 @@ object FormMain: TFormMain
         Columns = <
           item
             Caption = 'Timestamp'
-            Width = 150
+            Width = 225
           end
           item
             Caption = 'Confidence'
-            Width = 70
+            Width = 80
           end>
         HideSelection = False
         ReadOnly = True
@@ -393,6 +393,7 @@ object FormMain: TFormMain
         TabOrder = 1
         ViewStyle = vsReport
         OnClick = FileListViewClick
+        OnResize = FileListViewResize
       end
     end
   end

@@ -103,6 +103,7 @@ type
     procedure BtnTogglePanelClick(Sender: TObject);
     procedure BtnSelectFolderClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
+    procedure FileListViewResize(Sender: TObject);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -179,6 +180,7 @@ type
     procedure BuildSpeciesEntries;
     procedure BuildResultsList;
     procedure ClearFileListRowData;
+    procedure FitResultsColumns;
   end;
 
 var
@@ -417,6 +419,7 @@ begin
   UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
+  FitResultsColumns();
 end;
 
 
@@ -504,6 +507,25 @@ begin
     if FileListView.Items[I].Data <> nil then
       Dispose(PRowData(FileListView.Items[I].Data));
   FileListView.Items.Clear;
+end;
+
+
+
+procedure TFormMain.FitResultsColumns;
+const
+  CONFIDENCE_COL_WIDTH = 80;
+  MIN_TIMESTAMP_COL_WIDTH = 60;
+begin
+  FileListView.Columns[1].Width := CONFIDENCE_COL_WIDTH;
+  FileListView.Columns[0].Width :=
+    Max(MIN_TIMESTAMP_COL_WIDTH, FileListView.ClientWidth - CONFIDENCE_COL_WIDTH);
+end;
+
+
+
+procedure TFormMain.FileListViewResize(Sender: TObject);
+begin
+  FitResultsColumns();
 end;
 
 
@@ -720,6 +742,7 @@ begin
   finally
     FileListView.Items.EndUpdate;
   end;
+  FitResultsColumns();
 end;
 
 
