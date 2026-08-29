@@ -12,7 +12,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
-  WaveformPainter, SpectrogramPainter, PngExport;
+  WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations;
 
 const
   LEFT_MARGIN = 65;
@@ -70,6 +70,7 @@ type
     BtnTogglePanel: TButton;
     PanelFileContent: TPanel;
     BtnSelectFolder: TButton;
+    CbxLanguage: TComboBox;
     FileListView: TListView;
     SplitterRight: TSplitter;
     procedure FormCreate(Sender: TObject);
@@ -107,6 +108,7 @@ type
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
+    procedure CbxLanguageChange(Sender: TObject);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -178,6 +180,7 @@ type
       FRightPanelWidth: Integer;
       FSortColumn: TResultSortColumn;
       FSortAscending: Boolean;
+      FDisplayLanguage: TDisplayLanguage;
     procedure LoadFile(const AFilePath: string);
     function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
     procedure ScanFolderForFiles(const AFolder: string);
@@ -427,6 +430,7 @@ begin
   FCurrentFilePath := '';
   FSortColumn := rscConfidence;
   FSortAscending := False;
+  FDisplayLanguage := dlDutch;
   FRightPanelWidth := PanelRight.Width;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
@@ -747,7 +751,9 @@ begin
     TComparer<TSpeciesEntry>.Construct(
       function(const A, B: TSpeciesEntry): Integer
       begin
-        Result := CompareText(A.CommonName, B.CommonName);
+        Result := CompareText(
+          TranslateSpeciesName(A.CommonName, FDisplayLanguage),
+          TranslateSpeciesName(B.CommonName, FDisplayLanguage));
       end));
 end;
 
@@ -769,9 +775,9 @@ begin
     for I := 0 to High(FSpeciesEntries) do begin
       Species := FSpeciesEntries[I];
       if Species.Expanded then
-        Cap := #$25BC + ' ' + Species.CommonName
+        Cap := #$25BC + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage)
       else
-        Cap := #$25B6 + ' ' + Species.CommonName;
+        Cap := #$25B6 + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage);
       Item := FileListView.Items.Add;
       Item.Caption := Cap;
       Item.SubItems.Add('');
@@ -836,6 +842,15 @@ begin
   finally
     D.Free;
   end;
+end;
+
+
+
+procedure TFormMain.CbxLanguageChange(Sender: TObject);
+begin
+  FDisplayLanguage := TDisplayLanguage(CbxLanguage.ItemIndex);
+  BuildSpeciesEntries;
+  BuildResultsList;
 end;
 
 

@@ -397,11 +397,29 @@ object FormMain: TFormMain
         TabOrder = 0
         OnClick = BtnSelectFolderClick
       end
-      object FileListView: TListView
+      object CbxLanguage: TComboBox
         Left = 0
         Top = 28
         Width = 300
-        Height = 699
+        Height = 21
+        Align = alTop
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 1
+        Text = 'Dutch'
+        OnChange = CbxLanguageChange
+        Items.Strings = (
+          'Dutch'
+          'English'
+          'German'
+          'French'
+          'Spanish')
+      end
+      object FileListView: TListView
+        Left = 0
+        Top = 49
+        Width = 300
+        Height = 678
         Align = alClient
         Columns = <
           item
@@ -415,7 +433,7 @@ object FormMain: TFormMain
         HideSelection = False
         ReadOnly = True
         RowSelect = True
-        TabOrder = 1
+        TabOrder = 2
         ViewStyle = vsReport
         OnClick = FileListViewClick
         OnColumnClick = FileListViewColumnClick
