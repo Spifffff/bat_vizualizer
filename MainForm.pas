@@ -793,7 +793,7 @@ begin
           Det := Entry.Detections[Species.Refs[J].DetIdx];
           Item := FileListView.Items.Add;
           Item.Caption := '    ' +
-            LowerCase(FormatDateTime('d mmmm, hh:nn', Det.DateTime, TFormatSettings.Invariant));
+            LowerCase(FormatDateTime('d mmmm, hh:nn:ss', Det.DateTime, TFormatSettings.Invariant));
           Item.SubItems.Add(Format('%.2f%%', [Det.Confidence * 100]));
           New(RD);
           RD^.Kind := rkDetection;
