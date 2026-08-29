@@ -108,8 +108,6 @@ type
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
-    procedure FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
-      State: TCustomDrawState; var DefaultDraw: Boolean);
     procedure CbxLanguageChange(Sender: TObject);
   private
     FWavFile: TWavFile;
@@ -582,21 +580,6 @@ begin
   end;
   BuildSpeciesEntries;
   BuildResultsList;
-end;
-
-
-
-procedure TFormMain.FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
-  State: TCustomDrawState; var DefaultDraw: Boolean);
-var
-  RD: PRowData;
-begin
-  DefaultDraw := True;
-  RD := PRowData(Item.Data);
-  if (RD <> nil) and (RD^.Kind = rkSpecies) then
-    Sender.Canvas.Font.Style := Sender.Canvas.Font.Style + [fsBold]
-  else
-    Sender.Canvas.Font.Style := Sender.Canvas.Font.Style - [fsBold];
 end;
 
 
