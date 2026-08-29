@@ -171,9 +171,9 @@ object FormMain: TFormMain
       Width = 164
       Height = 21
       Style = csDropDownList
-      ItemIndex = 6
+      ItemIndex = 5
       TabOrder = 6
-      Text = '4096'
+      Text = '2048'
       OnChange = CbxFFTSizeChange
       Items.Strings = (
         '64'
@@ -221,9 +221,9 @@ object FormMain: TFormMain
       Width = 164
       Height = 21
       Style = csDropDownList
-      ItemIndex = 0
+      ItemIndex = 2
       TabOrder = 9
-      Text = 'Viridis'
+      Text = 'Magma'
       OnChange = CbxColorSchemeChange
       Items.Strings = (
         'Viridis'
@@ -242,8 +242,8 @@ object FormMain: TFormMain
       Top = 384
       Width = 172
       Height = 26
-      Max = -20
-      Min = -120
+      Max = 0
+      Min = -100
       Frequency = 10
       Position = -100
       TabOrder = 10
@@ -255,8 +255,8 @@ object FormMain: TFormMain
       Top = 434
       Width = 172
       Height = 26
-      Max = 40
-      Min = -60
+      Max = 60
+      Min = -40
       Frequency = 10
       TabOrder = 11
       TickStyle = tsNone
