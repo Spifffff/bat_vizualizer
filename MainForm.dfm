@@ -380,20 +380,12 @@ object FormMain: TFormMain
         Align = alClient
         Columns = <
           item
-            Caption = 'Species'
+            Caption = 'Timestamp'
             Width = 150
-          end
-          item
-            Caption = 'Date & Time'
-            Width = 95
           end
           item
             Caption = 'Confidence'
             Width = 70
-          end
-          item
-            Caption = 'Duration'
-            Width = 60
           end>
         HideSelection = False
         ReadOnly = True

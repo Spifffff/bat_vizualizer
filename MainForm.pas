@@ -695,8 +695,6 @@ begin
       Item := FileListView.Items.Add;
       Item.Caption := Cap;
       Item.SubItems.Add('');
-      Item.SubItems.Add('');
-      Item.SubItems.Add('');
       New(RD);
       RD^.Kind := rkSpecies;
       RD^.SpeciesIdx := I;
@@ -708,10 +706,8 @@ begin
           Entry := FFileEntries[Species.Refs[J].FileIdx];
           Det := Entry.Detections[Species.Refs[J].DetIdx];
           Item := FileListView.Items.Add;
-          Item.Caption := '    ' + Entry.FileName;
-          Item.SubItems.Add(FormatDateTime('dd/mm hh:nn', Det.DateTime));
-          Item.SubItems.Add(Format('%.1f%%', [Det.Confidence * 100]));
-          Item.SubItems.Add(Format('%.2f s', [Det.EndSec - Det.StartSec]));
+          Item.Caption := '    ' + FormatDateTime('dd/mm hh:nn', Det.DateTime);
+          Item.SubItems.Add(Format('%.2f%%', [Det.Confidence * 100]));
           New(RD);
           RD^.Kind := rkDetection;
           RD^.SpeciesIdx := I;
