@@ -108,6 +108,8 @@ type
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
+    procedure FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
+      State: TCustomDrawState; var DefaultDraw: Boolean);
     procedure CbxLanguageChange(Sender: TObject);
   private
     FWavFile: TWavFile;
@@ -580,6 +582,25 @@ begin
   end;
   BuildSpeciesEntries;
   BuildResultsList;
+end;
+
+
+
+procedure TFormMain.FileListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
+  State: TCustomDrawState; var DefaultDraw: Boolean);
+var
+  RD: PRowData;
+begin
+  DefaultDraw := True;
+  { Under a VCL Style, touching Canvas.Font here makes Windows paint an
+    opaque (default white) background rect behind the text. A clear brush
+    stops that fill, leaving the already-drawn themed background in place. }
+  Sender.Canvas.Brush.Style := bsClear;
+  RD := PRowData(Item.Data);
+  if (RD <> nil) and (RD^.Kind = rkSpecies) then
+    Sender.Canvas.Font.Style := Sender.Canvas.Font.Style + [fsBold]
+  else
+    Sender.Canvas.Font.Style := Sender.Canvas.Font.Style - [fsBold];
 end;
 
 
