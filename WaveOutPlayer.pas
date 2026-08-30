@@ -12,7 +12,7 @@ interface
 
 uses
   Winapi.Windows,
-  System.SysUtils;
+  System.SysUtils, System.Math;
 
 type
   TWaveOutPlayer = class
@@ -21,6 +21,8 @@ type
     FWaveHdrBuf: array [0 .. 63] of Byte; // enough for WAVEHDR on 32-bit
     FBuffer: TArray<SmallInt>;
     FTotalSamples: Integer;
+    FFileTotalSamples: Integer;
+    FRangeStart: Integer;
     FSeekOffset: Integer;
     FActualRate: Cardinal;
     FLoaded: Boolean;
@@ -32,21 +34,29 @@ type
   public
     destructor Destroy; override;
 
-    { Convert samples to 16-bit and open the device at RequestedRate Hz
-      (= SrcRate * PlaybackRate, e.g. 19 200 for 192 000 * 0.1).
-      ActualRate is set to the rate that Windows accepted. }
-    procedure Load(const Samples: TArray<Single>; RequestedRate: Cardinal; out ActualRate: Cardinal);
+    { Convert samples[AStartSample..AEndSample) to 16-bit and open the device
+      at RequestedRate Hz (= SrcRate * PlaybackRate, e.g. 19 200 for
+      192 000 * 0.1). Only the requested sub-range is converted/buffered --
+      passing the current zoom window instead of the whole file keeps the
+      16-bit copy from ballooning memory use on long recordings, since
+      Samples itself (already a 4-byte-per-sample copy) stays alive
+      regardless. ActualRate is set to the rate that Windows accepted. }
+    procedure Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
+      RequestedRate: Cardinal; out ActualRate: Cardinal);
 
     procedure Play;
     procedure Pause;
     procedure Resume;
     procedure Stop;
 
-    { Seek to a normalised position 0..1; restarts playback from that point
-      if the device was playing or paused. }
+    { Seek to a position 0..1 normalised against the whole file (not just the
+      loaded range); restarts playback from that point if the device was
+      playing or paused. Clamped to the loaded range's edges if Pos falls
+      outside what was actually buffered by Load. }
     procedure SeekToNormalized(Pos: Double);
 
-    { Normalised position 0..1 (samples consumed / total samples). }
+    { Normalised position 0..1, relative to the whole file (not just the
+      loaded range). }
     function GetNormalizedPosition: Double;
 
     { State queries. }
@@ -191,26 +201,31 @@ end;
 
 
 
-procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; RequestedRate: Cardinal; out ActualRate: Cardinal);
+procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
+  RequestedRate: Cardinal; out ActualRate: Cardinal);
 const
   Fallbacks: array [0 .. 3] of Cardinal = (22050, 16000, 11025, 44100);
 var
   Fmt: TWaveFormatEx;
   H: PWaveHdr;
   Res: MMRESULT;
-  I, V: Integer;
+  I, V, StartSample, EndSample: Integer;
   Rate: Cardinal;
 begin
   CloseDevice();
 
-  FTotalSamples := Length(Samples);
+  FFileTotalSamples := Length(Samples);
+  StartSample := EnsureRange(AStartSample, 0, FFileTotalSamples);
+  EndSample := EnsureRange(AEndSample, StartSample, FFileTotalSamples);
+  FRangeStart := StartSample;
+  FTotalSamples := EndSample - StartSample;
   if FTotalSamples = 0 then
     raise Exception.Create('No samples to load.');
 
-  { Float -1..1 → Int16. }
+  { Float -1..1 → Int16, only for the requested sub-range. }
   SetLength(FBuffer, FTotalSamples);
   for I := 0 to FTotalSamples - 1 do begin
-    V := Round(Samples[I] * 32767.0);
+    V := Round(Samples[StartSample + I] * 32767.0);
     if V > 32767 then
       V := 32767;
     if V < -32768 then
@@ -303,6 +318,8 @@ begin
   CloseDevice();
   SetLength(FBuffer, 0);
   FTotalSamples := 0;
+  FFileTotalSamples := 0;
+  FRangeStart := 0;
   FActualRate := 0;
 end;
 
@@ -313,12 +330,12 @@ var
   MMT: TMMTime;
 begin
   Result := 0.0;
-  if (FDevHandle = 0) or (FTotalSamples = 0) then
+  if (FDevHandle = 0) or (FTotalSamples = 0) or (FFileTotalSamples = 0) then
     Exit();
   FillChar(MMT, SizeOf(MMT), 0);
   MMT.wType := TIME_SAMPLES;
   waveOutGetPosition(FDevHandle, @MMT, SizeOf(TMMTime));
-  Result := (FSeekOffset + MMT.sample) / FTotalSamples;
+  Result := (FRangeStart + FSeekOffset + MMT.sample) / FFileTotalSamples;
   if Result > 1.0 then
     Result := 1.0;
 end;
@@ -349,7 +366,7 @@ end;
 procedure TWaveOutPlayer.SeekToNormalized(Pos: Double);
 var
   H: PWaveHdr;
-  Offset: Integer;
+  Offset, AbsSample: Integer;
   WasActive: Boolean;
 begin
   if (FDevHandle = 0) or not FLoaded then
@@ -363,9 +380,11 @@ begin
 
   if Pos < 0.0 then Pos := 0.0;
   if Pos > 1.0 then Pos := 1.0;
-  Offset := Round(Pos * FTotalSamples);
-  if Offset >= FTotalSamples then
-    Offset := FTotalSamples - 1;
+  { Pos is relative to the whole file; translate to an offset within the
+    (possibly zoom-limited) loaded range, clamping to its edges if Pos
+    falls outside what was actually buffered. }
+  AbsSample := Round(Pos * FFileTotalSamples);
+  Offset := EnsureRange(AbsSample - FRangeStart, 0, FTotalSamples - 1);
   FSeekOffset := Offset;
 
   FillChar(H^, SizeOf(TWaveHdr), 0);

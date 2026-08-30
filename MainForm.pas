@@ -997,6 +997,7 @@ end;
 procedure TFormMain.BtnPlayClick(Sender: TObject);
 var
   OutRate, ActualRate: Cardinal;
+  StartSample, EndSample: Integer;
 begin
   if FWavFile = nil then
     Exit();
@@ -1005,14 +1006,16 @@ begin
       FWavePlayer.Resume()
     else begin
       OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
-      FWavePlayer.Load(FWavFile.Samples, OutRate, ActualRate);
+      { Only load/convert the current zoom window, not the whole file --
+        for a large recording zoomed into a single call, this keeps the
+        16-bit playback buffer from ballooning to the size of the entire
+        (possibly multi-hour) file. Playback also now stops at the zoom
+        end instead of continuing into the rest of the file. }
+      StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+      EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
+      FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, ActualRate);
       FWavePlayer.Play();
-      if FZoomStart > 0.0 then begin
-        FWavePlayer.SeekToNormalized(FZoomStart);
-        FCursorPos := FZoomStart;
-      end
-      else
-        FCursorPos := 0;
+      FCursorPos := FZoomStart;
       if ActualRate <> OutRate then
         StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
       else
