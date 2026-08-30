@@ -10,9 +10,9 @@ uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList, Vcl.Imaging.pngimage,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
-  WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations;
+  WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList;
 
 const
   LEFT_MARGIN = 65;
@@ -50,7 +50,6 @@ type
     BtnAutoFloor: TButton;
     BtnAutoCeiling: TButton;
     BtnAutoMaxFreq: TButton;
-    ImgListAuto: TImageList;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -76,6 +75,7 @@ type
     CbxLanguage: TComboBox;
     FileListView: TListView;
     SplitterRight: TSplitter;
+    ImageListButtons: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenClick(Sender: TObject);
@@ -141,8 +141,6 @@ type
     procedure ScheduleRender;
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
-    function ResourcePath(const AFileName: string): string;
-    procedure LoadAutoImageList;
     type
       TRowKind = (rkSpecies, rkDetection);
       TRowData = record
@@ -445,7 +443,6 @@ begin
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
   FitResultsColumns();
-  LoadAutoImageList();
 end;
 
 
@@ -1190,50 +1187,6 @@ begin
   FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
   LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
   ScheduleRender();
-end;
-
-
-
-function TFormMain.ResourcePath(const AFileName: string): string;
-begin
-  Result := ExtractFilePath(ParamStr(0)) + 'resources\' + AFileName;
-end;
-
-
-
-procedure TFormMain.LoadAutoImageList;
-
-  procedure AddIcon(const AFileName: string);
-  var
-    Png: TPngImage;
-    Bmp: TBitmap;
-  begin
-    Bmp := TBitmap.Create();
-    try
-      Bmp.PixelFormat := pf32bit;
-      Bmp.Width := ImgListAuto.Width;
-      Bmp.Height := ImgListAuto.Height;
-      Bmp.Canvas.Brush.Color := clFuchsia;
-      Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
-      if FileExists(AFileName) then begin
-        Png := TPngImage.Create();
-        try
-          Png.LoadFromFile(AFileName);
-          Bmp.Canvas.StretchDraw(Rect(0, 0, Bmp.Width, Bmp.Height), Png);
-        finally
-          Png.Free();
-        end;
-      end;
-      ImgListAuto.AddMasked(Bmp, clFuchsia);
-    finally
-      Bmp.Free();
-    end;
-  end;
-
-begin
-  ImgListAuto.Clear();
-  AddIcon(ResourcePath('auto.png'));   // index 0: ImageIndex (enabled)
-  AddIcon(ResourcePath('auto_d.png')); // index 1: DisabledImageIndex
 end;
 
 
