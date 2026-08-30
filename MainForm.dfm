@@ -95,7 +95,7 @@ object FormMain: TFormMain
     end
     object LblSave: TLabel
       Left = 8
-      Top = 520
+      Top = 554
       Width = 65
       Height = 13
       Caption = 'Save as PNG:'
@@ -255,7 +255,7 @@ object FormMain: TFormMain
     object TrkFloor: TTrackBar
       Left = 4
       Top = 384
-      Width = 140
+      Width = 172
       Height = 26
       Max = 0
       Min = -100
@@ -268,7 +268,7 @@ object FormMain: TFormMain
     object TrkCeiling: TTrackBar
       Left = 4
       Top = 434
-      Width = 140
+      Width = 172
       Height = 26
       Max = 60
       Min = -40
@@ -280,7 +280,7 @@ object FormMain: TFormMain
     object TrkMaxFreq: TTrackBar
       Left = 4
       Top = 484
-      Width = 140
+      Width = 172
       Height = 26
       Max = 96
       Min = 1
@@ -290,42 +290,19 @@ object FormMain: TFormMain
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
     end
-    object ImgAutoFloor: TImage
-      Left = 148
-      Top = 384
-      Width = 24
+    object BtnAutoLevels: TButton
+      Left = 8
+      Top = 514
+      Width = 164
       Height = 26
-      Cursor = crHandPoint
-      Center = True
-      Proportional = True
-      Stretch = True
-      OnClick = ImgAutoFloorClick
-    end
-    object ImgAutoCeiling: TImage
-      Left = 148
-      Top = 434
-      Width = 24
-      Height = 26
-      Cursor = crHandPoint
-      Center = True
-      Proportional = True
-      Stretch = True
-      OnClick = ImgAutoCeilingClick
-    end
-    object ImgAutoMaxFreq: TImage
-      Left = 148
-      Top = 484
-      Width = 24
-      Height = 26
-      Cursor = crHandPoint
-      Center = True
-      Proportional = True
-      Stretch = True
-      OnClick = ImgAutoMaxFreqClick
+      Caption = 'Auto floor / ceiling / freq'
+      Enabled = False
+      TabOrder = 17
+      OnClick = BtnAutoLevelsClick
     end
     object CbxSaveTarget: TComboBox
       Left = 8
-      Top = 536
+      Top = 570
       Width = 164
       Height = 21
       Style = csDropDownList
@@ -339,7 +316,7 @@ object FormMain: TFormMain
     end
     object BtnSavePNG: TButton
       Left = 8
-      Top = 562
+      Top = 596
       Width = 164
       Height = 26
       Caption = 'Save PNG...'
@@ -349,7 +326,7 @@ object FormMain: TFormMain
     end
     object BtnSaveMp3: TButton
       Left = 8
-      Top = 592
+      Top = 626
       Width = 164
       Height = 26
       Caption = 'Save MP3...'
