@@ -95,7 +95,7 @@ object FormMain: TFormMain
     end
     object LblSave: TLabel
       Left = 8
-      Top = 554
+      Top = 520
       Width = 65
       Height = 13
       Caption = 'Save as PNG:'
@@ -255,7 +255,7 @@ object FormMain: TFormMain
     object TrkFloor: TTrackBar
       Left = 4
       Top = 384
-      Width = 172
+      Width = 140
       Height = 26
       Max = 0
       Min = -100
@@ -268,7 +268,7 @@ object FormMain: TFormMain
     object TrkCeiling: TTrackBar
       Left = 4
       Top = 434
-      Width = 172
+      Width = 140
       Height = 26
       Max = 60
       Min = -40
@@ -280,7 +280,7 @@ object FormMain: TFormMain
     object TrkMaxFreq: TTrackBar
       Left = 4
       Top = 484
-      Width = 172
+      Width = 140
       Height = 26
       Max = 96
       Min = 1
@@ -290,19 +290,48 @@ object FormMain: TFormMain
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
     end
-    object BtnAutoLevels: TButton
-      Left = 8
-      Top = 514
-      Width = 164
+    object BtnAutoFloor: TButton
+      Left = 148
+      Top = 384
+      Width = 24
       Height = 26
-      Caption = 'Auto floor / ceiling / freq'
+      Caption = ''
       Enabled = False
+      Images = ImgListAuto
+      ImageIndex = 0
+      DisabledImageIndex = 1
       TabOrder = 17
-      OnClick = BtnAutoLevelsClick
+      OnClick = BtnAutoFloorClick
+    end
+    object BtnAutoCeiling: TButton
+      Left = 148
+      Top = 434
+      Width = 24
+      Height = 26
+      Caption = ''
+      Enabled = False
+      Images = ImgListAuto
+      ImageIndex = 0
+      DisabledImageIndex = 1
+      TabOrder = 18
+      OnClick = BtnAutoCeilingClick
+    end
+    object BtnAutoMaxFreq: TButton
+      Left = 148
+      Top = 484
+      Width = 24
+      Height = 26
+      Caption = ''
+      Enabled = False
+      Images = ImgListAuto
+      ImageIndex = 0
+      DisabledImageIndex = 1
+      TabOrder = 19
+      OnClick = BtnAutoMaxFreqClick
     end
     object CbxSaveTarget: TComboBox
       Left = 8
-      Top = 570
+      Top = 536
       Width = 164
       Height = 21
       Style = csDropDownList
@@ -316,7 +345,7 @@ object FormMain: TFormMain
     end
     object BtnSavePNG: TButton
       Left = 8
-      Top = 596
+      Top = 562
       Width = 164
       Height = 26
       Caption = 'Save PNG...'
@@ -326,7 +355,7 @@ object FormMain: TFormMain
     end
     object BtnSaveMp3: TButton
       Left = 8
-      Top = 626
+      Top = 592
       Width = 164
       Height = 26
       Caption = 'Save MP3...'
@@ -499,8 +528,14 @@ object FormMain: TFormMain
       OnChange = ZoomBarChange
     end
   end
+  object ImgListAuto: TImageList
+    Width = 24
+    Height = 24
+    Left = 1080
+    Top = 72
+  end
   object OpenDialog: TOpenDialog
-    Filter = 
+    Filter =
       'Audio files|*.wav;*.mp3|WAV files|*.wav|MP3 files|*.mp3|All file' +
       's|*.*'
     Left = 1080

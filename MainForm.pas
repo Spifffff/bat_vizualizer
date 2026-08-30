@@ -10,7 +10,7 @@ uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList, Vcl.Imaging.pngimage,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations;
 
@@ -47,7 +47,10 @@ type
     TrkCeiling: TTrackBar;
     LblMaxFreq: TLabel;
     TrkMaxFreq: TTrackBar;
-    BtnAutoLevels: TButton;
+    BtnAutoFloor: TButton;
+    BtnAutoCeiling: TButton;
+    BtnAutoMaxFreq: TButton;
+    ImgListAuto: TImageList;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -99,7 +102,9 @@ type
     procedure TrkFloorChange(Sender: TObject);
     procedure TrkCeilingChange(Sender: TObject);
     procedure TrkMaxFreqChange(Sender: TObject);
-    procedure BtnAutoLevelsClick(Sender: TObject);
+    procedure BtnAutoFloorClick(Sender: TObject);
+    procedure BtnAutoCeilingClick(Sender: TObject);
+    procedure BtnAutoMaxFreqClick(Sender: TObject);
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
     procedure BtnSaveMp3Click(Sender: TObject);
@@ -136,6 +141,8 @@ type
     procedure ScheduleRender;
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
+    function ResourcePath(const AFileName: string): string;
+    procedure LoadAutoImageList;
     type
       TRowKind = (rkSpecies, rkDetection);
       TRowData = record
@@ -438,6 +445,7 @@ begin
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
   FitResultsColumns();
+  LoadAutoImageList();
 end;
 
 
@@ -492,7 +500,9 @@ begin
       BtnPlay.Enabled := True;
       BtnSavePNG.Enabled := True;
       BtnSaveMp3.Enabled := True;
-      BtnAutoLevels.Enabled := True;
+      BtnAutoFloor.Enabled := True;
+      BtnAutoCeiling.Enabled := True;
+      BtnAutoMaxFreq.Enabled := True;
     except
       on E: Exception do begin
         FreeAndNil(FWavFile);
@@ -1184,15 +1194,75 @@ end;
 
 
 
-procedure TFormMain.BtnAutoLevelsClick(Sender: TObject);
+function TFormMain.ResourcePath(const AFileName: string): string;
+begin
+  Result := ExtractFilePath(ParamStr(0)) + 'resources\' + AFileName;
+end;
+
+
+
+procedure TFormMain.LoadAutoImageList;
+
+  procedure AddIcon(const AFileName: string);
+  var
+    Png: TPngImage;
+    Bmp: TBitmap;
+  begin
+    Bmp := TBitmap.Create();
+    try
+      Bmp.PixelFormat := pf32bit;
+      Bmp.Width := ImgListAuto.Width;
+      Bmp.Height := ImgListAuto.Height;
+      Bmp.Canvas.Brush.Color := clFuchsia;
+      Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
+      if FileExists(AFileName) then begin
+        Png := TPngImage.Create();
+        try
+          Png.LoadFromFile(AFileName);
+          Bmp.Canvas.StretchDraw(Rect(0, 0, Bmp.Width, Bmp.Height), Png);
+        finally
+          Png.Free();
+        end;
+      end;
+      ImgListAuto.AddMasked(Bmp, clFuchsia);
+    finally
+      Bmp.Free();
+    end;
+  end;
+
+begin
+  ImgListAuto.Clear();
+  AddIcon(ResourcePath('auto.png'));   // index 0: ImageIndex (enabled)
+  AddIcon(ResourcePath('auto_d.png')); // index 1: DisabledImageIndex
+end;
+
+
+
+procedure TFormMain.BtnAutoFloorClick(Sender: TObject);
 begin
   if (FWavFile = nil) or (FSpecgram = nil) then
     Exit();
   TrkFloor.Position := EnsureRange(Round(FSpecgram.AutoFloorDB), TrkFloor.Min, TrkFloor.Max);
-  TrkCeiling.Position := EnsureRange(Round(FSpecgram.AutoCeilingDB), TrkCeiling.Min, TrkCeiling.Max);
-  TrkMaxFreq.Position := EnsureRange(Round(FSpecgram.AutoMaxFreqHz / 1000.0), TrkMaxFreq.Min, TrkMaxFreq.Max);
   TrkFloorChange(TrkFloor);
+end;
+
+
+
+procedure TFormMain.BtnAutoCeilingClick(Sender: TObject);
+begin
+  if (FWavFile = nil) or (FSpecgram = nil) then
+    Exit();
+  TrkCeiling.Position := EnsureRange(Round(FSpecgram.AutoCeilingDB), TrkCeiling.Min, TrkCeiling.Max);
   TrkCeilingChange(TrkCeiling);
+end;
+
+
+
+procedure TFormMain.BtnAutoMaxFreqClick(Sender: TObject);
+begin
+  if (FWavFile = nil) or (FSpecgram = nil) then
+    Exit();
+  TrkMaxFreq.Position := EnsureRange(Round(FSpecgram.AutoMaxFreqHz / 1000.0), TrkMaxFreq.Min, TrkMaxFreq.Max);
   TrkMaxFreqChange(TrkMaxFreq);
 end;
 
