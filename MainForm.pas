@@ -189,6 +189,8 @@ type
       FDisplayLanguage: TDisplayLanguage;
     procedure LoadFile(const AFilePath: string);
     function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
+    function MergeConsecutiveDetections(const ADetections: TArray<TBatDetection>): TArray<TBatDetection>;
+    function TopMeanConfidence(const ADetections: TArray<TBatDetection>; ALow, AHigh: Integer): Double;
     procedure ScanFolderForFiles(const AFolder: string);
     function TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
     function GetFileFallbackDateTime(const AFilePath: string): TDateTime;
@@ -630,6 +632,56 @@ end;
 
 
 
+function TFormMain.TopMeanConfidence(const ADetections: TArray<TBatDetection>; ALow, AHigh: Integer): Double;
+var
+  Vals: TArray<Double>;
+  I, N: Integer;
+  Sum: Double;
+begin
+  SetLength(Vals, AHigh - ALow + 1);
+  for I := 0 to High(Vals) do
+    Vals[I] := ADetections[ALow + I].Confidence;
+  TArray.Sort<Double>(Vals, TComparer<Double>.Construct(
+    function(const L, R: Double): Integer
+    begin
+      Result := CompareValue(R, L);
+    end));
+  N := Min(3, Length(Vals));
+  Sum := 0;
+  for I := 0 to N - 1 do
+    Sum := Sum + Vals[I];
+  Result := Sum / N;
+end;
+
+
+
+function TFormMain.MergeConsecutiveDetections(const ADetections: TArray<TBatDetection>): TArray<TBatDetection>;
+const
+  GAP_TOLERANCE_SEC = 500; // todo: replace with 5
+var
+  GroupStart, GroupEnd: Integer;
+  Merged: TBatDetection;
+begin
+  Result := [];
+  if Length(ADetections) = 0 then
+    Exit();
+  GroupStart := 0;
+  while GroupStart <= High(ADetections) do begin
+    GroupEnd := GroupStart;
+    while (GroupEnd < High(ADetections))
+      and (ADetections[GroupEnd + 1].CommonName = ADetections[GroupStart].CommonName)
+      and (ADetections[GroupEnd + 1].StartSec <= ADetections[GroupEnd].EndSec + GAP_TOLERANCE_SEC) do
+      Inc(GroupEnd);
+    Merged := ADetections[GroupStart];
+    Merged.EndSec := ADetections[GroupEnd].EndSec;
+    Merged.Confidence := TopMeanConfidence(ADetections, GroupStart, GroupEnd);
+    Result := Result + [Merged];
+    GroupStart := GroupEnd + 1;
+  end;
+end;
+
+
+
 function TFormMain.TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
 var
   Y, Mo, D, H, Mi, S: Integer;
@@ -689,7 +741,7 @@ begin
         CsvPath := ChangeFileExt(Entry.FilePath, '.bat.results.csv');
         Entry.HasCsv := FileExists(CsvPath);
         if Entry.HasCsv then
-          Entry.Detections := ParseBatResults(CsvPath)
+          Entry.Detections := MergeConsecutiveDetections(ParseBatResults(CsvPath))
         else
           Entry.Detections := [];
         for K := 0 to High(Entry.Detections) do
