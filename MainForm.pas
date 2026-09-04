@@ -886,8 +886,12 @@ begin
     D.Options := [fdoPickFolders, fdoPathMustExist];
     if D.Execute then begin
       ScanFolderForFiles(ExcludeTrailingPathDelimiter(D.FileName));
-      PanelRight.Visible := True;
-      SplitterRight.Visible := True;
+      if Length(FFileEntries) = 0 then
+        MessageDlg('No WAV files found in the selected folder.', mtWarning, [mbOK], 0)
+      else begin
+        PanelRight.Visible := True;
+        SplitterRight.Visible := True;
+      end;
     end;
   finally
     D.Free;
