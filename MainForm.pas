@@ -550,6 +550,10 @@ begin
   FileListView.Columns[1].Width := CONFIDENCE_COL_WIDTH;
   FileListView.Columns[0].Width :=
     Max(MIN_TIMESTAMP_COL_WIDTH, FileListView.ClientWidth - CONFIDENCE_COL_WIDTH);
+  { The common control sometimes shows a horizontal scrollbar for a tick after
+    items are added even though the columns fit, and only clears it on the next
+    scroll notification. Force it hidden rather than wait for that. }
+  ShowScrollBar(FileListView.Handle, SB_HORZ, False);
 end;
 
 
