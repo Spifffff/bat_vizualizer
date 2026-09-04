@@ -1320,8 +1320,8 @@ end;
 
 procedure TFormMain.ApplyZoomDrag(const ChartR: TRect);
 var
-  W, SelX1, SelX2: Integer;
-  Frac1, Frac2, ClickFrac: Double;
+  W, SelX1, SelX2, AnchorX, DragDist: Integer;
+  Frac1, Frac2, ClickFrac, Frac, T, NewSpan, NewStart, NewEnd: Double;
 begin
   W := Max(1, ChartR.Right - ChartR.Left);
 
@@ -1344,8 +1344,28 @@ begin
     RenderSpectrogram();
   end
   else begin
-    FZoomStart := 0.0;
-    FZoomEnd := 1.0;
+    { Dragging left zooms out, anchored at the drag start point (so that data
+      point stays under the cursor), with the same distance-to-zoom-factor
+      relationship used for the zoom-in drag above: covering a small fraction
+      of the chart width gives a strong zoom change, a nearly full-width drag
+      barely changes the view. }
+    AnchorX := Max(ChartR.Left, Min(ChartR.Right, FDragStartX));
+    Frac := (AnchorX - ChartR.Left) / W;
+    T := FZoomStart + Frac * (FZoomEnd - FZoomStart);
+    DragDist := Min(W, Abs(FDragStartX - FDragCurrentX));
+    NewSpan := Min(1.0, (FZoomEnd - FZoomStart) * (W / DragDist));
+    NewStart := T - Frac * NewSpan;
+    NewEnd := NewStart + NewSpan;
+    if NewStart < 0.0 then begin
+      NewStart := 0.0;
+      NewEnd := NewSpan;
+    end;
+    if NewEnd > 1.0 then begin
+      NewEnd := 1.0;
+      NewStart := 1.0 - NewSpan;
+    end;
+    FZoomStart := Max(0.0, NewStart);
+    FZoomEnd := Min(1.0, NewEnd);
     UpdateZoomBar();
     RenderSpectrogram();
   end;
