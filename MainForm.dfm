@@ -124,7 +124,10 @@ object FormMain: TFormMain
       Width = 50
       Height = 26
       Caption = 'Play'
+      DisabledImageIndex = 3
       Enabled = False
+      ImageIndex = 2
+      Images = ImageListButtons
       TabOrder = 2
       OnClick = BtnPlayClick
     end
@@ -134,7 +137,10 @@ object FormMain: TFormMain
       Width = 50
       Height = 26
       Caption = 'Pause'
+      DisabledImageIndex = 5
       Enabled = False
+      ImageIndex = 4
+      Images = ImageListButtons
       TabOrder = 3
       OnClick = BtnPauseClick
     end
@@ -144,7 +150,10 @@ object FormMain: TFormMain
       Width = 54
       Height = 26
       Caption = 'Stop'
+      DisabledImageIndex = 7
       Enabled = False
+      ImageIndex = 6
+      Images = ImageListButtons
       TabOrder = 4
       OnClick = BtnStopClick
     end
