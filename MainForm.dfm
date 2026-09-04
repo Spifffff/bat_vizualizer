@@ -394,6 +394,7 @@ object FormMain: TFormMain
     Height = 727
     Align = alRight
     BevelOuter = bvNone
+    Constraints.MinWidth = 100
     TabOrder = 2
     object PanelFileContent: TPanel
       Left = 0
