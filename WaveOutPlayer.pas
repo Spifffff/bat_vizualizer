@@ -50,9 +50,10 @@ type
     procedure Stop;
 
     { Seek to a position 0..1 normalised against the whole file (not just the
-      loaded range); restarts playback from that point if the device was
-      playing or paused. Clamped to the loaded range's edges if Pos falls
-      outside what was actually buffered by Load. }
+      loaded range). If the device was playing, playback continues from the
+      new position; if it was paused, it stays paused there instead of
+      resuming. Clamped to the loaded range's edges if Pos falls outside
+      what was actually buffered by Load. }
     procedure SeekToNormalized(Pos: Double);
 
     { Normalised position 0..1, relative to the whole file (not just the
@@ -367,11 +368,12 @@ procedure TWaveOutPlayer.SeekToNormalized(Pos: Double);
 var
   H: PWaveHdr;
   Offset, AbsSample: Integer;
-  WasActive: Boolean;
+  WasPlaying, WasPaused: Boolean;
 begin
   if (FDevHandle = 0) or not FLoaded then
     Exit();
-  WasActive := IsPlaying() or IsPaused();
+  WasPlaying := IsPlaying();
+  WasPaused := IsPaused();
   H := PWaveHdr(@FWaveHdrBuf);
   waveOutReset(FDevHandle);
   waveOutUnprepareHeader(FDevHandle, H, SizeOf(TWaveHdr));
@@ -392,9 +394,15 @@ begin
   H^.dwBufferLength := DWORD((FTotalSamples - Offset) * SizeOf(SmallInt));
   waveOutPrepareHeader(FDevHandle, H, SizeOf(TWaveHdr));
 
-  if WasActive then begin
+  if WasPlaying then begin
     waveOutWrite(FDevHandle, H, SizeOf(TWaveHdr));
     FSubmitted := True;
+  end
+  else if WasPaused then begin
+    waveOutWrite(FDevHandle, H, SizeOf(TWaveHdr));
+    waveOutPause(FDevHandle);
+    FSubmitted := True;
+    FPaused := True;
   end;
 end;
 
