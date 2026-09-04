@@ -69,6 +69,8 @@ type
     SaveDialogMp3: TSaveDialog;
     PanelRight: TPanel;
     PanelFileContent: TPanel;
+    PanelFileHeader: TPanel;
+    BtnCloseRightPanel: TButton;
     CbxLanguage: TComboBox;
     FileListView: TListView;
     SplitterRight: TSplitter;
@@ -111,6 +113,7 @@ type
     procedure FileListViewResize(Sender: TObject);
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
     procedure CbxLanguageChange(Sender: TObject);
+    procedure BtnCloseRightPanelClick(Sender: TObject);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -885,6 +888,14 @@ begin
   finally
     D.Free;
   end;
+end;
+
+
+
+procedure TFormMain.BtnCloseRightPanelClick(Sender: TObject);
+begin
+  PanelRight.Visible := False;
+  SplitterRight.Visible := False;
 end;
 
 

@@ -403,23 +403,42 @@ object FormMain: TFormMain
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 0
-      object CbxLanguage: TComboBox
+      object PanelFileHeader: TPanel
         Left = 0
         Top = 0
         Width = 318
         Height = 21
         Align = alTop
-        Style = csDropDownList
-        ItemIndex = 0
+        BevelOuter = bvNone
         TabOrder = 0
-        Text = 'Dutch'
-        OnChange = CbxLanguageChange
-        Items.Strings = (
-          'Dutch'
-          'English'
-          'German'
-          'French'
-          'Spanish')
+        object BtnCloseRightPanel: TButton
+          Left = 298
+          Top = 0
+          Width = 20
+          Height = 21
+          Align = alRight
+          Caption = 'X'
+          TabOrder = 0
+          OnClick = BtnCloseRightPanelClick
+        end
+        object CbxLanguage: TComboBox
+          Left = 0
+          Top = 0
+          Width = 298
+          Height = 21
+          Align = alClient
+          Style = csDropDownList
+          ItemIndex = 0
+          TabOrder = 1
+          Text = 'Dutch'
+          OnChange = CbxLanguageChange
+          Items.Strings = (
+            'Dutch'
+            'English'
+            'German'
+            'French'
+            'Spanish')
+        end
       end
       object FileListView: TListView
         Left = 0
