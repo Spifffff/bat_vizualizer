@@ -21,12 +21,12 @@ const
   RIGHT_MARGIN = 10;
   SPECTROGRAM_GAMMA = 2.5;
   WAVE_VPAD = 12;
-  PANEL_TOGGLE_WIDTH = 18;
 
 type
   TFormMain = class(TForm)
     PanelLeft: TPanel;
-    BtnOpen: TButton;
+    BtnOpenFile: TButton;
+    BtnOpenFolder: TButton;
     BtnPlay: TButton;
     BtnPause: TButton;
     BtnStop: TButton;
@@ -68,17 +68,15 @@ type
     BtnSaveMp3: TButton;
     SaveDialogMp3: TSaveDialog;
     PanelRight: TPanel;
-    PanelToggle: TPanel;
-    BtnTogglePanel: TButton;
     PanelFileContent: TPanel;
-    BtnSelectFolder: TButton;
     CbxLanguage: TComboBox;
     FileListView: TListView;
     SplitterRight: TSplitter;
     ImageListButtons: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure BtnOpenClick(Sender: TObject);
+    procedure BtnOpenFileClick(Sender: TObject);
+    procedure BtnOpenFolderClick(Sender: TObject);
     procedure BtnSavePNGClick(Sender: TObject);
     procedure BtnPlayClick(Sender: TObject);
     procedure BtnPauseClick(Sender: TObject);
@@ -108,8 +106,6 @@ type
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
     procedure BtnSaveMp3Click(Sender: TObject);
-    procedure BtnTogglePanelClick(Sender: TObject);
-    procedure BtnSelectFolderClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewDblClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
@@ -183,7 +179,6 @@ type
       FCurrentFilePath: string;
       FFileEntries: TArray<TBatFileEntry>;
       FSpeciesEntries: TArray<TSpeciesEntry>;
-      FRightPanelWidth: Integer;
       FSortColumn: TResultSortColumn;
       FSortAscending: Boolean;
       FDisplayLanguage: TDisplayLanguage;
@@ -439,7 +434,8 @@ begin
   FSortColumn := rscConfidence;
   FSortAscending := False;
   FDisplayLanguage := dlDutch;
-  FRightPanelWidth := PanelRight.Width;
+  PanelRight.Visible := False;
+  SplitterRight.Visible := False;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
@@ -518,11 +514,13 @@ end;
 
 
 
-procedure TFormMain.BtnOpenClick(Sender: TObject);
+procedure TFormMain.BtnOpenFileClick(Sender: TObject);
 begin
   if not OpenDialog.Execute() then
     Exit();
   LoadFile(OpenDialog.FileName);
+  PanelRight.Visible := False;
+  SplitterRight.Visible := False;
 end;
 
 { ---- file browser panel ---------------------------------------------------- }
@@ -657,7 +655,7 @@ end;
 
 function TFormMain.MergeConsecutiveDetections(const ADetections: TArray<TBatDetection>): TArray<TBatDetection>;
 const
-  GAP_TOLERANCE_SEC = 500; // todo: replace with 5
+  GAP_TOLERANCE_SEC = 5;
 var
   GroupStart, GroupEnd: Integer;
   Merged: TBatDetection;
@@ -872,33 +870,18 @@ end;
 
 
 
-procedure TFormMain.BtnTogglePanelClick(Sender: TObject);
-begin
-  if PanelFileContent.Visible then begin
-    FRightPanelWidth := PanelRight.Width;
-    PanelFileContent.Visible := False;
-    SplitterRight.Visible := False;
-    PanelRight.Width := PANEL_TOGGLE_WIDTH;
-    BtnTogglePanel.Caption := '>';
-  end else begin
-    PanelRight.Width := FRightPanelWidth;
-    PanelFileContent.Visible := True;
-    SplitterRight.Visible := True;
-    BtnTogglePanel.Caption := '<';
-  end;
-end;
-
-
-
-procedure TFormMain.BtnSelectFolderClick(Sender: TObject);
+procedure TFormMain.BtnOpenFolderClick(Sender: TObject);
 var
   D: TFileOpenDialog;
 begin
   D := TFileOpenDialog.Create(nil);
   try
     D.Options := [fdoPickFolders, fdoPathMustExist];
-    if D.Execute then
+    if D.Execute then begin
       ScanFolderForFiles(ExcludeTrailingPathDelimiter(D.FileName));
+      PanelRight.Visible := True;
+      SplitterRight.Visible := True;
+    end;
   finally
     D.Free;
   end;

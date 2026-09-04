@@ -100,14 +100,23 @@ object FormMain: TFormMain
       Height = 13
       Caption = 'Save as PNG:'
     end
-    object BtnOpen: TButton
+    object BtnOpenFile: TButton
       Left = 8
       Top = 10
-      Width = 164
+      Width = 80
       Height = 28
-      Caption = 'Open audio'
+      Caption = 'Open file'
       TabOrder = 0
-      OnClick = BtnOpenClick
+      OnClick = BtnOpenFileClick
+    end
+    object BtnOpenFolder: TButton
+      Left = 92
+      Top = 10
+      Width = 80
+      Height = 28
+      Caption = 'Open folder'
+      TabOrder = 1
+      OnClick = BtnOpenFolderClick
     end
     object BtnPlay: TButton
       Left = 8
@@ -116,7 +125,7 @@ object FormMain: TFormMain
       Height = 26
       Caption = 'Play'
       Enabled = False
-      TabOrder = 1
+      TabOrder = 2
       OnClick = BtnPlayClick
     end
     object BtnPause: TButton
@@ -126,7 +135,7 @@ object FormMain: TFormMain
       Height = 26
       Caption = 'Pause'
       Enabled = False
-      TabOrder = 2
+      TabOrder = 3
       OnClick = BtnPauseClick
     end
     object BtnStop: TButton
@@ -136,7 +145,7 @@ object FormMain: TFormMain
       Height = 26
       Caption = 'Stop'
       Enabled = False
-      TabOrder = 3
+      TabOrder = 4
       OnClick = BtnStopClick
     end
     object CbxSpeed: TComboBox
@@ -146,7 +155,7 @@ object FormMain: TFormMain
       Height = 21
       Style = csDropDownList
       ItemIndex = 1
-      TabOrder = 4
+      TabOrder = 5
       Text = '10%'
       Items.Strings = (
         '5%'
@@ -164,7 +173,7 @@ object FormMain: TFormMain
       Height = 21
       Style = csDropDownList
       ItemIndex = 1
-      TabOrder = 5
+      TabOrder = 6
       Text = 'Hann'
       OnChange = CbxWindowChange
       Items.Strings = (
@@ -181,7 +190,7 @@ object FormMain: TFormMain
       Height = 21
       Style = csDropDownList
       ItemIndex = 5
-      TabOrder = 6
+      TabOrder = 7
       Text = '2048'
       OnChange = CbxFFTSizeChange
       Items.Strings = (
@@ -202,7 +211,7 @@ object FormMain: TFormMain
       Height = 26
       Max = 80
       Frequency = 10
-      TabOrder = 7
+      TabOrder = 8
       TickStyle = tsNone
       OnChange = TrkGainChange
     end
@@ -214,7 +223,7 @@ object FormMain: TFormMain
       Caption = 'Reduce noise'
       Checked = True
       State = cbChecked
-      TabOrder = 8
+      TabOrder = 9
       OnClick = ChkBGSubChange
     end
     object ChkFilter: TCheckBox
@@ -225,7 +234,7 @@ object FormMain: TFormMain
       Caption = 'High-pass + gate'
       Checked = True
       State = cbChecked
-      TabOrder = 13
+      TabOrder = 14
       OnClick = ChkFilterChange
     end
     object CbxColorScheme: TComboBox
@@ -235,7 +244,7 @@ object FormMain: TFormMain
       Height = 21
       Style = csDropDownList
       ItemIndex = 3
-      TabOrder = 9
+      TabOrder = 10
       Text = 'Magma'
       OnChange = CbxColorSchemeChange
       Items.Strings = (
@@ -261,7 +270,7 @@ object FormMain: TFormMain
       Min = -100
       Frequency = 10
       Position = -100
-      TabOrder = 10
+      TabOrder = 11
       TickStyle = tsNone
       OnChange = TrkFloorChange
     end
@@ -273,7 +282,7 @@ object FormMain: TFormMain
       Max = 60
       Min = -40
       Frequency = 10
-      TabOrder = 11
+      TabOrder = 12
       TickStyle = tsNone
       OnChange = TrkCeilingChange
     end
@@ -286,7 +295,7 @@ object FormMain: TFormMain
       Min = 1
       Frequency = 10
       Position = 96
-      TabOrder = 12
+      TabOrder = 13
       TickStyle = tsNone
       OnChange = TrkMaxFreqChange
     end
@@ -299,7 +308,7 @@ object FormMain: TFormMain
       Enabled = False
       ImageIndex = 0
       Images = ImageListButtons
-      TabOrder = 17
+      TabOrder = 18
       OnClick = BtnAutoFloorClick
     end
     object BtnAutoCeiling: TButton
@@ -311,7 +320,7 @@ object FormMain: TFormMain
       Enabled = False
       ImageIndex = 0
       Images = ImageListButtons
-      TabOrder = 18
+      TabOrder = 19
       OnClick = BtnAutoCeilingClick
     end
     object BtnAutoMaxFreq: TButton
@@ -323,7 +332,7 @@ object FormMain: TFormMain
       Enabled = False
       ImageIndex = 0
       Images = ImageListButtons
-      TabOrder = 19
+      TabOrder = 20
       OnClick = BtnAutoMaxFreqClick
     end
     object CbxSaveTarget: TComboBox
@@ -333,7 +342,7 @@ object FormMain: TFormMain
       Height = 21
       Style = csDropDownList
       ItemIndex = 2
-      TabOrder = 14
+      TabOrder = 15
       Text = 'Combined'
       Items.Strings = (
         'Waveform'
@@ -347,7 +356,7 @@ object FormMain: TFormMain
       Height = 26
       Caption = 'Save PNG...'
       Enabled = False
-      TabOrder = 15
+      TabOrder = 16
       OnClick = BtnSavePNGClick
     end
     object BtnSaveMp3: TButton
@@ -357,7 +366,7 @@ object FormMain: TFormMain
       Height = 26
       Caption = 'Save MP3...'
       Enabled = False
-      TabOrder = 16
+      TabOrder = 17
       OnClick = BtnSaveMp3Click
     end
   end
@@ -386,52 +395,23 @@ object FormMain: TFormMain
     Align = alRight
     BevelOuter = bvNone
     TabOrder = 2
-    object PanelToggle: TPanel
+    object PanelFileContent: TPanel
       Left = 0
       Top = 0
-      Width = 18
-      Height = 727
-      Align = alLeft
-      BevelOuter = bvNone
-      TabOrder = 0
-      object BtnTogglePanel: TButton
-        Left = 0
-        Top = 0
-        Width = 18
-        Height = 727
-        Align = alClient
-        Caption = '<'
-        TabOrder = 0
-        OnClick = BtnTogglePanelClick
-      end
-    end
-    object PanelFileContent: TPanel
-      Left = 18
-      Top = 0
-      Width = 300
+      Width = 318
       Height = 727
       Align = alClient
       BevelOuter = bvNone
-      TabOrder = 1
-      object BtnSelectFolder: TButton
-        Left = 0
-        Top = 0
-        Width = 300
-        Height = 28
-        Align = alTop
-        Caption = 'Select folder...'
-        TabOrder = 0
-        OnClick = BtnSelectFolderClick
-      end
+      TabOrder = 0
       object CbxLanguage: TComboBox
         Left = 0
-        Top = 28
-        Width = 300
+        Top = 0
+        Width = 318
         Height = 21
         Align = alTop
         Style = csDropDownList
         ItemIndex = 0
-        TabOrder = 1
+        TabOrder = 0
         Text = 'Dutch'
         OnChange = CbxLanguageChange
         Items.Strings = (
@@ -443,9 +423,9 @@ object FormMain: TFormMain
       end
       object FileListView: TListView
         Left = 0
-        Top = 49
-        Width = 300
-        Height = 678
+        Top = 21
+        Width = 318
+        Height = 706
         Align = alClient
         Columns = <
           item
@@ -459,14 +439,12 @@ object FormMain: TFormMain
         HideSelection = False
         ReadOnly = True
         RowSelect = True
-        TabOrder = 2
+        TabOrder = 1
         ViewStyle = vsReport
         OnClick = FileListViewClick
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
-        ExplicitLeft = 6
-        ExplicitTop = 43
       end
     end
   end
