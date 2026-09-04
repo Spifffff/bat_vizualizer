@@ -39,7 +39,7 @@ type
 
     { Render the visible zoom window at display resolution.  Each pixel column
       gets its own FFT so there is no block artefact when zoomed in. }
-    procedure Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
+    procedure Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; Gamma: Double;
       MinDB: Double = -100.0; MaxDB: Double = 0.0; ColorScheme: TColorScheme = csViridis; MaxFreqHz: Double = 0.0;
       UseHighPass: Boolean = False; UseEnergyGate: Boolean = False);
 
@@ -375,7 +375,7 @@ end;
 
 
 
-procedure TSpectrogramData.Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; GainDB, Gamma: Double;
+procedure TSpectrogramData.Render(DestBmp: TBitmap; DestWidth, DestHeight: Integer; ZoomStart, ZoomEnd: Double; BgSubtract: Boolean; Gamma: Double;
   MinDB: Double; MaxDB: Double; ColorScheme: TColorScheme; MaxFreqHz: Double;
   UseHighPass: Boolean; UseEnergyGate: Boolean);
 var
@@ -476,7 +476,7 @@ begin
         Mag := Max(0.0, Mag - NoiseBuf[Bin]);
 
       if Mag > 1.0E-12 then
-        DB := 20.0 * Log10(Mag) + GainDB
+        DB := 20.0 * Log10(Mag)
       else
         DB := MinDB;
 

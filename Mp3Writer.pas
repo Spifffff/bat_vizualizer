@@ -15,7 +15,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Math;
 
 procedure SaveMp3(const Samples: TArray<Single>; ZoomStart, ZoomEnd: Double;
-  const FileName: string; DesiredRate: Cardinal; out ActualRate: Cardinal);
+  const FileName: string; DesiredRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 
 implementation
 
@@ -61,7 +61,7 @@ end;
 { ---- Public procedure ------------------------------------------------------- }
 
 procedure SaveMp3(const Samples: TArray<Single>; ZoomStart, ZoomEnd: Double;
-  const FileName: string; DesiredRate: Cardinal; out ActualRate: Cardinal);
+  const FileName: string; DesiredRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 const
   LAME_QUALITY    = 5;    // 2 = high quality, 5 = good, 7 = ok
   LAME_KBPS       = 128;  // kbit/s
@@ -115,7 +115,7 @@ begin
     { Convert float samples in the zoom window to 16-bit PCM. }
     SetLength(Pcm, N);
     for I := 0 to N - 1 do begin
-      V := Round(Samples[S0 + I] * 32767.0);
+      V := Round(Samples[S0 + I] * Gain * 32767.0);
       if V > 32767 then V := 32767;
       if V < -32768 then V := -32768;
       Pcm[I] := SmallInt(V);

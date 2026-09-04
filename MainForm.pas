@@ -135,6 +135,7 @@ type
     function GetFFTSize: Integer;
     function GetWindowType: TWindowType;
     function GetPlaybackRate: Double;
+    function GetPlaybackGain: Double;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
@@ -320,6 +321,13 @@ end;
 
 
 
+function TFormMain.GetPlaybackGain: Double;
+begin
+  Result := Power(10.0, TrkGain.Position / 20.0);
+end;
+
+
+
 procedure TFormMain.UpdateZoomBar;
 var
   SI: TScrollInfo;
@@ -384,7 +392,7 @@ begin
     Exit();
   if FDisplayBmp = nil then
     FDisplayBmp := TBitmap.Create();
-  FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd, ChkBGSub.Checked, TrkGain.Position, SPECTROGRAM_GAMMA, TrkFloor.Position, TrkCeiling.Position,
+  FSpecgram.Render(FDisplayBmp, W, H, FZoomStart, FZoomEnd, ChkBGSub.Checked, SPECTROGRAM_GAMMA, TrkFloor.Position, TrkCeiling.Position,
     IdxToColorScheme(CbxColorScheme.ItemIndex), FMaxPlotHz, ChkFilter.Checked, ChkFilter.Checked);
 end;
 
@@ -1037,7 +1045,7 @@ begin
   Screen.Cursor := crHourGlass;
   try
     try
-      SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, ActualRate);
+      SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
       StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
         [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
     except
@@ -1074,7 +1082,7 @@ begin
         end instead of continuing into the rest of the file. }
       StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
       EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
-      FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, ActualRate);
+      FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, GetPlaybackGain(), ActualRate);
       FWavePlayer.Play();
       FCursorPos := FZoomStart;
       if ActualRate <> OutRate then
@@ -1184,7 +1192,6 @@ begin
     LblGainVal.Caption := '0 dB'
   else
     LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
-  ScheduleRender();
 end;
 
 

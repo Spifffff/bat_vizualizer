@@ -40,9 +40,11 @@ type
       passing the current zoom window instead of the whole file keeps the
       16-bit copy from ballooning memory use on long recordings, since
       Samples itself (already a 4-byte-per-sample copy) stays alive
-      regardless. ActualRate is set to the rate that Windows accepted. }
+      regardless. ActualRate is set to the rate that Windows accepted.
+      Gain is a linear amplitude multiplier applied before the 16-bit
+      conversion, clipping like the rest of the buffer. }
     procedure Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
-      RequestedRate: Cardinal; out ActualRate: Cardinal);
+      RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 
     procedure Play;
     procedure Pause;
@@ -203,7 +205,7 @@ end;
 
 
 procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
-  RequestedRate: Cardinal; out ActualRate: Cardinal);
+  RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 const
   Fallbacks: array [0 .. 3] of Cardinal = (22050, 16000, 11025, 44100);
 var
@@ -226,7 +228,7 @@ begin
   { Float -1..1 → Int16, only for the requested sub-range. }
   SetLength(FBuffer, FTotalSamples);
   for I := 0 to FTotalSamples - 1 do begin
-    V := Round(Samples[StartSample + I] * 32767.0);
+    V := Round(Samples[StartSample + I] * Gain * 32767.0);
     if V > 32767 then
       V := 32767;
     if V < -32768 then
