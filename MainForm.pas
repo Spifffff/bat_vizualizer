@@ -25,11 +25,14 @@ const
 type
   TFormMain = class(TForm)
     PanelLeft: TPanel;
+    GroupSource: TGroupBox;
     BtnOpenFile: TButton;
     BtnOpenFolder: TButton;
+    GroupPlayback: TGroupBox;
     BtnPlay: TButton;
     BtnPause: TButton;
     BtnStop: TButton;
+    GroupFFT: TGroupBox;
     LblWindow: TLabel;
     CbxWindow: TComboBox;
     LblFFTSize: TLabel;
@@ -37,8 +40,10 @@ type
     LblGainCaption: TLabel;
     LblGainVal: TLabel;
     TrkGain: TTrackBar;
+    GroupFiltering: TGroupBox;
     ChkBGSub: TCheckBox;
     ChkFilter: TCheckBox;
+    GroupSpectrogram: TGroupBox;
     LblColorScheme: TLabel;
     CbxColorScheme: TComboBox;
     LblFloor: TLabel;
@@ -50,6 +55,7 @@ type
     BtnAutoFloor: TButton;
     BtnAutoCeiling: TButton;
     BtnAutoMaxFreq: TButton;
+    GroupExport: TGroupBox;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -57,6 +63,12 @@ type
     Splitter1: TSplitter;
     PaintBox: TPaintBox;
     DetectionMarkersBox: TPaintBox;
+    PanelTransport: TPanel;
+    BtnPrevResult: TButton;
+    BtnNextResult: TButton;
+    BtnZoomIn: TButton;
+    BtnZoomOut: TButton;
+    BtnZoomFull: TButton;
     OpenDialog: TOpenDialog;
     SaveDialog: TSaveDialog;
     Timer: TTimer;
@@ -74,16 +86,26 @@ type
     BtnCloseRightPanel: TButton;
     CbxLanguage: TComboBox;
     FileListView: TListView;
+    PanelFileNav: TPanel;
+    BtnPrevFile: TButton;
+    BtnNextFile: TButton;
     SplitterRight: TSplitter;
     ImageListButtons: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenFileClick(Sender: TObject);
     procedure BtnOpenFolderClick(Sender: TObject);
+    procedure BtnPrevFileClick(Sender: TObject);
+    procedure BtnNextFileClick(Sender: TObject);
     procedure BtnSavePNGClick(Sender: TObject);
     procedure BtnPlayClick(Sender: TObject);
     procedure BtnPauseClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
+    procedure BtnPrevResultClick(Sender: TObject);
+    procedure BtnNextResultClick(Sender: TObject);
+    procedure BtnZoomInClick(Sender: TObject);
+    procedure BtnZoomOutClick(Sender: TObject);
+    procedure BtnZoomFullClick(Sender: TObject);
     procedure PaintBoxPaint(Sender: TObject);
     procedure PaintBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -133,6 +155,7 @@ type
     function SpectRect: TRect;
     function WaveRect: TRect;
     procedure ApplyZoomDrag(const ChartR: TRect);
+    procedure ZoomAroundCenter(Factor: Double);
     function GetFFTSize: Integer;
     function GetWindowType: TWindowType;
     function GetPlaybackRate: Double;
@@ -199,7 +222,9 @@ type
     procedure ClearFileListRowData;
     procedure ApplyResultsColumnWidths;
     procedure FitResultsColumns;
+    function GetCurrentFileIndex: Integer;
     function GetCurrentFileDetections: TArray<TBatDetection>;
+    procedure JumpToDetection(const Det: TBatDetection);
     procedure DetectionMarkersBoxPaint(Sender: TObject);
   end;
 
@@ -811,16 +836,46 @@ end;
 
 
 
-function TFormMain.GetCurrentFileDetections: TArray<TBatDetection>;
+function TFormMain.GetCurrentFileIndex: Integer;
 var
   I: Integer;
 begin
-  Result := [];
+  Result := -1;
   for I := 0 to High(FFileEntries) do
     if FFileEntries[I].FilePath = FCurrentFilePath then begin
-      Result := FFileEntries[I].Detections;
+      Result := I;
       Exit();
     end;
+end;
+
+
+
+function TFormMain.GetCurrentFileDetections: TArray<TBatDetection>;
+var
+  Idx: Integer;
+begin
+  Idx := GetCurrentFileIndex();
+  if Idx >= 0 then
+    Result := FFileEntries[Idx].Detections
+  else
+    Result := [];
+end;
+
+
+
+procedure TFormMain.JumpToDetection(const Det: TBatDetection);
+begin
+  if FWavFile = nil then
+    Exit();
+  FZoomStart := Max(0.0, (Det.StartSec - 0.5) / FWavFile.Info.DurationSec);
+  FZoomEnd := Min(1.0, (Det.EndSec + 0.5) / FWavFile.Info.DurationSec);
+  if FZoomEnd <= FZoomStart then
+    FZoomEnd := Min(1.0, FZoomStart + 0.01);
+  UpdateZoomBar();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
+  WaveformBox.Invalidate();
 end;
 
 
@@ -962,6 +1017,28 @@ end;
 
 
 
+procedure TFormMain.BtnPrevFileClick(Sender: TObject);
+var
+  Idx: Integer;
+begin
+  Idx := GetCurrentFileIndex();
+  if Idx > 0 then
+    LoadFile(FFileEntries[Idx - 1].FilePath);
+end;
+
+
+
+procedure TFormMain.BtnNextFileClick(Sender: TObject);
+var
+  Idx: Integer;
+begin
+  Idx := GetCurrentFileIndex();
+  if (Idx >= 0) and (Idx < High(FFileEntries)) then
+    LoadFile(FFileEntries[Idx + 1].FilePath);
+end;
+
+
+
 procedure TFormMain.BtnCloseRightPanelClick(Sender: TObject);
 begin
   PanelRight.Visible := False;
@@ -1003,8 +1080,6 @@ var
   Item: TListItem;
   RD: PRowData;
   Entry: TBatFileEntry;
-  Det: TBatDetection;
-  ZStart, ZEnd: Double;
 begin
   Item := FileListView.Selected;
   if Item = nil then
@@ -1013,22 +1088,9 @@ begin
   if (RD = nil) or (RD^.Kind <> rkDetection) then
     Exit();
   Entry := FFileEntries[RD^.FileIdx];
-  Det := Entry.Detections[RD^.DetIdx];
   if FCurrentFilePath <> Entry.FilePath then
     LoadFile(Entry.FilePath);
-  if FWavFile = nil then
-    Exit();
-  ZStart := (Det.StartSec - 0.5) / FWavFile.Info.DurationSec;
-  ZEnd := (Det.EndSec + 0.5) / FWavFile.Info.DurationSec;
-  FZoomStart := Max(0.0, ZStart);
-  FZoomEnd := Min(1.0, ZEnd);
-  if FZoomEnd <= FZoomStart then
-    FZoomEnd := Min(1.0, FZoomStart + 0.01);
-  UpdateZoomBar();
-  RenderSpectrogram();
-  PaintBox.Invalidate();
-  DetectionMarkersBox.Invalidate();
-  WaveformBox.Invalidate();
+  JumpToDetection(Entry.Detections[RD^.DetIdx]);
 end;
 
 
@@ -1181,6 +1243,45 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+end;
+
+
+
+procedure TFormMain.BtnPrevResultClick(Sender: TObject);
+var
+  Detections: TArray<TBatDetection>;
+  I, Best: Integer;
+  RefTime: Double;
+begin
+  if FWavFile = nil then
+    Exit();
+  Detections := GetCurrentFileDetections();
+  RefTime := (FZoomStart + FZoomEnd) / 2.0 * FWavFile.Info.DurationSec;
+  Best := -1;
+  for I := 0 to High(Detections) do
+    if Detections[I].StartSec < RefTime - 0.01 then
+      Best := I;
+  if Best >= 0 then
+    JumpToDetection(Detections[Best]);
+end;
+
+
+
+procedure TFormMain.BtnNextResultClick(Sender: TObject);
+var
+  Detections: TArray<TBatDetection>;
+  I: Integer;
+  RefTime: Double;
+begin
+  if FWavFile = nil then
+    Exit();
+  Detections := GetCurrentFileDetections();
+  RefTime := (FZoomStart + FZoomEnd) / 2.0 * FWavFile.Info.DurationSec;
+  for I := 0 to High(Detections) do
+    if Detections[I].StartSec > RefTime + 0.01 then begin
+      JumpToDetection(Detections[I]);
+      Exit();
+    end;
 end;
 
 { ---- playback timer -------------------------------------------------------- }
@@ -1440,6 +1541,65 @@ begin
     UpdateZoomBar();
     RenderSpectrogram();
   end;
+  PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
+  WaveformBox.Invalidate();
+end;
+
+
+
+procedure TFormMain.ZoomAroundCenter(Factor: Double);
+var
+  T, Span, NewSpan, NewStart, NewEnd: Double;
+begin
+  if FWavFile = nil then
+    Exit();
+  Span := FZoomEnd - FZoomStart;
+  T := FZoomStart + 0.5 * Span;
+  NewSpan := Max(0.001, Min(1.0, Span * Factor));
+  NewStart := T - 0.5 * NewSpan;
+  NewEnd := NewStart + NewSpan;
+  if NewStart < 0.0 then begin
+    NewStart := 0.0;
+    NewEnd := NewSpan;
+  end;
+  if NewEnd > 1.0 then begin
+    NewEnd := 1.0;
+    NewStart := 1.0 - NewSpan;
+  end;
+  FZoomStart := Max(0.0, NewStart);
+  FZoomEnd := Min(1.0, NewEnd);
+  UpdateZoomBar();
+  RenderSpectrogram();
+  PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
+  WaveformBox.Invalidate();
+end;
+
+
+
+procedure TFormMain.BtnZoomInClick(Sender: TObject);
+begin
+  ZoomAroundCenter(0.7);
+end;
+
+
+
+procedure TFormMain.BtnZoomOutClick(Sender: TObject);
+begin
+  ZoomAroundCenter(1.0 / 0.7);
+end;
+
+
+
+procedure TFormMain.BtnZoomFullClick(Sender: TObject);
+begin
+  if FWavFile = nil then
+    Exit();
+  FZoomStart := 0.0;
+  FZoomEnd := 1.0;
+  UpdateZoomBar();
+  RenderSpectrogram();
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();

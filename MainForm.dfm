@@ -25,358 +25,381 @@ object FormMain: TFormMain
   object PanelLeft: TPanel
     Left = 0
     Top = 0
-    Width = 180
+    Width = 186
     Height = 727
     Align = alLeft
     BevelOuter = bvNone
+    Padding.Left = 3
+    Padding.Right = 3
     TabOrder = 0
-    object LblSpeed: TLabel
-      Left = 8
-      Top = 74
-      Width = 35
-      Height = 13
-      Caption = 'Speed:'
-    end
-    object LblWindow: TLabel
-      Left = 8
-      Top = 122
-      Width = 61
-      Height = 13
-      Caption = 'Window fn:'
-    end
-    object LblFFTSize: TLabel
-      Left = 8
-      Top = 168
-      Width = 43
-      Height = 13
-      Caption = 'FFT size:'
-    end
-    object LblGainCaption: TLabel
-      Left = 8
-      Top = 214
-      Width = 27
-      Height = 13
-      Caption = 'Gain:'
-    end
-    object LblGainVal: TLabel
-      Left = 50
-      Top = 214
-      Width = 22
-      Height = 13
-      Caption = '0 dB'
-    end
-    object LblColorScheme: TLabel
-      Left = 8
-      Top = 316
-      Width = 72
-      Height = 13
-      Caption = 'Color scheme:'
-    end
-    object LblFloor: TLabel
-      Left = 8
-      Top = 368
-      Width = 71
-      Height = 13
-      Caption = 'Floor: -100 dB'
-    end
-    object LblCeiling: TLabel
-      Left = 8
-      Top = 418
-      Width = 64
-      Height = 13
-      Caption = 'Ceiling: 0 dB'
-    end
-    object LblMaxFreq: TLabel
-      Left = 8
-      Top = 468
-      Width = 61
-      Height = 13
-      Caption = 'Max: 96 kHz'
-    end
-    object LblSave: TLabel
-      Left = 8
-      Top = 520
-      Width = 65
-      Height = 13
-      Caption = 'Save as PNG:'
-    end
-    object BtnOpenFile: TButton
-      Left = 8
-      Top = 10
-      Width = 80
-      Height = 28
-      Caption = 'Open file'
+    object GroupSource: TGroupBox
+      Left = 3
+      Top = 0
+      Width = 180
+      Height = 58
+      Align = alTop
+      Caption = 'Source'
       TabOrder = 0
-      OnClick = BtnOpenFileClick
+      ExplicitLeft = 0
+      object BtnOpenFile: TButton
+        Left = 8
+        Top = 20
+        Width = 80
+        Height = 28
+        Caption = 'Open file'
+        TabOrder = 0
+        OnClick = BtnOpenFileClick
+      end
+      object BtnOpenFolder: TButton
+        Left = 92
+        Top = 20
+        Width = 80
+        Height = 28
+        Caption = 'Open folder'
+        TabOrder = 1
+        OnClick = BtnOpenFolderClick
+      end
     end
-    object BtnOpenFolder: TButton
-      Left = 92
-      Top = 10
-      Width = 80
-      Height = 28
-      Caption = 'Open folder'
+    object GroupPlayback: TGroupBox
+      Left = 3
+      Top = 58
+      Width = 180
+      Height = 118
+      Align = alTop
+      Caption = 'Playback options'
       TabOrder = 1
-      OnClick = BtnOpenFolderClick
+      ExplicitLeft = 0
+      object LblSpeed: TLabel
+        Left = 8
+        Top = 20
+        Width = 35
+        Height = 13
+        Caption = 'Speed:'
+      end
+      object LblGainCaption: TLabel
+        Left = 8
+        Top = 66
+        Width = 27
+        Height = 13
+        Caption = 'Gain:'
+      end
+      object LblGainVal: TLabel
+        Left = 50
+        Top = 66
+        Width = 22
+        Height = 13
+        Caption = '0 dB'
+      end
+      object CbxSpeed: TComboBox
+        Left = 8
+        Top = 36
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 1
+        TabOrder = 0
+        Text = '10%'
+        Items.Strings = (
+          '5%'
+          '10%'
+          '12.5%'
+          '20%'
+          '25%'
+          '50%'
+          '100%')
+      end
+      object TrkGain: TTrackBar
+        Left = 4
+        Top = 82
+        Width = 172
+        Height = 26
+        Max = 80
+        Frequency = 10
+        TabOrder = 1
+        TickStyle = tsNone
+        OnChange = TrkGainChange
+      end
     end
-    object BtnPlay: TButton
-      Left = 8
-      Top = 44
-      Width = 50
-      Height = 26
-      Caption = 'Play'
-      DisabledImageIndex = 3
-      Enabled = False
-      ImageIndex = 2
-      Images = ImageListButtons
+    object GroupFiltering: TGroupBox
+      Left = 3
+      Top = 176
+      Width = 180
+      Height = 67
+      Align = alTop
+      Caption = 'Filtering'
       TabOrder = 2
-      OnClick = BtnPlayClick
+      ExplicitLeft = 0
+      object ChkBGSub: TCheckBox
+        Left = 8
+        Top = 20
+        Width = 164
+        Height = 17
+        Caption = 'Reduce noise'
+        Checked = True
+        State = cbChecked
+        TabOrder = 0
+        OnClick = ChkBGSubChange
+      end
+      object ChkFilter: TCheckBox
+        Left = 8
+        Top = 40
+        Width = 164
+        Height = 17
+        Caption = 'High-pass + gate'
+        Checked = True
+        State = cbChecked
+        TabOrder = 1
+        OnClick = ChkFilterChange
+      end
     end
-    object BtnPause: TButton
-      Left = 63
-      Top = 44
-      Width = 50
-      Height = 26
-      Caption = 'Pause'
-      DisabledImageIndex = 5
-      Enabled = False
-      ImageIndex = 4
-      Images = ImageListButtons
+    object GroupFFT: TGroupBox
+      Left = 3
+      Top = 243
+      Width = 180
+      Height = 113
+      Align = alTop
+      Caption = 'FFT'
       TabOrder = 3
-      OnClick = BtnPauseClick
+      ExplicitLeft = 0
+      object LblWindow: TLabel
+        Left = 8
+        Top = 20
+        Width = 61
+        Height = 13
+        Caption = 'Window fn:'
+      end
+      object LblFFTSize: TLabel
+        Left = 8
+        Top = 66
+        Width = 43
+        Height = 13
+        Caption = 'FFT size:'
+      end
+      object CbxWindow: TComboBox
+        Left = 8
+        Top = 36
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 1
+        TabOrder = 0
+        Text = 'Hann'
+        OnChange = CbxWindowChange
+        Items.Strings = (
+          'Rectangular'
+          'Hann'
+          'Hamming'
+          'Blackman'
+          'Flat-Top')
+      end
+      object CbxFFTSize: TComboBox
+        Left = 8
+        Top = 82
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 5
+        TabOrder = 1
+        Text = '2048'
+        OnChange = CbxFFTSizeChange
+        Items.Strings = (
+          '64'
+          '128'
+          '256'
+          '512'
+          '1024'
+          '2048'
+          '4096'
+          '8192'
+          '16384')
+      end
     end
-    object BtnStop: TButton
-      Left = 118
-      Top = 44
-      Width = 54
-      Height = 26
-      Caption = 'Stop'
-      DisabledImageIndex = 7
-      Enabled = False
-      ImageIndex = 6
-      Images = ImageListButtons
+    object GroupSpectrogram: TGroupBox
+      Left = 3
+      Top = 356
+      Width = 180
+      Height = 218
+      Align = alTop
+      Caption = 'Spectrogram'
       TabOrder = 4
-      OnClick = BtnStopClick
+      ExplicitLeft = 0
+      object LblColorScheme: TLabel
+        Left = 8
+        Top = 20
+        Width = 72
+        Height = 13
+        Caption = 'Color scheme:'
+      end
+      object LblFloor: TLabel
+        Left = 8
+        Top = 66
+        Width = 71
+        Height = 13
+        Caption = 'Floor: -100 dB'
+      end
+      object LblCeiling: TLabel
+        Left = 8
+        Top = 116
+        Width = 64
+        Height = 13
+        Caption = 'Ceiling: 0 dB'
+      end
+      object LblMaxFreq: TLabel
+        Left = 8
+        Top = 166
+        Width = 61
+        Height = 13
+        Caption = 'Max: 96 kHz'
+      end
+      object CbxColorScheme: TComboBox
+        Left = 8
+        Top = 36
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 3
+        TabOrder = 0
+        Text = 'Magma'
+        OnChange = CbxColorSchemeChange
+        Items.Strings = (
+          'Viridis'
+          'Plasma'
+          'Inferno'
+          'Magma'
+          'Cividis'
+          'Mako'
+          'Rocket'
+          'Grayscale'
+          'Grayscale (inv)'
+          'Turbo'
+          'Hot'
+          'Spectral')
+      end
+      object TrkFloor: TTrackBar
+        Left = 4
+        Top = 82
+        Width = 140
+        Height = 26
+        Max = 0
+        Min = -100
+        Frequency = 10
+        Position = -100
+        TabOrder = 1
+        TickStyle = tsNone
+        OnChange = TrkFloorChange
+      end
+      object BtnAutoFloor: TButton
+        Left = 148
+        Top = 82
+        Width = 24
+        Height = 26
+        DisabledImageIndex = 1
+        Enabled = False
+        ImageIndex = 0
+        Images = ImageListButtons
+        TabOrder = 2
+        OnClick = BtnAutoFloorClick
+      end
+      object TrkCeiling: TTrackBar
+        Left = 4
+        Top = 132
+        Width = 140
+        Height = 26
+        Max = 60
+        Min = -40
+        Frequency = 10
+        TabOrder = 3
+        TickStyle = tsNone
+        OnChange = TrkCeilingChange
+      end
+      object BtnAutoCeiling: TButton
+        Left = 148
+        Top = 132
+        Width = 24
+        Height = 26
+        DisabledImageIndex = 1
+        Enabled = False
+        ImageIndex = 0
+        Images = ImageListButtons
+        TabOrder = 4
+        OnClick = BtnAutoCeilingClick
+      end
+      object TrkMaxFreq: TTrackBar
+        Left = 4
+        Top = 182
+        Width = 140
+        Height = 26
+        Max = 96
+        Min = 1
+        Frequency = 10
+        Position = 96
+        TabOrder = 5
+        TickStyle = tsNone
+        OnChange = TrkMaxFreqChange
+      end
+      object BtnAutoMaxFreq: TButton
+        Left = 148
+        Top = 182
+        Width = 24
+        Height = 26
+        DisabledImageIndex = 1
+        Enabled = False
+        ImageIndex = 0
+        Images = ImageListButtons
+        TabOrder = 6
+        OnClick = BtnAutoMaxFreqClick
+      end
     end
-    object CbxSpeed: TComboBox
-      Left = 8
-      Top = 90
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 1
+    object GroupExport: TGroupBox
+      Left = 3
+      Top = 574
+      Width = 180
+      Height = 132
+      Align = alTop
+      Caption = 'Export'
       TabOrder = 5
-      Text = '10%'
-      Items.Strings = (
-        '5%'
-        '10%'
-        '12.5%'
-        '20%'
-        '25%'
-        '50%'
-        '100%')
-    end
-    object CbxWindow: TComboBox
-      Left = 8
-      Top = 138
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 1
-      TabOrder = 6
-      Text = 'Hann'
-      OnChange = CbxWindowChange
-      Items.Strings = (
-        'Rectangular'
-        'Hann'
-        'Hamming'
-        'Blackman'
-        'Flat-Top')
-    end
-    object CbxFFTSize: TComboBox
-      Left = 8
-      Top = 184
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 5
-      TabOrder = 7
-      Text = '2048'
-      OnChange = CbxFFTSizeChange
-      Items.Strings = (
-        '64'
-        '128'
-        '256'
-        '512'
-        '1024'
-        '2048'
-        '4096'
-        '8192'
-        '16384')
-    end
-    object TrkGain: TTrackBar
-      Left = 4
-      Top = 230
-      Width = 172
-      Height = 26
-      Max = 80
-      Frequency = 10
-      TabOrder = 8
-      TickStyle = tsNone
-      OnChange = TrkGainChange
-    end
-    object ChkBGSub: TCheckBox
-      Left = 8
-      Top = 264
-      Width = 164
-      Height = 17
-      Caption = 'Reduce noise'
-      Checked = True
-      State = cbChecked
-      TabOrder = 9
-      OnClick = ChkBGSubChange
-    end
-    object ChkFilter: TCheckBox
-      Left = 8
-      Top = 284
-      Width = 164
-      Height = 17
-      Caption = 'High-pass + gate'
-      Checked = True
-      State = cbChecked
-      TabOrder = 14
-      OnClick = ChkFilterChange
-    end
-    object CbxColorScheme: TComboBox
-      Left = 8
-      Top = 332
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 3
-      TabOrder = 10
-      Text = 'Magma'
-      OnChange = CbxColorSchemeChange
-      Items.Strings = (
-        'Viridis'
-        'Plasma'
-        'Inferno'
-        'Magma'
-        'Cividis'
-        'Mako'
-        'Rocket'
-        'Grayscale'
-        'Grayscale (inv)'
-        'Turbo'
-        'Hot'
-        'Spectral')
-    end
-    object TrkFloor: TTrackBar
-      Left = 4
-      Top = 384
-      Width = 140
-      Height = 26
-      Max = 0
-      Min = -100
-      Frequency = 10
-      Position = -100
-      TabOrder = 11
-      TickStyle = tsNone
-      OnChange = TrkFloorChange
-    end
-    object TrkCeiling: TTrackBar
-      Left = 4
-      Top = 434
-      Width = 140
-      Height = 26
-      Max = 60
-      Min = -40
-      Frequency = 10
-      TabOrder = 12
-      TickStyle = tsNone
-      OnChange = TrkCeilingChange
-    end
-    object TrkMaxFreq: TTrackBar
-      Left = 4
-      Top = 484
-      Width = 140
-      Height = 26
-      Max = 96
-      Min = 1
-      Frequency = 10
-      Position = 96
-      TabOrder = 13
-      TickStyle = tsNone
-      OnChange = TrkMaxFreqChange
-    end
-    object BtnAutoFloor: TButton
-      Left = 148
-      Top = 384
-      Width = 24
-      Height = 26
-      DisabledImageIndex = 1
-      Enabled = False
-      ImageIndex = 0
-      Images = ImageListButtons
-      TabOrder = 18
-      OnClick = BtnAutoFloorClick
-    end
-    object BtnAutoCeiling: TButton
-      Left = 148
-      Top = 434
-      Width = 24
-      Height = 26
-      DisabledImageIndex = 1
-      Enabled = False
-      ImageIndex = 0
-      Images = ImageListButtons
-      TabOrder = 19
-      OnClick = BtnAutoCeilingClick
-    end
-    object BtnAutoMaxFreq: TButton
-      Left = 148
-      Top = 484
-      Width = 24
-      Height = 26
-      DisabledImageIndex = 1
-      Enabled = False
-      ImageIndex = 0
-      Images = ImageListButtons
-      TabOrder = 20
-      OnClick = BtnAutoMaxFreqClick
-    end
-    object CbxSaveTarget: TComboBox
-      Left = 8
-      Top = 536
-      Width = 164
-      Height = 21
-      Style = csDropDownList
-      ItemIndex = 2
-      TabOrder = 15
-      Text = 'Combined'
-      Items.Strings = (
-        'Waveform'
-        'Spectrogram'
-        'Combined')
-    end
-    object BtnSavePNG: TButton
-      Left = 8
-      Top = 562
-      Width = 164
-      Height = 26
-      Caption = 'Save PNG...'
-      Enabled = False
-      TabOrder = 16
-      OnClick = BtnSavePNGClick
-    end
-    object BtnSaveMp3: TButton
-      Left = 8
-      Top = 592
-      Width = 164
-      Height = 26
-      Caption = 'Save MP3...'
-      Enabled = False
-      TabOrder = 17
-      OnClick = BtnSaveMp3Click
+      ExplicitLeft = 0
+      object LblSave: TLabel
+        Left = 8
+        Top = 20
+        Width = 65
+        Height = 13
+        Caption = 'Save as PNG:'
+      end
+      object CbxSaveTarget: TComboBox
+        Left = 8
+        Top = 36
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 2
+        TabOrder = 0
+        Text = 'Combined'
+        Items.Strings = (
+          'Waveform'
+          'Spectrogram'
+          'Combined')
+      end
+      object BtnSavePNG: TButton
+        Left = 8
+        Top = 66
+        Width = 164
+        Height = 26
+        Caption = 'Save PNG...'
+        Enabled = False
+        TabOrder = 1
+        OnClick = BtnSavePNGClick
+      end
+      object BtnSaveMp3: TButton
+        Left = 8
+        Top = 96
+        Width = 164
+        Height = 26
+        Caption = 'Save MP3...'
+        Enabled = False
+        TabOrder = 2
+        OnClick = BtnSaveMp3Click
+      end
     end
   end
   object StatusBar: TStatusBar
@@ -454,7 +477,7 @@ object FormMain: TFormMain
         Left = 0
         Top = 21
         Width = 318
-        Height = 706
+        Height = 674
         Align = alClient
         Columns = <
           item
@@ -475,22 +498,51 @@ object FormMain: TFormMain
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
       end
+      object PanelFileNav: TPanel
+        Left = 0
+        Top = 695
+        Width = 318
+        Height = 32
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 2
+        object BtnPrevFile: TButton
+          Left = 6
+          Top = 3
+          Width = 24
+          Height = 26
+          Caption = '<<'
+          TabOrder = 0
+          OnClick = BtnPrevFileClick
+        end
+        object BtnNextFile: TButton
+          Left = 36
+          Top = 3
+          Width = 24
+          Height = 26
+          Caption = '>>'
+          TabOrder = 1
+          OnClick = BtnNextFileClick
+        end
+      end
     end
   end
   object PanelMain: TPanel
-    Left = 180
+    Left = 186
     Top = 0
-    Width = 698
+    Width = 692
     Height = 727
     Align = alClient
     BevelOuter = bvNone
     DoubleBuffered = True
     ParentDoubleBuffered = False
     TabOrder = 1
+    ExplicitLeft = 180
+    ExplicitWidth = 698
     object WaveformBox: TPaintBox
       Left = 0
       Top = 0
-      Width = 698
+      Width = 692
       Height = 120
       Align = alTop
       OnMouseDown = WaveformBoxMouseDown
@@ -502,7 +554,7 @@ object FormMain: TFormMain
     object Splitter1: TSplitter
       Left = 0
       Top = 120
-      Width = 698
+      Width = 692
       Height = 4
       Cursor = crVSplit
       Align = alTop
@@ -513,8 +565,8 @@ object FormMain: TFormMain
     object PaintBox: TPaintBox
       Left = 0
       Top = 124
-      Width = 698
-      Height = 583
+      Width = 692
+      Height = 551
       Align = alClient
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove
@@ -522,17 +574,110 @@ object FormMain: TFormMain
       OnPaint = PaintBoxPaint
       ExplicitLeft = -2
       ExplicitTop = 126
+      ExplicitWidth = 698
+    end
+    object PanelTransport: TPanel
+      Left = 0
+      Top = 695
+      Width = 692
+      Height = 32
+      Align = alBottom
+      BevelOuter = bvNone
+      TabOrder = 1
+      ExplicitWidth = 698
+      object BtnPrevResult: TButton
+        Left = 6
+        Top = 3
+        Width = 24
+        Height = 26
+        Caption = '<'
+        TabOrder = 0
+        OnClick = BtnPrevResultClick
+      end
+      object BtnPlay: TButton
+        Left = 34
+        Top = 3
+        Width = 26
+        Height = 26
+        DisabledImageIndex = 3
+        Enabled = False
+        ImageIndex = 2
+        Images = ImageListButtons
+        TabOrder = 1
+        OnClick = BtnPlayClick
+      end
+      object BtnPause: TButton
+        Left = 64
+        Top = 3
+        Width = 26
+        Height = 26
+        DisabledImageIndex = 5
+        Enabled = False
+        ImageIndex = 4
+        Images = ImageListButtons
+        TabOrder = 2
+        OnClick = BtnPauseClick
+      end
+      object BtnStop: TButton
+        Left = 94
+        Top = 3
+        Width = 26
+        Height = 26
+        DisabledImageIndex = 7
+        Enabled = False
+        ImageIndex = 6
+        Images = ImageListButtons
+        TabOrder = 3
+        OnClick = BtnStopClick
+      end
+      object BtnNextResult: TButton
+        Left = 124
+        Top = 3
+        Width = 24
+        Height = 26
+        Caption = '>'
+        TabOrder = 4
+        OnClick = BtnNextResultClick
+      end
+      object BtnZoomIn: TButton
+        Left = 166
+        Top = 3
+        Width = 24
+        Height = 26
+        Caption = '+'
+        TabOrder = 5
+        OnClick = BtnZoomInClick
+      end
+      object BtnZoomOut: TButton
+        Left = 194
+        Top = 3
+        Width = 24
+        Height = 26
+        Caption = '-'
+        TabOrder = 6
+        OnClick = BtnZoomOutClick
+      end
+      object BtnZoomFull: TButton
+        Left = 222
+        Top = 3
+        Width = 32
+        Height = 26
+        Caption = '1:1'
+        TabOrder = 7
+        OnClick = BtnZoomFullClick
+      end
     end
     object ZoomBar: TScrollBar
       Left = 0
-      Top = 707
-      Width = 698
+      Top = 675
+      Width = 692
       Height = 20
       Align = alBottom
       Max = 1000
       PageSize = 0
       TabOrder = 0
       OnChange = ZoomBarChange
+      ExplicitWidth = 698
     end
   end
   object OpenDialog: TOpenDialog
