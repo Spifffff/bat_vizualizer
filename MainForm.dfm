@@ -36,7 +36,7 @@ object FormMain: TFormMain
       Left = 3
       Top = 0
       Width = 180
-      Height = 58
+      Height = 86
       Align = alTop
       Caption = 'Source'
       TabOrder = 0
@@ -59,10 +59,19 @@ object FormMain: TFormMain
         TabOrder = 1
         OnClick = BtnOpenFolderClick
       end
+      object BtnIdentify: TButton
+        Left = 8
+        Top = 52
+        Width = 164
+        Height = 26
+        Caption = 'Identify...'
+        TabOrder = 2
+        OnClick = BtnIdentifyClick
+      end
     end
     object GroupPlayback: TGroupBox
       Left = 3
-      Top = 58
+      Top = 86
       Width = 180
       Height = 118
       Align = alTop
@@ -122,7 +131,7 @@ object FormMain: TFormMain
     end
     object GroupFiltering: TGroupBox
       Left = 3
-      Top = 176
+      Top = 204
       Width = 180
       Height = 67
       Align = alTop
@@ -154,7 +163,7 @@ object FormMain: TFormMain
     end
     object GroupFFT: TGroupBox
       Left = 3
-      Top = 243
+      Top = 271
       Width = 180
       Height = 113
       Align = alTop
@@ -216,9 +225,9 @@ object FormMain: TFormMain
     end
     object GroupSpectrogram: TGroupBox
       Left = 3
-      Top = 356
+      Top = 384
       Width = 180
-      Height = 218
+      Height = 208
       Align = alTop
       Caption = 'Spectrogram'
       TabOrder = 4
@@ -352,7 +361,7 @@ object FormMain: TFormMain
     end
     object GroupExport: TGroupBox
       Left = 3
-      Top = 574
+      Top = 592
       Width = 180
       Height = 132
       Align = alTop

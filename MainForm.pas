@@ -12,7 +12,8 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
-  WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList;
+  WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
+  BatIdentForm;
 
 const
   LEFT_MARGIN = 65;
@@ -28,6 +29,7 @@ type
     GroupSource: TGroupBox;
     BtnOpenFile: TButton;
     BtnOpenFolder: TButton;
+    BtnIdentify: TButton;
     GroupPlayback: TGroupBox;
     BtnPlay: TButton;
     BtnPause: TButton;
@@ -97,6 +99,7 @@ type
     procedure BtnOpenFolderClick(Sender: TObject);
     procedure BtnPrevFileClick(Sender: TObject);
     procedure BtnNextFileClick(Sender: TObject);
+    procedure BtnIdentifyClick(Sender: TObject);
     procedure BtnSavePNGClick(Sender: TObject);
     procedure BtnPlayClick(Sender: TObject);
     procedure BtnPauseClick(Sender: TObject);
@@ -215,6 +218,7 @@ type
     function MergeConsecutiveDetections(const ADetections: TArray<TBatDetection>): TArray<TBatDetection>;
     function TopMeanConfidence(const ADetections: TArray<TBatDetection>; ALow, AHigh: Integer): Double;
     procedure ScanFolderForFiles(const AFolder: string);
+    procedure ScanAndShowFolder(const AFolder: string);
     function TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
     function GetFileFallbackDateTime(const AFilePath: string): TDateTime;
     procedure BuildSpeciesEntries;
@@ -994,6 +998,19 @@ end;
 
 
 
+procedure TFormMain.ScanAndShowFolder(const AFolder: string);
+begin
+  ScanFolderForFiles(AFolder);
+  if Length(FFileEntries) = 0 then
+    MessageDlg('No WAV files found in the selected folder.', mtWarning, [mbOK], 0)
+  else begin
+    PanelRight.Visible := True;
+    SplitterRight.Visible := True;
+  end;
+end;
+
+
+
 procedure TFormMain.BtnOpenFolderClick(Sender: TObject);
 var
   D: TFileOpenDialog;
@@ -1001,17 +1018,26 @@ begin
   D := TFileOpenDialog.Create(nil);
   try
     D.Options := [fdoPickFolders, fdoPathMustExist];
-    if D.Execute then begin
-      ScanFolderForFiles(ExcludeTrailingPathDelimiter(D.FileName));
-      if Length(FFileEntries) = 0 then
-        MessageDlg('No WAV files found in the selected folder.', mtWarning, [mbOK], 0)
-      else begin
-        PanelRight.Visible := True;
-        SplitterRight.Visible := True;
-      end;
-    end;
+    if D.Execute then
+      ScanAndShowFolder(ExcludeTrailingPathDelimiter(D.FileName));
   finally
     D.Free;
+  end;
+end;
+
+
+
+procedure TFormMain.BtnIdentifyClick(Sender: TObject);
+var
+  Form: TFormBatIdent;
+begin
+  Form := TFormBatIdent.Create(Self);
+  try
+    Form.ShowModal();
+    if Form.Completed and (Form.WAVFolder <> '') then
+      ScanAndShowFolder(Form.WAVFolder);
+  finally
+    Form.Free();
   end;
 end;
 

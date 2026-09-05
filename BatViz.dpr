@@ -5,6 +5,7 @@ uses
   Vcl.Themes,
   Vcl.Styles,
   MainForm in 'MainForm.pas' {FormMain} ,
+  BatIdentForm in 'BatIdentForm.pas' {FormBatIdent},
   FFT in 'FFT.pas',
   WavReader in 'WavReader.pas',
   Spectrogram in 'Spectrogram.pas',

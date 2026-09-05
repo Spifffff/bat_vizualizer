@@ -136,6 +136,9 @@
         <DCCReference Include="MainForm.pas">
             <Form>FormMain</Form>
         </DCCReference>
+        <DCCReference Include="BatIdentForm.pas">
+            <Form>FormBatIdent</Form>
+        </DCCReference>
         <DCCReference Include="FFT.pas"/>
         <DCCReference Include="WavReader.pas"/>
         <DCCReference Include="Spectrogram.pas"/>

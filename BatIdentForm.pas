@@ -87,6 +87,7 @@ type
   public
     WAVFolder: string;
     OutputFolder: string;
+    Completed: Boolean;
   end;
 
 var
@@ -396,6 +397,8 @@ begin
   if not ValidateInputs() then
     Exit();
   WavDir := ExcludeTrailingPathDelimiter(EdtWavFolder.Text);
+  WAVFolder := WavDir;
+  Completed := False;
   ForceDirectories(EdtOutputFolder.Text);
   FPendingFiles.Clear();
   if FindFirst(WavDir + '\*.wav', faAnyFile - faDirectory, SR) = 0 then
@@ -499,6 +502,7 @@ begin
   begin
     Timer.Enabled := False;
     FRunning := False;
+    Completed := True;
     SetControlsEnabled(True);
     PrgBar.Position := PrgBar.Max;
     Log('Done. Processed ' + IntToStr(FDoneCount) + ' of ' + IntToStr(FTotalFiles) + ' files.');
