@@ -11,13 +11,14 @@ uses Vcl.Graphics, System.Types;
 // Draws frequency (Y) and time (X) axis labels and grid lines inside R.
 // MaxPlotHz: the caller passes FMaxPlotHz (always valid when a file is loaded).
 // DurationSec: FWavFile.Info.DurationSec.
+// AxisColor/GridColor are style-dependent, resolved by the caller.
 procedure DrawSpectAxes(C: TCanvas; const R: TRect;
-  DurationSec, MaxPlotHz, ZoomStart, ZoomEnd: Double);
+  DurationSec, MaxPlotHz, ZoomStart, ZoomEnd: Double; AxisColor, GridColor: TColor);
 
 // Draws the playback-cursor line inside R.
 // CursorPos < 0 means unset (no cursor drawn).
 procedure DrawSpectCursor(C: TCanvas; const R: TRect;
-  CursorPos, ZoomStart, ZoomEnd: Double);
+  CursorPos, ZoomStart, ZoomEnd: Double; CursorColor: TColor);
 
 
 
@@ -30,10 +31,7 @@ uses System.SysUtils, System.Math;
 
 
 procedure DrawSpectAxes(C: TCanvas; const R: TRect;
-  DurationSec, MaxPlotHz, ZoomStart, ZoomEnd: Double);
-const
-  CLR_AXIS = clWhite;
-  CLR_GRID = $00444444;
+  DurationSec, MaxPlotHz, ZoomStart, ZoomEnd: Double; AxisColor, GridColor: TColor);
 var
   StartTime, EndTime, ZoomDur: Double;
   FreqStep, TimeStep: Double;
@@ -44,7 +42,7 @@ var
   Lbl: string;
 begin
   C.Font.Size := 8;
-  C.Font.Color := CLR_AXIS;
+  C.Font.Color := AxisColor;
   C.Brush.Style := bsClear;
 
   if MaxPlotHz >= 40000 then
@@ -61,12 +59,12 @@ begin
     Freq := I * FreqStep;
     Y := R.Bottom - 1 - Round(Freq / MaxPlotHz * (R.Bottom - R.Top - 1));
 
-    C.Pen.Color := CLR_AXIS;
+    C.Pen.Color := AxisColor;
     C.Pen.Width := 1;
     C.MoveTo(R.Left - 4, Y);
     C.LineTo(R.Left, Y);
 
-    C.Pen.Color := CLR_GRID;
+    C.Pen.Color := GridColor;
     C.MoveTo(R.Left, Y);
     C.LineTo(R.Right, Y);
 
@@ -75,7 +73,7 @@ begin
     else
       Lbl := Format('%g', [Freq]);
     TextW := C.TextWidth(Lbl);
-    C.Font.Color := CLR_AXIS;
+    C.Font.Color := AxisColor;
     C.TextOut(R.Left - TextW - 6, Y - TextH div 2, Lbl);
   end;
 
@@ -124,17 +122,17 @@ begin
   while T <= EndTime + TimeStep * 1.0E-6 do begin
     X := R.Left + Round((T - StartTime) / ZoomDur * (R.Right - R.Left));
     if (X >= R.Left) and (X <= R.Right) then begin
-      C.Pen.Color := CLR_AXIS;
+      C.Pen.Color := AxisColor;
       C.MoveTo(X, R.Bottom);
       C.LineTo(X, R.Bottom + 4);
 
-      C.Pen.Color := CLR_GRID;
+      C.Pen.Color := GridColor;
       C.MoveTo(X, R.Top);
       C.LineTo(X, R.Bottom);
 
       Lbl := Format('%.3f s', [T]);
       TextW := C.TextWidth(Lbl);
-      C.Font.Color := CLR_AXIS;
+      C.Font.Color := AxisColor;
       C.TextOut(X - TextW div 2, R.Bottom + 5, Lbl);
     end;
     T := T + TimeStep;
@@ -144,7 +142,7 @@ end;
 
 
 procedure DrawSpectCursor(C: TCanvas; const R: TRect;
-  CursorPos, ZoomStart, ZoomEnd: Double);
+  CursorPos, ZoomStart, ZoomEnd: Double; CursorColor: TColor);
 var
   VisFrac: Double;
   X: Integer;
@@ -155,7 +153,7 @@ begin
   if (VisFrac < 0.0) or (VisFrac > 1.0) then
     Exit();
   X := R.Left + Round(VisFrac * (R.Right - R.Left));
-  C.Pen.Color := clWhite;
+  C.Pen.Color := CursorColor;
   C.Pen.Width := 2;
   C.MoveTo(X, R.Top);
   C.LineTo(X, R.Bottom);

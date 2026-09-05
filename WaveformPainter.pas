@@ -10,10 +10,12 @@ uses Winapi.Windows, Vcl.Graphics, System.Math;
 
 // Paints the waveform into InnerR on canvas C.
 // PxW/PxH = full client dimensions (for outer background fill).
-// BgColor/WaveColor come from the active colour scheme's endpoints.
+// OuterColor is the fill for that outer margin; BgColor/WaveColor come from
+// the active colour scheme's endpoints. AxisColor/GridColor/CursorColor are
+// style-dependent, resolved by the caller.
 procedure PaintWaveform(C: TCanvas; PxW, PxH: Integer; const InnerR: TRect;
   const Samples: TArray<Single>; ZoomStart, ZoomEnd, CursorPos: Double;
-  BgColor, WaveColor: TColor);
+  OuterColor, BgColor, WaveColor, AxisColor, GridColor, CursorColor: TColor);
 
 // Semi-transparent white selection band from X1 to X2 inside R.
 procedure DrawSelectionOverlay(C: TCanvas; const R: TRect; X1, X2: Integer);
@@ -35,11 +37,7 @@ var
 
 procedure PaintWaveform(C: TCanvas; PxW, PxH: Integer; const InnerR: TRect;
   const Samples: TArray<Single>; ZoomStart, ZoomEnd, CursorPos: Double;
-  BgColor, WaveColor: TColor);
-const
-  GRID_COLOR = $00444444;
-  AXIS_COLOR = clWhite;
-  OUTER_COLOR = $00202020;
+  OuterColor, BgColor, WaveColor, AxisColor, GridColor, CursorColor: TColor);
 var
   TotalSamples: Integer;
   R: TRect;
@@ -54,7 +52,7 @@ var
   Lbl: string;
   LblY: Integer;
 begin
-  C.Brush.Color := OUTER_COLOR;
+  C.Brush.Color := OuterColor;
   C.FillRect(Rect(0, 0, PxW, PxH));
 
   R := InnerR;
@@ -69,7 +67,7 @@ begin
   C.Brush.Style := bsClear;
 
   C.Font.Size := 8;
-  C.Font.Color := AXIS_COLOR;
+  C.Font.Color := AxisColor;
   C.Pen.Width := 1;
   TextH := C.TextHeight('0');
 
@@ -87,10 +85,10 @@ begin
       Lbl := '-100%';
       LblY := R.Bottom - 1;
     end;
-    C.Pen.Color := GRID_COLOR;
+    C.Pen.Color := GridColor;
     C.MoveTo(R.Left, LblY);
     C.LineTo(R.Right, LblY);
-    C.Pen.Color := AXIS_COLOR;
+    C.Pen.Color := AxisColor;
     C.MoveTo(R.Left - 4, LblY);
     C.LineTo(R.Left, LblY);
     TextW := C.TextWidth(Lbl);
@@ -133,7 +131,7 @@ begin
     VisFrac := (CursorPos - ZoomStart) / (ZoomEnd - ZoomStart);
     if (VisFrac >= 0.0) and (VisFrac <= 1.0) then begin
       CurX := R.Left + Round(VisFrac * W);
-      C.Pen.Color := clWhite;
+      C.Pen.Color := CursorColor;
       C.Pen.Width := 2;
       C.MoveTo(CurX, R.Top);
       C.LineTo(CurX, R.Bottom);

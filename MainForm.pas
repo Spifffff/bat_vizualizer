@@ -9,7 +9,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList;
@@ -56,6 +56,7 @@ type
     WaveformBox: TPaintBox;
     Splitter1: TSplitter;
     PaintBox: TPaintBox;
+    DetectionMarkersBox: TPaintBox;
     OpenDialog: TOpenDialog;
     SaveDialog: TSaveDialog;
     Timer: TTimer;
@@ -198,6 +199,8 @@ type
     procedure ClearFileListRowData;
     procedure ApplyResultsColumnWidths;
     procedure FitResultsColumns;
+    function GetCurrentFileDetections: TArray<TBatDetection>;
+    procedure DetectionMarkersBoxPaint(Sender: TObject);
   end;
 
 var
@@ -245,6 +248,20 @@ begin
   else
     Result := csViridis;
   end;
+end;
+
+
+
+function BlendColors(C1, C2: TColor; T: Double): TColor;
+var
+  RGB1, RGB2: Longint;
+begin
+  RGB1 := ColorToRGB(C1);
+  RGB2 := ColorToRGB(C2);
+  Result := RGB(
+    Round(GetRValue(RGB1) * (1.0 - T) + GetRValue(RGB2) * T),
+    Round(GetGValue(RGB1) * (1.0 - T) + GetGValue(RGB2) * T),
+    Round(GetBValue(RGB1) * (1.0 - T) + GetBValue(RGB2) * T));
 end;
 
 { ---- helpers --------------------------------------------------------------- }
@@ -373,6 +390,7 @@ begin
   FSpecgram.Prepare(FWavFile, GetFFTSize(), GetWindowType());
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -413,6 +431,7 @@ begin
     Exit();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
 end;
 
 
@@ -447,6 +466,20 @@ begin
   FDisplayLanguage := dlDutch;
   PanelRight.Visible := False;
   SplitterRight.Visible := False;
+  { Created here rather than via the dfm: a dfm-declared TPaintBox at this
+    spot has twice raised "EReadError: Invalid property value" for a reason
+    I haven't been able to pin down without a compiler; a plain method-pointer
+    assignment for OnPaint sidesteps dfm streaming entirely. Among alTop
+    siblings, VCL docks in order of each control's Top at the time Align is
+    set, so Top must be pushed below Splitter1 first -- left at the default 0
+    it ties with WaveformBox and ends up docked before Splitter1 instead of
+    after it. }
+  DetectionMarkersBox := TPaintBox.Create(Self);
+  DetectionMarkersBox.Parent := PanelMain;
+  DetectionMarkersBox.Top := Splitter1.Top + Splitter1.Height;
+  DetectionMarkersBox.Height := 4;
+  DetectionMarkersBox.Align := alTop;
+  DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
@@ -473,6 +506,9 @@ end;
 
 
 procedure TFormMain.LoadFile(const AFilePath: string);
+var
+  Detections: TArray<TBatDetection>;
+  I: Integer;
 begin
   Timer.Enabled := False;
   FWavePlayer.Stop();
@@ -509,6 +545,10 @@ begin
       BtnAutoFloor.Enabled := True;
       BtnAutoCeiling.Enabled := True;
       BtnAutoMaxFreq.Enabled := True;
+      Detections := GetCurrentFileDetections();
+      for I := 0 to High(Detections) do
+        OutputDebugString(PChar(Format('%s: detection %d - %.3fs to %.3fs',
+          [ExtractFileName(AFilePath), I, Detections[I].StartSec, Detections[I].EndSec])));
     except
       on E: Exception do begin
         FreeAndNil(FWavFile);
@@ -771,6 +811,20 @@ end;
 
 
 
+function TFormMain.GetCurrentFileDetections: TArray<TBatDetection>;
+var
+  I: Integer;
+begin
+  Result := [];
+  for I := 0 to High(FFileEntries) do
+    if FFileEntries[I].FilePath = FCurrentFilePath then begin
+      Result := FFileEntries[I].Detections;
+      Exit();
+    end;
+end;
+
+
+
 procedure TFormMain.BuildSpeciesEntries;
 var
   Flat: TArray<TFlatDet>;
@@ -973,6 +1027,7 @@ begin
   UpdateZoomBar();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -987,7 +1042,7 @@ var
   WavBmp, SpectBmp: TBitmap;
   Scheme: TColorScheme;
   VR, VG, VB: Byte;
-  BgColor, WaveColor: TColor;
+  BgColor, WaveColor, OuterColor, AxisColor, GridColor: TColor;
   Samples: TArray<Single>;
 begin
   if FSpecgram = nil then
@@ -999,6 +1054,9 @@ begin
   BgColor := RGB(VR, VG, VB);
   FSpecgram.GetColor(1.0, Scheme, VR, VG, VB);
   WaveColor := RGB(VR, VG, VB);
+  OuterColor := StyleServices.GetSystemColor(clWindow);
+  AxisColor := StyleServices.GetSystemColor(clWindowText);
+  GridColor := BlendColors(OuterColor, AxisColor, 0.3);
   Samples := FWavFile.Samples;
   WavBmp := TBitmap.Create();
   SpectBmp := TBitmap.Create();
@@ -1008,7 +1066,7 @@ begin
     WavBmp.Height := WaveformBox.Height;
     PaintWaveform(WavBmp.Canvas, WavBmp.Width, WavBmp.Height,
       Rect(LEFT_MARGIN, WAVE_VPAD, WavBmp.Width - RIGHT_MARGIN, WavBmp.Height - WAVE_VPAD),
-      Samples, FZoomStart, FZoomEnd, FCursorPos, BgColor, WaveColor);
+      Samples, FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor, AxisColor, GridColor, AxisColor);
     SpectBmp.PixelFormat := pf24bit;
     SpectBmp.Width  := PaintBox.Width;
     SpectBmp.Height := PaintBox.Height;
@@ -1121,6 +1179,7 @@ begin
   FCursorPos := -1;
   ResetPlaybackUI();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -1139,6 +1198,7 @@ begin
     FCursorPos := -1;
     ResetPlaybackUI();
     PaintBox.Invalidate();
+    DetectionMarkersBox.Invalidate();
     WaveformBox.Invalidate();
     Exit();
   end;
@@ -1202,6 +1262,7 @@ begin
     Exit();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
 end;
 
 
@@ -1212,6 +1273,7 @@ begin
     Exit();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
 end;
 
 
@@ -1222,6 +1284,7 @@ begin
     Exit();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -1302,6 +1365,7 @@ begin
   end;
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -1377,6 +1441,7 @@ begin
     RenderSpectrogram();
   end;
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
 end;
 
@@ -1404,6 +1469,7 @@ begin
   if FDragging then begin
     FDragCurrentX := X;
     PaintBox.Invalidate();
+    DetectionMarkersBox.Invalidate();
     WaveformBox.Invalidate();
   end;
 
@@ -1471,6 +1537,7 @@ begin
   UpdateZoomBar();
   RenderSpectrogram();
   PaintBox.Invalidate();
+  DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
   Handled := True;
 end;
@@ -1499,6 +1566,7 @@ begin
     FDragCurrentX := X;
     WaveformBox.Invalidate();
     PaintBox.Invalidate();
+    DetectionMarkersBox.Invalidate();
   end;
 end;
 
@@ -1518,30 +1586,90 @@ end;
 
 
 
+procedure TFormMain.DetectionMarkersBoxPaint(Sender: TObject);
+const
+  MARKER_MIN_WIDTH = 5;
+  BAR_HEIGHT = 3;
+var
+  Detections: TArray<TBatDetection>;
+  I, Left, Right, W, X1, X2, Mid: Integer;
+  DurationSec, Frac0, Frac1: Double;
+begin
+  { Docked alTop above (not overlapping) PaintBox, one row taller than the bar
+    itself so a 1px margin separates it from the spectrogram below -- that
+    margin row is left at clBtnFace (the form's own background) rather than
+    the spectrogram's own fill color (clWindow, matching PaintBox/WaveformBox).
+    Spans the full panel width, so the time axis is inset by the same
+    LEFT_MARGIN/RIGHT_MARGIN PaintBox itself uses for its own time axis
+    (SpectRect). }
+  DetectionMarkersBox.Canvas.Brush.Color := StyleServices.GetSystemColor(clBtnFace);
+  DetectionMarkersBox.Canvas.FillRect(DetectionMarkersBox.ClientRect);
+  DetectionMarkersBox.Canvas.Brush.Color := StyleServices.GetSystemColor(clWindow);
+  DetectionMarkersBox.Canvas.FillRect(Rect(0, 0, DetectionMarkersBox.Width, BAR_HEIGHT));
+  if (FWavFile = nil) or (FZoomEnd <= FZoomStart) then
+    Exit();
+  DurationSec := FWavFile.Info.DurationSec;
+  if DurationSec <= 0.0 then
+    Exit();
+  Detections := GetCurrentFileDetections();
+  if Length(Detections) = 0 then
+    Exit();
+  Left := LEFT_MARGIN;
+  Right := DetectionMarkersBox.Width - RIGHT_MARGIN;
+  W := Right - Left;
+  if W <= 0 then
+    Exit();
+  DetectionMarkersBox.Canvas.Brush.Color := StyleServices.GetSystemColor(clWindowText);
+  DetectionMarkersBox.Canvas.Pen.Style := psClear;
+  for I := 0 to High(Detections) do begin
+    Frac0 := (Detections[I].StartSec / DurationSec - FZoomStart) / (FZoomEnd - FZoomStart);
+    Frac1 := (Detections[I].EndSec / DurationSec - FZoomStart) / (FZoomEnd - FZoomStart);
+    if (Frac1 < 0.0) or (Frac0 > 1.0) then
+      Continue;
+    X1 := Left + Round(Frac0 * W);
+    X2 := Left + Round(Frac1 * W);
+    if X2 - X1 < MARKER_MIN_WIDTH then begin
+      Mid := (X1 + X2) div 2;
+      X1 := Mid - MARKER_MIN_WIDTH div 2;
+      X2 := X1 + MARKER_MIN_WIDTH;
+    end;
+    X1 := Max(Left, X1);
+    X2 := Min(Right, X2);
+    if X2 > X1 then
+      DetectionMarkersBox.Canvas.FillRect(Rect(X1, 0, X2, BAR_HEIGHT));
+  end;
+  DetectionMarkersBox.Canvas.Pen.Style := psSolid;
+end;
+
+
+
 procedure TFormMain.WaveformBoxPaint(Sender: TObject);
 var
   Scheme: TColorScheme;
   VR, VG, VB: Byte;
-  BgColor, WaveColor: TColor;
+  OuterColor, BgColor, WaveColor, AxisColor, GridColor: TColor;
   Samples: TArray<Single>;
   R: TRect;
   SelX1, SelX2: Integer;
 begin
   Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
+  OuterColor := StyleServices.GetSystemColor(clWindow);
+  AxisColor := StyleServices.GetSystemColor(clWindowText);
+  GridColor := BlendColors(OuterColor, AxisColor, 0.3);
   if FSpecgram <> nil then begin
     FSpecgram.GetColor(0.0, Scheme, VR, VG, VB);
     BgColor := RGB(VR, VG, VB);
     FSpecgram.GetColor(1.0, Scheme, VR, VG, VB);
     WaveColor := RGB(VR, VG, VB);
   end else begin
-    BgColor := clBlack;
+    BgColor := OuterColor;
     WaveColor := $00BBBBBB;
   end;
   if FWavFile <> nil then
     Samples := FWavFile.Samples;
   R := WaveRect();
   PaintWaveform(WaveformBox.Canvas, WaveformBox.Width, WaveformBox.Height, R,
-    Samples, FZoomStart, FZoomEnd, FCursorPos, BgColor, WaveColor);
+    Samples, FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor, AxisColor, GridColor, AxisColor);
   if FDragging and (FDragCurrentX > FDragStartX) then begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
@@ -1557,17 +1685,18 @@ var
   W, H: Integer;
   Msg: string;
   SelX1, SelX2: Integer;
+  AxisColor, GridColor: TColor;
 begin
   R := SpectRect();
   W := R.Right - R.Left;
   H := R.Bottom - R.Top;
 
-  PaintBox.Canvas.Brush.Color := $00202020;
+  PaintBox.Canvas.Brush.Color := StyleServices.GetSystemColor(clWindow);
   PaintBox.Canvas.FillRect(PaintBox.ClientRect);
 
   if FSpecgram = nil then begin
     Msg := 'Open an audio file to display the spectrogram';
-    PaintBox.Canvas.Font.Color := clGray;
+    PaintBox.Canvas.Font.Color := StyleServices.GetSystemColor(clGrayText);
     PaintBox.Canvas.Font.Size := 12;
     PaintBox.Canvas.Brush.Style := bsClear;
     PaintBox.Canvas.TextOut(PaintBox.Width div 2 - PaintBox.Canvas.TextWidth(Msg) div 2, PaintBox.Height div 2 - PaintBox.Canvas.TextHeight(Msg) div 2, Msg);
@@ -1581,9 +1710,11 @@ begin
     BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H, FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
 
   if (W > 0) and (H > 0) then begin
+    AxisColor := StyleServices.GetSystemColor(clWindowText);
+    GridColor := BlendColors(StyleServices.GetSystemColor(clWindow), AxisColor, 0.3);
     if FWavFile <> nil then
-      DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd);
-    DrawSpectCursor(PaintBox.Canvas, R, FCursorPos, FZoomStart, FZoomEnd);
+      DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd, AxisColor, GridColor);
+    DrawSpectCursor(PaintBox.Canvas, R, FCursorPos, FZoomStart, FZoomEnd, AxisColor);
   end;
 
   if FDragging and (FDragCurrentX > FDragStartX) then begin
