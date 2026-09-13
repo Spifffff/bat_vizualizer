@@ -154,10 +154,8 @@ begin
     Exit();
   X := R.Left + Round(VisFrac * (R.Right - R.Left));
   C.Pen.Color := CursorColor;
-  C.Pen.Width := 2;
   C.MoveTo(X, R.Top);
   C.LineTo(X, R.Bottom);
-  C.Pen.Width := 1;
 end;
 
 

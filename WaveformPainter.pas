@@ -132,10 +132,8 @@ begin
     if (VisFrac >= 0.0) and (VisFrac <= 1.0) then begin
       CurX := R.Left + Round(VisFrac * W);
       C.Pen.Color := CursorColor;
-      C.Pen.Width := 2;
       C.MoveTo(CurX, R.Top);
       C.LineTo(CurX, R.Bottom);
-      C.Pen.Width := 1;
     end;
   end;
 end;
