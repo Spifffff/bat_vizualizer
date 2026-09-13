@@ -100,6 +100,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
+    procedure FormDropFiles(Sender: TObject; const FileNames: array of string);
     procedure BtnOpenFileClick(Sender: TObject);
     procedure BtnOpenFolderClick(Sender: TObject);
     procedure BtnPrevFileClick(Sender: TObject);
@@ -1298,6 +1299,34 @@ begin
   finally
     D.Free;
   end;
+end;
+
+
+
+procedure TFormMain.FormDropFiles(Sender: TObject; const FileNames: array of string);
+var
+  Ext: string;
+begin
+  if Length(FileNames) = 0 then
+    Exit();
+  if Length(FileNames) = 1 then begin
+    if DirectoryExists(FileNames[0]) then begin
+      ScanAndShowFolder(ExcludeTrailingPathDelimiter(FileNames[0]));
+      Exit();
+    end;
+    Ext := ExtractFileExt(FileNames[0]);
+    if not (SameText(Ext, '.wav') or SameText(Ext, '.mp3')) then begin
+      MessageDlg('Only a WAV/MP3 file or a folder can be dropped here.', mtWarning, [mbOK], 0);
+      Exit();
+    end;
+    LoadFile(FileNames[0]);
+    PanelRight.Visible := False;
+    SplitterRight.Visible := False;
+    Exit();
+  end;
+  { Multiple files dropped at once -- browse them like Open Folder, using
+    the folder they were dropped from. }
+  ScanAndShowFolder(ExcludeTrailingPathDelimiter(ExtractFileDir(FileNames[0])));
 end;
 
 

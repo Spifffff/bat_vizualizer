@@ -1,6 +1,7 @@
 object FormMain: TFormMain
   Left = 100
   Top = 80
+  AllowDropFiles = True
   Caption = 'Bat Visualizer'
   ClientHeight = 796
   ClientWidth = 1205
@@ -13,6 +14,7 @@ object FormMain: TFormMain
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnDropFiles = FormDropFiles
   TextHeight = 13
   object SplitterRight: TSplitter
     Left = 883
