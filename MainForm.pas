@@ -171,6 +171,7 @@ type
     procedure ScheduleRender;
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
+    procedure UpdateTransportButtons;
     type
       TRowKind = (rkSpecies, rkDetection);
       TRowData = record
@@ -477,6 +478,41 @@ begin
   StatusBar.Panels[1].Text := '';
 end;
 
+
+
+procedure TFormMain.UpdateTransportButtons;
+var
+  HasFile, HasPrevResult, HasNextResult, FullyZoomedOut: Boolean;
+  Idx, I: Integer;
+  Detections: TArray<TBatDetection>;
+  RefTime: Double;
+begin
+  HasFile := FWavFile <> nil;
+  Idx := GetCurrentFileIndex();
+  BtnPrevFile.Enabled := HasFile and (Idx > 0);
+  BtnNextFile.Enabled := HasFile and (Idx >= 0) and (Idx < High(FFileEntries));
+
+  HasPrevResult := False;
+  HasNextResult := False;
+  if HasFile then begin
+    Detections := GetCurrentFileDetections();
+    RefTime := (FZoomStart + FZoomEnd) / 2.0 * FWavFile.Info.DurationSec;
+    for I := 0 to High(Detections) do begin
+      if Detections[I].StartSec < RefTime - 0.01 then
+        HasPrevResult := True;
+      if Detections[I].StartSec > RefTime + 0.01 then
+        HasNextResult := True;
+    end;
+  end;
+  BtnPrevResult.Enabled := HasFile and HasPrevResult;
+  BtnNextResult.Enabled := HasFile and HasNextResult;
+
+  FullyZoomedOut := HasFile and SameValue(FZoomStart, 0.0) and SameValue(FZoomEnd, 1.0);
+  BtnZoomIn.Enabled := HasFile;
+  BtnZoomOut.Enabled := HasFile and not FullyZoomedOut;
+  BtnZoomFull.Enabled := HasFile and not FullyZoomedOut;
+end;
+
 { ---- form lifecycle -------------------------------------------------------- }
 
 
@@ -513,6 +549,8 @@ begin
 //  DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
+  ResetPlaybackUI();
+  UpdateTransportButtons();
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
   FitResultsColumns();
@@ -592,6 +630,7 @@ begin
     Enabled := True;
     Screen.Cursor := crDefault;
   end;
+  UpdateTransportButtons();
 end;
 
 
@@ -882,6 +921,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
 end;
 
 
@@ -1009,6 +1049,7 @@ begin
     PanelRight.Visible := True;
     SplitterRight.Visible := True;
   end;
+  UpdateTransportButtons();
 end;
 
 
@@ -1496,6 +1537,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
 end;
 
 { ---- zoom drag ------------------------------------------------------------- }
@@ -1572,6 +1614,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
 end;
 
 
@@ -1602,6 +1645,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
 end;
 
 
@@ -1631,6 +1675,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
 end;
 
 
@@ -1727,6 +1772,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateTransportButtons();
   Handled := True;
 end;
 
