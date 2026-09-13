@@ -233,6 +233,9 @@ type
     function GetCurrentFileIndex: Integer;
     function GetCurrentFileDetections: TArray<TBatDetection>;
     procedure JumpToDetection(const Det: TBatDetection);
+    function GetCurrentFileRecordedAt: TDateTime;
+    function GetCurrentClipSpeciesName: string;
+    function BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
   end;
 
 var
@@ -926,6 +929,77 @@ end;
 
 
 
+function TFormMain.GetCurrentFileRecordedAt: TDateTime;
+var
+  BaseName: string;
+begin
+  BaseName := ChangeFileExt(ExtractFileName(FCurrentFilePath), '');
+  if not TryParseFileNameDateTime(BaseName, Result) then
+    Result := GetFileFallbackDateTime(FCurrentFilePath);
+end;
+
+
+
+function TFormMain.GetCurrentClipSpeciesName: string;
+var
+  Detections: TArray<TBatDetection>;
+  I: Integer;
+  ClipStart, ClipEnd: Double;
+begin
+  Result := '';
+  if FWavFile = nil then
+    Exit();
+  Detections := GetCurrentFileDetections();
+  ClipStart := FZoomStart * FWavFile.Info.DurationSec;
+  ClipEnd := FZoomEnd * FWavFile.Info.DurationSec;
+  for I := 0 to High(Detections) do
+    if (Detections[I].StartSec < ClipEnd) and (Detections[I].EndSec > ClipStart) then begin
+      if Result = '' then
+        Result := Detections[I].CommonName
+      else if not SameText(Result, Detections[I].CommonName) then
+        Exit('');
+    end;
+end;
+
+
+
+function TFormMain.BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
+const
+  INVALID_CHARS: TSysCharSet = ['\', '/', ':', '*', '?', '"', '<', '>', '|'];
+var
+  Species, Expansion, DateTimePart: string;
+  ExpansionFactor: Double;
+  ParenPos, I: Integer;
+begin
+  DateTimePart := FormatDateTime('yyyymmdd_hhnnss', GetCurrentFileRecordedAt(), TFormatSettings.Invariant);
+  Species := GetCurrentClipSpeciesName();
+  if Species <> '' then begin
+    { The translated name is "Common name (Scientific name)" -- keep just the
+      common name for the filename. }
+    Species := TranslateSpeciesName(Species, FDisplayLanguage);
+    ParenPos := Pos(' (', Species);
+    if ParenPos > 0 then
+      Species := Copy(Species, 1, ParenPos - 1);
+    Species := StringReplace(Species, ' ', '_', [rfReplaceAll]);
+    for I := 1 to Length(Species) do
+      if CharInSet(Species[I], INVALID_CHARS) then
+        Species[I] := '_';
+    Result := Species + '_' + DateTimePart;
+  end
+  else
+    Result := DateTimePart;
+  if AIncludeTimeExpansion then begin
+    ExpansionFactor := 1.0 / GetPlaybackRate();
+    if SameValue(Frac(ExpansionFactor), 0.0) then
+      Expansion := IntToStr(Round(ExpansionFactor))
+    else
+      Expansion := FormatFloat('0.#', ExpansionFactor, TFormatSettings.Invariant);
+    Result := Result + '_TE_x' + Expansion;
+  end;
+end;
+
+
+
 procedure TFormMain.BuildSpeciesEntries;
 var
   Flat: TArray<TFlatDet>;
@@ -1207,6 +1281,7 @@ var
 begin
   if FSpecgram = nil then
     Exit();
+  SaveDialog.FileName := BuildDefaultExportFileName(False);
   if not SaveDialog.Execute() then
     Exit();
   Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
@@ -1257,6 +1332,7 @@ var
 begin
   if FWavFile = nil then
     Exit();
+  SaveDialogMp3.FileName := BuildDefaultExportFileName(True);
   if not SaveDialogMp3.Execute() then
     Exit();
   DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
