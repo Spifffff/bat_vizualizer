@@ -114,6 +114,7 @@ type
     procedure PaintBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxPaint(Sender: TObject);
+    procedure DetectionMarkersBoxPaint(Sender: TObject);
     procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -229,7 +230,6 @@ type
     function GetCurrentFileIndex: Integer;
     function GetCurrentFileDetections: TArray<TBatDetection>;
     procedure JumpToDetection(const Det: TBatDetection);
-    procedure DetectionMarkersBoxPaint(Sender: TObject);
   end;
 
 var
@@ -503,12 +503,12 @@ begin
     set, so Top must be pushed below Splitter1 first -- left at the default 0
     it ties with WaveformBox and ends up docked before Splitter1 instead of
     after it. }
-  DetectionMarkersBox := TPaintBox.Create(Self);
-  DetectionMarkersBox.Parent := PanelMain;
-  DetectionMarkersBox.Top := Splitter1.Top + Splitter1.Height;
-  DetectionMarkersBox.Height := 4;
-  DetectionMarkersBox.Align := alTop;
-  DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
+//  DetectionMarkersBox := TPaintBox.Create(Self);
+//  DetectionMarkersBox.Parent := PanelMain;
+//  DetectionMarkersBox.Top := Splitter1.Top + Splitter1.Height;
+//  DetectionMarkersBox.Height := 4;
+//  DetectionMarkersBox.Align := alTop;
+//  DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
   Application.OnMessage := AppMouseWheel;
