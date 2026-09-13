@@ -7,7 +7,7 @@ interface
 
 
 uses
-  Winapi.Windows, Winapi.Messages,
+  Winapi.Windows, Winapi.Messages, Winapi.ShellAPI,
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
@@ -100,7 +100,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
-    procedure FormDropFiles(Sender: TObject; const FileNames: array of string);
     procedure BtnOpenFileClick(Sender: TObject);
     procedure BtnOpenFolderClick(Sender: TObject);
     procedure BtnPrevFileClick(Sender: TObject);
@@ -169,6 +168,14 @@ type
     FBusyStartTick: Cardinal;
     FBusyShown: Boolean;
     FBusyForm: TFormBusy;
+
+    { AllowDropFiles/OnDropFiles aren't published on TCustomForm -- streaming
+      them from the dfm raised EReadError, and referencing AllowDropFiles in
+      code doesn't even compile (it isn't a real property/method at all, VCL
+      has no built-in drop-target support). DragAcceptFiles() below is the
+      actual Win32 API for this; WMDropFiles handles the message it causes. }
+    procedure WMDropFiles(var Msg: TMessage); message WM_DROPFILES;
+    procedure HandleDroppedFiles(const FileNames: TArray<string>);
 
     function SpectRect: TRect;
     function WaveRect: TRect;
@@ -660,6 +667,7 @@ begin
   FDisplayLanguage := dlDutch;
   PanelRight.Visible := False;
   SplitterRight.Visible := False;
+  DragAcceptFiles(Handle, True);
   { Created here rather than via the dfm: a dfm-declared TPaintBox at this
     spot has twice raised "EReadError: Invalid property value" for a reason
     I haven't been able to pin down without a compiler; a plain method-pointer
@@ -1303,7 +1311,31 @@ end;
 
 
 
-procedure TFormMain.FormDropFiles(Sender: TObject; const FileNames: array of string);
+procedure TFormMain.WMDropFiles(var Msg: TMessage);
+var
+  Drop: HDROP;
+  FileNames: TArray<string>;
+  Buf: array [0 .. MAX_PATH] of Char;
+  Count, I: Integer;
+begin
+  Drop := HDROP(Msg.WParam);
+  try
+    Count := DragQueryFile(Drop, $FFFFFFFF, nil, 0);
+    SetLength(FileNames, Count);
+    for I := 0 to Count - 1 do begin
+      DragQueryFile(Drop, I, @Buf[0], MAX_PATH);
+      FileNames[I] := PChar(@Buf[0]);
+    end;
+  finally
+    DragFinish(Drop);
+  end;
+  Msg.Result := 0;
+  HandleDroppedFiles(FileNames);
+end;
+
+
+
+procedure TFormMain.HandleDroppedFiles(const FileNames: TArray<string>);
 var
   Ext: string;
 begin
