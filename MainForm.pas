@@ -42,6 +42,7 @@ type
     LblGainCaption: TLabel;
     LblGainVal: TLabel;
     TrkGain: TTrackBar;
+    BtnAutoGain: TButton;
     GroupFiltering: TGroupBox;
     ChkBGSub: TCheckBox;
     ChkFilter: TCheckBox;
@@ -125,6 +126,7 @@ type
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
     procedure TrkGainChange(Sender: TObject);
+    procedure BtnAutoGainClick(Sender: TObject);
     procedure ChkBGSubChange(Sender: TObject);
     procedure ChkFilterChange(Sender: TObject);
     procedure CbxColorSchemeChange(Sender: TObject);
@@ -617,6 +619,7 @@ begin
       BtnAutoFloor.Enabled := True;
       BtnAutoCeiling.Enabled := True;
       BtnAutoMaxFreq.Enabled := True;
+      BtnAutoGain.Enabled := True;
       Detections := GetCurrentFileDetections();
       for I := 0 to High(Detections) do
         OutputDebugString(PChar(Format('%s: detection %d - %.3fs to %.3fs',
@@ -1527,6 +1530,32 @@ begin
     LblGainVal.Caption := '0 dB'
   else
     LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
+end;
+
+
+
+procedure TFormMain.BtnAutoGainClick(Sender: TObject);
+const
+  TARGET_PEAK = 0.98;
+var
+  Samples: TArray<Single>;
+  StartSample, EndSample, I: Integer;
+  PeakAbs: Double;
+  GainDB: Double;
+begin
+  if FWavFile = nil then
+    Exit();
+  Samples := FWavFile.Samples;
+  StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+  EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
+  PeakAbs := 0.0;
+  for I := StartSample to EndSample - 1 do
+    PeakAbs := Max(PeakAbs, Abs(Samples[I]));
+  if PeakAbs <= 0.0 then
+    Exit();
+  GainDB := 20.0 * Log10(TARGET_PEAK / PeakAbs);
+  TrkGain.Position := EnsureRange(Round(GainDB), TrkGain.Min, TrkGain.Max);
+  TrkGainChange(TrkGain);
 end;
 
 

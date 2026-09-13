@@ -120,13 +120,25 @@ object FormMain: TFormMain
       object TrkGain: TTrackBar
         Left = 4
         Top = 82
-        Width = 172
+        Width = 144
         Height = 26
         Max = 80
         Frequency = 10
         TabOrder = 1
         TickStyle = tsNone
         OnChange = TrkGainChange
+      end
+      object BtnAutoGain: TButton
+        Left = 148
+        Top = 80
+        Width = 24
+        Height = 26
+        DisabledImageIndex = 1
+        Enabled = False
+        ImageIndex = 0
+        Images = ImageListButtons
+        TabOrder = 2
+        OnClick = BtnAutoGainClick
       end
     end
     object GroupFiltering: TGroupBox
@@ -469,6 +481,7 @@ object FormMain: TFormMain
           Width = 26
           Height = 26
           DisabledImageIndex = 19
+          ImageAlignment = iaCenter
           ImageIndex = 18
           Images = ImageListButtons
           TabOrder = 1
@@ -480,6 +493,7 @@ object FormMain: TFormMain
           Width = 26
           Height = 26
           DisabledImageIndex = 21
+          ImageAlignment = iaCenter
           ImageIndex = 20
           Images = ImageListButtons
           TabOrder = 2
@@ -626,11 +640,12 @@ object FormMain: TFormMain
         32)
       object BtnPrevResult: TButton
         Left = 0
-        Top = 2
+        Top = 3
         Width = 26
         Height = 26
         DisabledImageIndex = 15
         HotImageIndex = 0
+        ImageAlignment = iaCenter
         ImageIndex = 14
         Images = ImageListButtons
         TabOrder = 0
@@ -642,6 +657,7 @@ object FormMain: TFormMain
         Width = 26
         Height = 26
         DisabledImageIndex = 3
+        ImageAlignment = iaCenter
         ImageIndex = 2
         Images = ImageListButtons
         TabOrder = 1
@@ -654,6 +670,7 @@ object FormMain: TFormMain
         Height = 26
         DisabledImageIndex = 5
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 4
         Images = ImageListButtons
         TabOrder = 2
@@ -666,6 +683,7 @@ object FormMain: TFormMain
         Height = 26
         DisabledImageIndex = 7
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 6
         Images = ImageListButtons
         TabOrder = 3
@@ -677,6 +695,7 @@ object FormMain: TFormMain
         Width = 26
         Height = 26
         DisabledImageIndex = 17
+        ImageAlignment = iaCenter
         ImageIndex = 16
         Images = ImageListButtons
         TabOrder = 4
@@ -689,6 +708,7 @@ object FormMain: TFormMain
         Height = 26
         Anchors = [akTop, akRight]
         DisabledImageIndex = 9
+        ImageAlignment = iaCenter
         ImageIndex = 8
         Images = ImageListButtons
         TabOrder = 5
@@ -701,6 +721,7 @@ object FormMain: TFormMain
         Height = 26
         Anchors = [akTop, akRight]
         DisabledImageIndex = 11
+        ImageAlignment = iaCenter
         ImageIndex = 10
         Images = ImageListButtons
         TabOrder = 6
@@ -713,6 +734,7 @@ object FormMain: TFormMain
         Height = 26
         Anchors = [akTop, akRight]
         DisabledImageIndex = 13
+        ImageAlignment = iaCenter
         ImageIndex = 12
         Images = ImageListButtons
         TabOrder = 7
