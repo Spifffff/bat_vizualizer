@@ -173,7 +173,7 @@ type
     procedure UpdateZoomBar;
     procedure UpdateTransportButtons;
     type
-      TRowKind = (rkSpecies, rkDetection);
+      TRowKind = (rkSpecies, rkDetection, rkFile);
       TRowData = record
         Kind: TRowKind;
         SpeciesIdx: Integer;
@@ -996,39 +996,62 @@ var
   Det: TBatDetection;
   RD: PRowData;
   Cap: string;
+  AnyCsv: Boolean;
 begin
   ClearFileListRowData;
   FileListView.Items.BeginUpdate;
   try
-    for I := 0 to High(FSpeciesEntries) do begin
-      Species := FSpeciesEntries[I];
-      if Species.Expanded then
-        Cap := #$25BC + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage)
-      else
-        Cap := #$25B6 + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage);
-      Item := FileListView.Items.Add;
-      Item.Caption := Cap;
-      Item.SubItems.Add('');
-      New(RD);
-      RD^.Kind := rkSpecies;
-      RD^.SpeciesIdx := I;
-      RD^.FileIdx := -1;
-      RD^.DetIdx := -1;
-      Item.Data := RD;
-      if Species.Expanded then begin
-        for J := 0 to High(Species.Refs) do begin
-          Entry := FFileEntries[Species.Refs[J].FileIdx];
-          Det := Entry.Detections[Species.Refs[J].DetIdx];
-          Item := FileListView.Items.Add;
-          Item.Caption := '    ' +
-            LowerCase(FormatDateTime('d mmmm, hh:nn:ss', Det.DateTime, TFormatSettings.Invariant));
-          Item.SubItems.Add(Format('%.2f%%', [Det.Confidence * 100]));
-          New(RD);
-          RD^.Kind := rkDetection;
-          RD^.SpeciesIdx := I;
-          RD^.FileIdx := Species.Refs[J].FileIdx;
-          RD^.DetIdx := Species.Refs[J].DetIdx;
-          Item.Data := RD;
+    AnyCsv := False;
+    for I := 0 to High(FFileEntries) do
+      if FFileEntries[I].HasCsv then begin
+        AnyCsv := True;
+        Break;
+      end;
+    FileListView.ShowColumnHeaders := AnyCsv;
+    if not AnyCsv then begin
+      for I := 0 to High(FFileEntries) do begin
+        Item := FileListView.Items.Add;
+        Item.Caption := FFileEntries[I].FileName;
+        Item.SubItems.Add('');
+        New(RD);
+        RD^.Kind := rkFile;
+        RD^.SpeciesIdx := -1;
+        RD^.FileIdx := I;
+        RD^.DetIdx := -1;
+        Item.Data := RD;
+      end;
+    end
+    else begin
+      for I := 0 to High(FSpeciesEntries) do begin
+        Species := FSpeciesEntries[I];
+        if Species.Expanded then
+          Cap := #$25BC + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage)
+        else
+          Cap := #$25B6 + ' ' + TranslateSpeciesName(Species.CommonName, FDisplayLanguage);
+        Item := FileListView.Items.Add;
+        Item.Caption := Cap;
+        Item.SubItems.Add('');
+        New(RD);
+        RD^.Kind := rkSpecies;
+        RD^.SpeciesIdx := I;
+        RD^.FileIdx := -1;
+        RD^.DetIdx := -1;
+        Item.Data := RD;
+        if Species.Expanded then begin
+          for J := 0 to High(Species.Refs) do begin
+            Entry := FFileEntries[Species.Refs[J].FileIdx];
+            Det := Entry.Detections[Species.Refs[J].DetIdx];
+            Item := FileListView.Items.Add;
+            Item.Caption := '    ' +
+              LowerCase(FormatDateTime('d mmmm, hh:nn:ss', Det.DateTime, TFormatSettings.Invariant));
+            Item.SubItems.Add(Format('%.2f%%', [Det.Confidence * 100]));
+            New(RD);
+            RD^.Kind := rkDetection;
+            RD^.SpeciesIdx := I;
+            RD^.FileIdx := Species.Refs[J].FileIdx;
+            RD^.DetIdx := Species.Refs[J].DetIdx;
+            Item.Data := RD;
+          end;
         end;
       end;
     end;
@@ -1154,7 +1177,13 @@ begin
   if Item = nil then
     Exit();
   RD := PRowData(Item.Data);
-  if (RD = nil) or (RD^.Kind <> rkDetection) then
+  if RD = nil then
+    Exit();
+  if RD^.Kind = rkFile then begin
+    LoadFile(FFileEntries[RD^.FileIdx].FilePath);
+    Exit();
+  end;
+  if RD^.Kind <> rkDetection then
     Exit();
   Entry := FFileEntries[RD^.FileIdx];
   if FCurrentFilePath <> Entry.FilePath then
