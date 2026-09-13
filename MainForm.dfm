@@ -109,6 +109,7 @@ object FormMain: TFormMain
         ItemIndex = 1
         TabOrder = 0
         Text = '10x'
+        OnChange = CbxSpeedChange
         Items.Strings = (
           '20x'
           '10x'
@@ -791,6 +792,13 @@ object FormMain: TFormMain
     OnTimer = RenderTimerTick
     Left = 1130
     Top = 40
+  end
+  object LivePlaybackTimer: TTimer
+    Enabled = False
+    Interval = 200
+    OnTimer = LivePlaybackTimerTick
+    Left = 1130
+    Top = 72
   end
   object ImageListButtons: TImageList
     ColorDepth = cd32Bit

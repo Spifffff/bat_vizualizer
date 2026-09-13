@@ -76,6 +76,7 @@ type
     SaveDialog: TSaveDialog;
     Timer: TTimer;
     RenderTimer: TTimer;
+    LivePlaybackTimer: TTimer;
     LblSpeed: TLabel;
     CbxSpeed: TComboBox;
     LblSave: TLabel;
@@ -126,8 +127,10 @@ type
     procedure TimerTick(Sender: TObject);
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
+    procedure CbxSpeedChange(Sender: TObject);
     procedure TrkGainChange(Sender: TObject);
     procedure BtnAutoGainClick(Sender: TObject);
+    procedure LivePlaybackTimerTick(Sender: TObject);
     procedure ChkBGSubChange(Sender: TObject);
     procedure ChkFilterChange(Sender: TObject);
     procedure CbxColorSchemeChange(Sender: TObject);
@@ -174,6 +177,7 @@ type
     function GetWindowType: TWindowType;
     function GetPlaybackRate: Double;
     function GetPlaybackGain: Double;
+    procedure ApplyPlaybackSettingsLive;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
@@ -1524,6 +1528,39 @@ end;
 
 
 
+procedure TFormMain.ApplyPlaybackSettingsLive;
+var
+  WasPaused: Boolean;
+  Pos: Double;
+  OutRate, ActualRate: Cardinal;
+  StartSample, EndSample: Integer;
+begin
+  if (FWavFile = nil) or not (FWavePlayer.IsPlaying() or FWavePlayer.IsPaused()) then
+    Exit();
+  WasPaused := FWavePlayer.IsPaused();
+  Pos := FWavePlayer.GetNormalizedPosition();
+  OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+  StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+  EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
+  { Reload with the new speed/gain, then seek back to where playback was and
+    resume -- SeekToNormalized() alone can't restart playback here since it
+    decides whether to (re)submit the buffer from the state Load() just
+    reset, not from the state we captured above, so Play()/Pause() below
+    take care of that explicitly. }
+  FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, GetPlaybackGain(), ActualRate);
+  FWavePlayer.SeekToNormalized(Pos);
+  FWavePlayer.Play();
+  if WasPaused then
+    FWavePlayer.Pause();
+  if ActualRate <> OutRate then
+    StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)',
+      [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
+  else
+    StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, GetPlaybackRate() * 100]);
+end;
+
+
+
 procedure TFormMain.BtnPrevResultClick(Sender: TObject);
 var
   Detections: TArray<TBatDetection>;
@@ -1630,6 +1667,26 @@ begin
     LblGainVal.Caption := '0 dB'
   else
     LblGainVal.Caption := '+' + IntToStr(G) + ' dB';
+  { Dragging the slider fires this on every intermediate position; debounce
+    so a live reload/reopen of the audio device only happens once dragging
+    settles, instead of on every pixel of movement. }
+  LivePlaybackTimer.Enabled := False;
+  LivePlaybackTimer.Enabled := True;
+end;
+
+
+
+procedure TFormMain.CbxSpeedChange(Sender: TObject);
+begin
+  ApplyPlaybackSettingsLive();
+end;
+
+
+
+procedure TFormMain.LivePlaybackTimerTick(Sender: TObject);
+begin
+  LivePlaybackTimer.Enabled := False;
+  ApplyPlaybackSettingsLive();
 end;
 
 
