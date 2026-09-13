@@ -129,12 +129,13 @@ object FormMain: TFormMain
         OnChange = TrkGainChange
       end
       object BtnAutoGain: TButton
-        Left = 148
+        Left = 146
         Top = 80
-        Width = 24
+        Width = 26
         Height = 26
         DisabledImageIndex = 1
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 0
         Images = ImageListButtons
         TabOrder = 2
@@ -162,7 +163,7 @@ object FormMain: TFormMain
       end
       object ChkFilter: TCheckBox
         Left = 8
-        Top = 40
+        Top = 41
         Width = 164
         Height = 17
         Caption = 'High-pass + gate'
@@ -307,12 +308,13 @@ object FormMain: TFormMain
         OnChange = TrkFloorChange
       end
       object BtnAutoFloor: TButton
-        Left = 148
+        Left = 146
         Top = 80
-        Width = 24
+        Width = 26
         Height = 26
         DisabledImageIndex = 1
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 0
         Images = ImageListButtons
         TabOrder = 2
@@ -331,12 +333,13 @@ object FormMain: TFormMain
         OnChange = TrkCeilingChange
       end
       object BtnAutoCeiling: TButton
-        Left = 148
+        Left = 146
         Top = 122
-        Width = 24
+        Width = 26
         Height = 26
         DisabledImageIndex = 1
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 0
         Images = ImageListButtons
         TabOrder = 4
@@ -356,12 +359,13 @@ object FormMain: TFormMain
         OnChange = TrkMaxFreqChange
       end
       object BtnAutoMaxFreq: TButton
-        Left = 148
+        Left = 146
         Top = 164
-        Width = 24
+        Width = 26
         Height = 26
         DisabledImageIndex = 1
         Enabled = False
+        ImageAlignment = iaCenter
         ImageIndex = 0
         Images = ImageListButtons
         TabOrder = 6
@@ -457,13 +461,13 @@ object FormMain: TFormMain
         Left = 0
         Top = 0
         Width = 318
-        Height = 33
+        Height = 32
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 0
         DesignSize = (
           318
-          33)
+          32)
         object BtnCloseRightPanel: TButton
           Left = 300
           Top = 2
@@ -477,7 +481,7 @@ object FormMain: TFormMain
         end
         object BtnPrevFile: TButton
           Left = 0
-          Top = 4
+          Top = 3
           Width = 26
           Height = 26
           DisabledImageIndex = 19
@@ -489,7 +493,7 @@ object FormMain: TFormMain
         end
         object BtnNextFile: TButton
           Left = 28
-          Top = 4
+          Top = 3
           Width = 26
           Height = 26
           DisabledImageIndex = 21
@@ -502,9 +506,9 @@ object FormMain: TFormMain
       end
       object FileListView: TListView
         Left = 0
-        Top = 33
+        Top = 32
         Width = 318
-        Height = 684
+        Height = 685
         Align = alClient
         Columns = <
           item
@@ -524,6 +528,8 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
+        ExplicitTop = 33
+        ExplicitHeight = 684
       end
       object PanelFilesBottom: TPanel
         Left = 0
@@ -644,7 +650,6 @@ object FormMain: TFormMain
         Width = 26
         Height = 26
         DisabledImageIndex = 15
-        HotImageIndex = 0
         ImageAlignment = iaCenter
         ImageIndex = 14
         Images = ImageListButtons
