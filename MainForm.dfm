@@ -34,7 +34,6 @@ object FormMain: TFormMain
     Padding.Left = 3
     Padding.Right = 3
     TabOrder = 0
-    ExplicitHeight = 727
     object GroupSource: TGroupBox
       Left = 3
       Top = 0
@@ -82,9 +81,9 @@ object FormMain: TFormMain
       object LblSpeed: TLabel
         Left = 8
         Top = 20
-        Width = 35
+        Width = 83
         Height = 13
-        Caption = 'Speed:'
+        Caption = 'Time expansion:'
       end
       object LblGainCaption: TLabel
         Left = 8
@@ -108,15 +107,15 @@ object FormMain: TFormMain
         Style = csDropDownList
         ItemIndex = 1
         TabOrder = 0
-        Text = '10%'
+        Text = '10x'
         Items.Strings = (
-          '5%'
-          '10%'
-          '12.5%'
-          '20%'
-          '25%'
-          '50%'
-          '100%')
+          '20x'
+          '10x'
+          '8x'
+          '5x'
+          '4x'
+          '2x'
+          '1x')
       end
       object TrkGain: TTrackBar
         Left = 4
@@ -138,7 +137,6 @@ object FormMain: TFormMain
       Align = alTop
       Caption = 'Filtering'
       TabOrder = 2
-      ExplicitTop = 204
       object ChkBGSub: TCheckBox
         Left = 8
         Top = 20
@@ -170,7 +168,6 @@ object FormMain: TFormMain
       Align = alTop
       Caption = 'FFT'
       TabOrder = 3
-      ExplicitTop = 271
       object LblWindow: TLabel
         Left = 8
         Top = 20
@@ -367,8 +364,6 @@ object FormMain: TFormMain
       Align = alClient
       Caption = 'Export'
       TabOrder = 5
-      ExplicitTop = 592
-      ExplicitHeight = 132
       object LblSave: TLabel
         Left = 8
         Top = 20
@@ -428,8 +423,6 @@ object FormMain: TFormMain
       item
         Width = 200
       end>
-    ExplicitTop = 727
-    ExplicitWidth = 1200
   end
   object PanelRight: TPanel
     Left = 887
@@ -440,8 +433,6 @@ object FormMain: TFormMain
     BevelOuter = bvNone
     Constraints.MinWidth = 100
     TabOrder = 2
-    ExplicitLeft = 882
-    ExplicitHeight = 727
     object PanelFileContent: TPanel
       Left = 0
       Top = 0
@@ -450,7 +441,6 @@ object FormMain: TFormMain
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 0
-      ExplicitHeight = 727
       object PanelFileHeader: TPanel
         Left = 0
         Top = 0
@@ -459,7 +449,6 @@ object FormMain: TFormMain
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitLeft = 2
         DesignSize = (
           318
           33)
@@ -521,9 +510,6 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
-        ExplicitLeft = 2
-        ExplicitTop = 36
-        ExplicitHeight = 663
       end
       object PanelFilesBottom: TPanel
         Left = 0
@@ -541,7 +527,6 @@ object FormMain: TFormMain
           Align = alClient
           Caption = 'Species language'
           TabOrder = 0
-          ExplicitHeight = 77
           object CbxLanguage: TComboBox
             AlignWithMargins = True
             Left = 8
@@ -564,8 +549,6 @@ object FormMain: TFormMain
               'German'
               'French'
               'Spanish')
-            ExplicitTop = 22
-            ExplicitWidth = 297
           end
         end
       end
@@ -581,8 +564,6 @@ object FormMain: TFormMain
     DoubleBuffered = True
     ParentDoubleBuffered = False
     TabOrder = 1
-    ExplicitWidth = 692
-    ExplicitHeight = 727
     object WaveformBox: TPaintBox
       Left = 0
       Top = 0
@@ -640,8 +621,6 @@ object FormMain: TFormMain
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 1
-      ExplicitTop = 695
-      ExplicitWidth = 692
       DesignSize = (
         697
         32)
@@ -714,7 +693,6 @@ object FormMain: TFormMain
         Images = ImageListButtons
         TabOrder = 5
         OnClick = BtnZoomInClick
-        ExplicitLeft = 610
       end
       object BtnZoomOut: TButton
         Left = 643
@@ -727,7 +705,6 @@ object FormMain: TFormMain
         Images = ImageListButtons
         TabOrder = 6
         OnClick = BtnZoomOutClick
-        ExplicitLeft = 638
       end
       object BtnZoomFull: TButton
         Left = 671
@@ -740,7 +717,6 @@ object FormMain: TFormMain
         Images = ImageListButtons
         TabOrder = 7
         OnClick = BtnZoomFullClick
-        ExplicitLeft = 666
       end
     end
     object ZoomBar: TScrollBar
@@ -753,8 +729,6 @@ object FormMain: TFormMain
       PageSize = 0
       TabOrder = 0
       OnChange = ZoomBarChange
-      ExplicitTop = 675
-      ExplicitWidth = 692
     end
   end
   object OpenDialog: TOpenDialog
