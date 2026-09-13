@@ -34,8 +34,10 @@ type
     procedure GetColor(T: Double; Scheme: TColorScheme; out R, G, B: Byte);
     { Call when file / FFT size / window changes.  Computes a rolling-median
       noise floor used by Render when BgSubtract is True, and suggested
-      auto floor/ceiling/max-frequency values (see Auto*** properties). }
-    procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
+      auto floor/ceiling/max-frequency values (see Auto*** properties).
+      AOnTick, when assigned, is called once per analyzed frame so a caller
+      can show progress for a slow (large-file) recompute. }
+    procedure Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType; const AOnTick: TProc = nil);
 
     { Render the visible zoom window at display resolution.  Each pixel column
       gets its own FFT so there is no block artefact when zoomed in. }
@@ -233,7 +235,7 @@ end;
 
 
 
-procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType);
+procedure TSpectrogramData.Prepare(AWavFile: TWavFile; AFFTSize: Integer; AWindow: TWindowType; const AOnTick: TProc);
 const
   MAX_NOISE_FRAMES = 256;
   NOISE_HALF_WIN = 16;
@@ -296,6 +298,8 @@ begin
     Move(Mags[0], RawMags[Frame][0], FNumBins * SizeOf(Double));
     FNoiseFramePos[Frame] := (Offset + AFFTSize * 0.5) / TotalSamples;
     Inc(Offset, Hop);
+    if Assigned(AOnTick) then
+      AOnTick();
   end;
 
   // Per-bin rolling median across the window

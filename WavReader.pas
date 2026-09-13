@@ -1,10 +1,13 @@
-unit WavReader;
+﻿unit WavReader;
 
 
 
 interface
 
 
+
+uses
+  System.SysUtils;
 
 type
   TWavInfo = record
@@ -22,10 +25,13 @@ type
   private
     FInfo: TWavInfo;
     FSamples: TArray<Single>;
-    procedure LoadWavFromFile(const FileName: string);
-    procedure LoadMp3FromFile(const FileName: string);
+    procedure LoadWavFromFile(const FileName: string; const AOnTick: TProc);
+    procedure LoadMp3FromFile(const FileName: string; const AOnTick: TProc);
   public
-    procedure LoadFromFile(const FileName: string);
+    { AOnTick, when assigned, is called periodically while the file streams
+      in so a caller can show progress for a slow (large-file) load; it is
+      not called at a fixed rate, just once per internally-buffered chunk. }
+    procedure LoadFromFile(const FileName: string; const AOnTick: TProc = nil);
     property Info: TWavInfo read FInfo;
     property Samples: TArray<Single> read FSamples;
   end;
@@ -39,7 +45,7 @@ implementation
 
 
 uses
-  SysUtils, Classes, System.Math, Winapi.Windows;
+  Classes, System.Math, Winapi.Windows;
 
 { =========================================================================
   Minimal Windows Media Foundation declarations — avoids Winapi.MediaFoundation
@@ -161,19 +167,19 @@ function MFCreateSourceReaderFromURL(pwszURL: PWideChar; pAttributes: IUnknown;
   TWavFile
   ========================================================================= }
 
-procedure TWavFile.LoadFromFile(const FileName: string);
+procedure TWavFile.LoadFromFile(const FileName: string; const AOnTick: TProc);
 begin
   FillChar(FInfo, SizeOf(FInfo), 0);
   SetLength(FSamples, 0);
   if SameText(ExtractFileExt(FileName), '.mp3') then
-    LoadMp3FromFile(FileName)
+    LoadMp3FromFile(FileName, AOnTick)
   else
-    LoadWavFromFile(FileName);
+    LoadWavFromFile(FileName, AOnTick);
 end;
 
 
 
-procedure TWavFile.LoadWavFromFile(const FileName: string);
+procedure TWavFile.LoadWavFromFile(const FileName: string; const AOnTick: TProc);
 const
   STREAM_BUF_BYTES = 1 shl 20; // 1 MB read buffer
 var
@@ -294,6 +300,8 @@ begin
       end;
 
       Dec(Remaining, BufFrames);
+      if Assigned(AOnTick) then
+        AOnTick();
     end;
 
   finally
@@ -359,7 +367,7 @@ end;
 
 
 
-procedure TWavFile.LoadMp3FromFile(const FileName: string);
+procedure TWavFile.LoadMp3FromFile(const FileName: string; const AOnTick: TProc);
 var
   HR: HResult;
   Reader: IMFSourceReader;
@@ -415,6 +423,7 @@ begin
     SetLength(Buf, Max(65536, Integer(Rate) * 10)); // pre-alloc ~10 s
 
     var NilRun := 0;
+    var TickCounter := 0;
     while True do begin
       Sample := nil;
       HR := Reader.ReadSample(AUDIO_STRM, 0, nil, @Flags, @Timestamp, Sample);
@@ -448,6 +457,9 @@ begin
       finally
         MBuf.Unlock();
       end;
+      Inc(TickCounter);
+      if Assigned(AOnTick) and (TickCounter mod 16 = 0) then
+        AOnTick();
     end;
 
     SetLength(FSamples, Count);

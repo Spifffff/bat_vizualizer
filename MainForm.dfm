@@ -10,6 +10,7 @@ object FormMain: TFormMain
   Font.Height = -11
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   TextHeight = 13
@@ -528,8 +529,6 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
-        ExplicitTop = 33
-        ExplicitHeight = 684
       end
       object PanelFilesBottom: TPanel
         Left = 0

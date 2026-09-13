@@ -13,7 +13,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
-  BatIdentForm;
+  BatIdentForm, BusyForm;
 
 const
   LEFT_MARGIN = 65;
@@ -97,6 +97,7 @@ type
     GroupBox1: TGroupBox;
     ImageListClose: TImageList;
     procedure FormCreate(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
     procedure BtnOpenFileClick(Sender: TObject);
     procedure BtnOpenFolderClick(Sender: TObject);
@@ -160,6 +161,11 @@ type
     FDragStartX: Integer;
     FDragCurrentX: Integer;
 
+    FBusyDepth: Integer;
+    FBusyStartTick: Cardinal;
+    FBusyShown: Boolean;
+    FBusyForm: TFormBusy;
+
     function SpectRect: TRect;
     function WaveRect: TRect;
     procedure ApplyZoomDrag(const ChartR: TRect);
@@ -174,6 +180,10 @@ type
     procedure ResetPlaybackUI;
     procedure UpdateZoomBar;
     procedure UpdateTransportButtons;
+    procedure EnsureBusyForm;
+    procedure BeginBusy(const AMessage: string);
+    procedure TickBusy;
+    procedure EndBusy;
     type
       TRowKind = (rkSpecies, rkDetection, rkFile);
       TRowData = record
@@ -417,14 +427,83 @@ end;
 
 
 
+{ ---- busy indicator --------------------------------------------------------
+  Long operations (opening a file, recomputing the spectrogram after an FFT
+  size/window change) run synchronously on the main thread, so the only way
+  to show a "please wait" popup partway through is for those operations to
+  call TickBusy() periodically from their own loops -- it pumps the message
+  queue so the popup can appear/repaint, but only once 0.5s have elapsed, so
+  a fast operation never shows it at all. BeginBusy/EndBusy nest (via
+  FBusyDepth) so a call that itself triggers another busy operation -- e.g.
+  LoadFile calling RecomputeSpectrogram -- keeps a single popup and a single
+  clock running across both, instead of restarting the 0.5s countdown. }
+
+
+
+procedure TFormMain.EnsureBusyForm;
+begin
+  if FBusyForm <> nil then
+    Exit();
+  FBusyForm := TFormBusy.Create(Self);
+end;
+
+
+
+procedure TFormMain.BeginBusy(const AMessage: string);
+begin
+  Inc(FBusyDepth);
+  if FBusyDepth > 1 then
+    Exit();
+  FBusyStartTick := GetTickCount();
+  FBusyShown := False;
+  EnsureBusyForm();
+  FBusyForm.LblMessage.Caption := AMessage;
+end;
+
+
+
+procedure TFormMain.TickBusy;
+begin
+  if FBusyDepth <= 0 then
+    Exit();
+  if not FBusyShown then begin
+    if GetTickCount() - FBusyStartTick < 500 then
+      Exit();
+    FBusyShown := True;
+    FBusyForm.Show();
+  end;
+  Application.ProcessMessages();
+end;
+
+
+
+procedure TFormMain.EndBusy;
+begin
+  if FBusyDepth <= 0 then
+    Exit();
+  Dec(FBusyDepth);
+  if FBusyDepth > 0 then
+    Exit();
+  if FBusyShown then
+    FBusyForm.Hide();
+  FBusyShown := False;
+end;
+
+
+
 procedure TFormMain.RecomputeSpectrogram;
 begin
   RenderTimer.Enabled := False;
   FreeAndNil(FSpecgram);
   if FWavFile = nil then
     Exit();
-  FSpecgram := TSpectrogramData.Create();
-  FSpecgram.Prepare(FWavFile, GetFFTSize(), GetWindowType());
+  BeginBusy('Analyzing spectrogram...');
+  try
+    FSpecgram := TSpectrogramData.Create();
+    FSpecgram.Prepare(FWavFile, GetFFTSize(), GetWindowType(), TickBusy);
+  finally
+    EndBusy();
+  end;
   RenderSpectrogram();
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
@@ -563,6 +642,17 @@ end;
 
 
 
+procedure TFormMain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  { A busy operation pumps messages via Application.ProcessMessages() so its
+    "please wait" popup can show/repaint; refuse to close the form mid-load
+    so that pump can never let FormDestroy tear down FWavFile/FSpecgram out
+    from under the load still in progress. }
+  CanClose := FBusyDepth <= 0;
+end;
+
+
+
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   Application.OnMessage := nil;
@@ -595,10 +685,11 @@ begin
   FCurrentFilePath := '';
   Screen.Cursor := crHourGlass;
   Enabled := False;
+  BeginBusy('Loading ' + ExtractFileName(AFilePath) + '...');
   try
     try
       FWavFile := TWavFile.Create();
-      FWavFile.LoadFromFile(AFilePath);
+      FWavFile.LoadFromFile(AFilePath, TickBusy);
       FCurrentFilePath := AFilePath;
       FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
         [ExtractFileName(AFilePath), FWavFile.Info.DurationSec,
@@ -633,6 +724,7 @@ begin
       end;
     end;
   finally
+    EndBusy();
     Enabled := True;
     Screen.Cursor := crDefault;
   end;
@@ -1553,7 +1645,7 @@ begin
     PeakAbs := Max(PeakAbs, Abs(Samples[I]));
   if PeakAbs <= 0.0 then
     Exit();
-  GainDB := 20.0 * Log10(TARGET_PEAK / PeakAbs);
+  GainDB := 5.0 * Log10(TARGET_PEAK / PeakAbs);
   TrkGain.Position := EnsureRange(Round(GainDB), TrkGain.Min, TrkGain.Max);
   TrkGainChange(TrkGain);
 end;
@@ -1863,6 +1955,8 @@ var
   Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
 begin
   if Msg.message <> WM_MOUSEWHEEL then
+    Exit();
+  if FBusyDepth > 0 then
     Exit();
   if FSpecgram = nil then
     Exit();
