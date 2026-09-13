@@ -17,7 +17,7 @@ object FormBusy: TFormBusy
   object LblMessage: TLabel
     Left = 12
     Top = 10
-    Width = 90
+    Width = 66
     Height = 13
     Caption = 'Please wait...'
   end
@@ -26,8 +26,8 @@ object FormBusy: TFormBusy
     Top = 30
     Width = 236
     Height = 20
-    TabOrder = 0
     Style = pbstMarquee
     MarqueeInterval = 30
+    TabOrder = 0
   end
 end

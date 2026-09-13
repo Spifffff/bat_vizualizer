@@ -36,6 +36,8 @@ type
     property Samples: TArray<Single> read FSamples;
   end;
 
+
+
 function GetWavDurationSec(const FileName: string): Double;
 
 
@@ -53,11 +55,11 @@ uses
   ========================================================================= }
 
 const
-  MFV          = DWORD($00020070); // MF_SDK_VERSION=2, MF_API_VERSION=$70 (Win7+)
-  AUDIO_STRM   = DWORD($FFFFFFFD); // MF_SOURCE_READER_FIRST_AUDIO_STREAM
-  ALL_STRMS    = DWORD($FFFFFFFE); // MF_SOURCE_READER_ALL_STREAMS
-  ENDOFSTREAM  = DWORD($00000004); // MF_SOURCE_READERF_ENDOFSTREAM
-  READERF_ERR  = DWORD($00000001); // MF_SOURCE_READERF_ERROR
+  MFV = DWORD($00020070); // MF_SDK_VERSION=2, MF_API_VERSION=$70 (Win7+)
+  AUDIO_STRM = DWORD($FFFFFFFD); // MF_SOURCE_READER_FIRST_AUDIO_STREAM
+  ALL_STRMS = DWORD($FFFFFFFE); // MF_SOURCE_READER_ALL_STREAMS
+  ENDOFSTREAM = DWORD($00000004); // MF_SOURCE_READERF_ENDOFSTREAM
+  READERF_ERR = DWORD($00000001); // MF_SOURCE_READERF_ERROR
 
 type
   { IMFAttributes — 30 methods after IUnknown; only the ones we call are typed. }
@@ -95,6 +97,8 @@ type
     function _A30: HResult; stdcall; { CopyAllItems }
   end;
 
+
+
   { IMFMediaType extends IMFAttributes with 5 more methods (unused). }
   IMFMediaType = interface(IMFAttributes)
     ['{44AE0FA8-EA31-4109-8D2E-4CAE4997C555}']
@@ -105,6 +109,8 @@ type
     function _M5: HResult; stdcall;
   end;
 
+
+
   IMFMediaBuffer = interface(IUnknown)
     ['{045FA593-8799-42B8-BC8D-8968C6453507}']
     function Lock(out ppbBuffer: PByte; pcbMaxLength: PDWORD; pcbCurrentLength: PDWORD): HResult; stdcall;
@@ -113,6 +119,8 @@ type
     function SetCurrentLength(cbCurrentLength: DWORD): HResult; stdcall;
     function GetMaxLength(out pcbMaxLength: DWORD): HResult; stdcall;
   end;
+
+
 
   { IMFSample extends IMFAttributes; ConvertToContiguousBuffer is the 9th
     IMFSample-specific method. }
@@ -129,6 +137,8 @@ type
     function ConvertToContiguousBuffer(out ppBuffer: IMFMediaBuffer): HResult; stdcall;
   end;
 
+
+
   { IMFSourceReader — GetCurrentMediaType is 4th, SetCurrentMediaType 5th,
     ReadSample 7th. }
   IMFSourceReader = interface(IUnknown)
@@ -139,33 +149,30 @@ type
     function GetCurrentMediaType(dwStreamIndex: DWORD; out ppMediaType: IMFMediaType): HResult; stdcall;
     function SetCurrentMediaType(dwStreamIndex: DWORD; pdwReserved: PDWORD; pMediaType: IMFMediaType): HResult; stdcall;
     function _R6: HResult; stdcall; { SetCurrentPosition }
-    function ReadSample(dwStreamIndex: DWORD; dwControlFlags: DWORD;
-      pdwActualStreamIndex: PDWORD; pdwStreamFlags: PDWORD;
-      pllTimestamp: PInt64; out ppSample: IMFSample): HResult; stdcall;
+    function ReadSample(dwStreamIndex: DWORD; dwControlFlags: DWORD; pdwActualStreamIndex: PDWORD; pdwStreamFlags: PDWORD; pllTimestamp: PInt64;
+      out ppSample: IMFSample): HResult; stdcall;
   end;
 
 var
-  MFMediaType_Audio:              TGUID = '{73647561-0000-0010-8000-00AA00389B71}';
-  MFAudioFormat_PCM:              TGUID = '{00000001-0000-0010-8000-00AA00389B71}';
-  MF_MT_MAJOR_TYPE:               TGUID = '{48EBA18E-F8C9-4687-BF11-0A74C9F96A8F}';
-  MF_MT_SUBTYPE:                  TGUID = '{F7E34C9A-42E8-4714-B74B-CB29D72C35E5}';
+  MFMediaType_Audio: TGUID = '{73647561-0000-0010-8000-00AA00389B71}';
+  MFAudioFormat_PCM: TGUID = '{00000001-0000-0010-8000-00AA00389B71}';
+  MF_MT_MAJOR_TYPE: TGUID = '{48EBA18E-F8C9-4687-BF11-0A74C9F96A8F}';
+  MF_MT_SUBTYPE: TGUID = '{F7E34C9A-42E8-4714-B74B-CB29D72C35E5}';
   MF_MT_AUDIO_SAMPLES_PER_SECOND: TGUID = '{5FAEEAE7-0290-4C31-9E8A-C534F68D9EDA}';
-  MF_MT_AUDIO_NUM_CHANNELS:       TGUID = '{37E48BF5-645E-4C5B-89DE-ADA9E29B696A}';
-  MF_MT_AUDIO_BITS_PER_SAMPLE:    TGUID = '{F2DEB57F-40FA-4764-AA33-ED4F2D1FF669}';
+  MF_MT_AUDIO_NUM_CHANNELS: TGUID = '{37E48BF5-645E-4C5B-89DE-ADA9E29B696A}';
+  MF_MT_AUDIO_BITS_PER_SAMPLE: TGUID = '{F2DEB57F-40FA-4764-AA33-ED4F2D1FF669}';
 
-function MFStartup(Version: DWORD; dwFlags: DWORD): HResult; stdcall;
-  external 'Mfplat.dll';
-function MFShutdown: HResult; stdcall;
-  external 'Mfplat.dll';
-function MFCreateMediaType(out ppMFType: IMFMediaType): HResult; stdcall;
-  external 'Mfplat.dll';
-function MFCreateSourceReaderFromURL(pwszURL: PWideChar; pAttributes: IUnknown;
-  out ppSourceReader: IMFSourceReader): HResult; stdcall;
+function MFStartup(Version: DWORD; dwFlags: DWORD): HResult; stdcall; external 'Mfplat.dll';
+function MFShutdown: HResult; stdcall; external 'Mfplat.dll';
+function MFCreateMediaType(out ppMFType: IMFMediaType): HResult; stdcall; external 'Mfplat.dll';
+function MFCreateSourceReaderFromURL(pwszURL: PWideChar; pAttributes: IUnknown; out ppSourceReader: IMFSourceReader): HResult; stdcall;
   external 'Mfreadwrite.dll';
 
 { =========================================================================
   TWavFile
   ========================================================================= }
+
+
 
 procedure TWavFile.LoadFromFile(const FileName: string; const AOnTick: TProc);
 begin
@@ -350,7 +357,8 @@ begin
       end else if (Tag[0] = 'd') and (Tag[1] = 'a') and (Tag[2] = 't') and (Tag[3] = 'a') then begin
         DataSize := ChunkSize;
         Break;
-      end else
+      end
+      else
         F.Seek(ChunkSize, soFromCurrent);
     end;
     if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
@@ -406,7 +414,7 @@ begin
       raise Exception.CreateFmt('Cannot decode audio in "%s" (HRESULT 0x%x)', [ExtractFileName(FileName), HR]);
 
     Channels := 1;
-    Rate     := 44100;
+    Rate := 44100;
     if not Failed(Reader.GetCurrentMediaType(AUDIO_STRM, ActType)) then begin
       ActType.GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, Channels);
       ActType.GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, Rate);
@@ -414,16 +422,18 @@ begin
     if Channels = 0 then
       Channels := 1;
 
-    FInfo.AudioFormat   := 1;
-    FInfo.Channels      := Channels;
-    FInfo.SampleRate    := Rate;
+    FInfo.AudioFormat := 1;
+    FInfo.Channels := Channels;
+    FInfo.SampleRate := Rate;
     FInfo.BitsPerSample := 16;
 
     Count := 0;
     SetLength(Buf, Max(65536, Integer(Rate) * 10)); // pre-alloc ~10 s
 
-    var NilRun := 0;
-    var TickCounter := 0;
+    var
+    NilRun := 0;
+    var
+    TickCounter := 0;
     while True do begin
       Sample := nil;
       HR := Reader.ReadSample(AUDIO_STRM, 0, nil, @Flags, @Timestamp, Sample);
@@ -431,7 +441,8 @@ begin
         Break;
       if Sample = nil then begin
         Inc(NilRun);
-        if NilRun > 500 then Break; // stream stalled
+        if NilRun > 500 then
+          Break; // stream stalled
         Continue;
       end;
       NilRun := 0;
@@ -465,7 +476,7 @@ begin
     SetLength(FSamples, Count);
     if Count > 0 then
       Move(Buf[0], FSamples[0], Count * SizeOf(Single));
-    FInfo.NumSamples  := Count;
+    FInfo.NumSamples := Count;
     FInfo.DurationSec := Count / Rate;
   finally
     MFShutdown();

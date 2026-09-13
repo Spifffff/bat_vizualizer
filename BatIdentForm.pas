@@ -1,6 +1,10 @@
 unit BatIdentForm;
 
+
+
 interface
+
+
 
 uses
   Winapi.Windows, Winapi.Messages,
@@ -14,6 +18,8 @@ const
 type
   TSlotState = (ssIdle, ssBatIdent);
 
+
+
   TFileSlot = record
     WavFile: string;
     BaseName: string;
@@ -23,6 +29,8 @@ type
     PipeBuffer: string;
     State: TSlotState;
   end;
+
+
 
   TFormBatIdent = class(TForm)
     GrpFolders: TGroupBox;
@@ -64,7 +72,7 @@ type
     procedure BtnStopClick(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
   private
-    FSlots: array[0..MAX_SLOTS - 1] of TFileSlot;
+    FSlots: array [0 .. MAX_SLOTS - 1] of TFileSlot;
     FSlotCount: Integer;
     FPendingFiles: TStringList;
     FPendingIdx: Integer;
@@ -93,9 +101,15 @@ type
 var
   FormBatIdent: TFormBatIdent;
 
+
+
 implementation
 
+
+
 {$R *.dfm}
+
+
 
 procedure TFormBatIdent.FormCreate(Sender: TObject);
 var
@@ -115,14 +129,17 @@ begin
   FRunning := False;
 end;
 
+
+
 procedure TFormBatIdent.FormShow(Sender: TObject);
 begin
-  if (WAVFolder <> '') and (EdtWavFolder.Text = '') then
-  begin
+  if (WAVFolder <> '') and (EdtWavFolder.Text = '') then begin
     EdtWavFolder.Text := WAVFolder;
     EdtOutputFolder.Text := WAVFolder + '\output';
   end;
 end;
+
+
 
 procedure TFormBatIdent.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -131,10 +148,14 @@ begin
   OutputFolder := EdtOutputFolder.Text;
 end;
 
+
+
 procedure TFormBatIdent.FormDestroy(Sender: TObject);
 begin
   FPendingFiles.Free();
 end;
+
+
 
 procedure TFormBatIdent.Log(const Msg: string);
 begin
@@ -142,18 +163,21 @@ begin
   SendMessage(MemoLog.Handle, WM_VSCROLL, SB_BOTTOM, 0);
 end;
 
+
+
 procedure TFormBatIdent.BtnBrowseWavClick(Sender: TObject);
 var
   Dir: string;
 begin
   Dir := EdtWavFolder.Text;
-  if SelectDirectory('Select WAV folder', '', Dir) then
-  begin
+  if SelectDirectory('Select WAV folder', '', Dir) then begin
     EdtWavFolder.Text := Dir;
     if EdtOutputFolder.Text = '' then
       EdtOutputFolder.Text := Dir + '\output';
   end;
 end;
+
+
 
 procedure TFormBatIdent.BtnBrowseOutputClick(Sender: TObject);
 var
@@ -164,6 +188,8 @@ begin
     EdtOutputFolder.Text := Dir;
 end;
 
+
+
 procedure TFormBatIdent.BtnBrowseBattyClick(Sender: TObject);
 var
   Dir: string;
@@ -173,31 +199,31 @@ begin
     EdtBattyFolder.Text := Dir;
 end;
 
+
+
 function TFormBatIdent.ValidateInputs(): Boolean;
 begin
   Result := False;
-  if EdtWavFolder.Text = '' then
-  begin
+  if EdtWavFolder.Text = '' then begin
     MessageDlg('Please select a WAV folder.', mtError, [mbOK], 0);
     Exit();
   end;
-  if not DirectoryExists(EdtWavFolder.Text) then
-  begin
+  if not DirectoryExists(EdtWavFolder.Text) then begin
     MessageDlg('WAV folder does not exist.', mtError, [mbOK], 0);
     Exit();
   end;
-  if EdtBattyFolder.Text = '' then
-  begin
+  if EdtBattyFolder.Text = '' then begin
     MessageDlg('Please select the BattyBirdNET folder.', mtError, [mbOK], 0);
     Exit();
   end;
-  if not FileExists(EdtBattyFolder.Text + '\bat_ident.py') then
-  begin
+  if not FileExists(EdtBattyFolder.Text + '\bat_ident.py') then begin
     MessageDlg('bat_ident.py not found in the BattyBirdNET folder.', mtError, [mbOK], 0);
     Exit();
   end;
   Result := True;
 end;
+
+
 
 procedure TFormBatIdent.SetControlsEnabled(AEnabled: Boolean);
 begin
@@ -217,6 +243,8 @@ begin
   EdtSensitivity.Enabled := AEnabled;
 end;
 
+
+
 function TFormBatIdent.LaunchProcess(const CmdLine: string; out PipeRead: THandle): THandle;
 var
   SA: TSecurityAttributes;
@@ -231,14 +259,12 @@ begin
   SA.nLength := SizeOf(SA);
   SA.lpSecurityDescriptor := nil;
   SA.bInheritHandle := True;
-  if not CreatePipe(PipeRead, PipeWrite, @SA, 0) then
-  begin
+  if not CreatePipe(PipeRead, PipeWrite, @SA, 0) then begin
     OutputDebugString('[BatIdent] CreatePipe failed');
     Exit();
   end;
   SetHandleInformation(PipeRead, HANDLE_FLAG_INHERIT, 0);
-  NulHandle := CreateFile('nul', GENERIC_READ,
-    FILE_SHARE_READ or FILE_SHARE_WRITE, @SA, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  NulHandle := CreateFile('nul', GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_WRITE, @SA, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   Cmd := CmdLine;
   OutputDebugString(PChar('[BatIdent] CMD: ' + Cmd));
   FillChar(SI, SizeOf(SI), 0);
@@ -248,18 +274,14 @@ begin
   SI.hStdInput := NulHandle;
   SI.hStdOutput := PipeWrite;
   SI.hStdError := PipeWrite;
-  if CreateProcess(nil, PChar(Cmd), nil, nil, True,
-    CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, nil, SI, PI) then
-  begin
+  if CreateProcess(nil, PChar(Cmd), nil, nil, True, CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, nil, SI, PI) then begin
     CloseHandle(PI.hThread);
     CloseHandle(PipeWrite);
     if NulHandle <> INVALID_HANDLE_VALUE then
       CloseHandle(NulHandle);
     Result := PI.hProcess;
     OutputDebugString(PChar('[BatIdent] launched PID=' + IntToStr(PI.dwProcessId)));
-  end
-  else
-  begin
+  end else begin
     Err := GetLastError();
     CloseHandle(PipeWrite);
     if NulHandle <> INVALID_HANDLE_VALUE then
@@ -270,26 +292,24 @@ begin
   end;
 end;
 
+
+
 procedure TFormBatIdent.DrainSlotPipe(SlotIdx: Integer);
 var
   Available, BytesRead: DWORD;
-  Buf: array[0..4095] of AnsiChar;
+  Buf: array [0 .. 4095] of AnsiChar;
   P: Integer;
   Line: string;
 begin
   if FSlots[SlotIdx].StdOutRead = INVALID_HANDLE_VALUE then
     Exit();
-  while PeekNamedPipe(FSlots[SlotIdx].StdOutRead, nil, 0, nil, @Available, nil)
-    and (Available > 0) do
-  begin
+  while PeekNamedPipe(FSlots[SlotIdx].StdOutRead, nil, 0, nil, @Available, nil) and (Available > 0) do begin
     FillChar(Buf, SizeOf(Buf), 0);
-    if not ReadFile(FSlots[SlotIdx].StdOutRead,
-      Buf[0], Min(Available, DWORD(SizeOf(Buf) - 1)), BytesRead, nil) then
+    if not ReadFile(FSlots[SlotIdx].StdOutRead, Buf[0], Min(Available, DWORD(SizeOf(Buf) - 1)), BytesRead, nil) then
       Break;
     if BytesRead = 0 then
       Break;
-    FSlots[SlotIdx].PipeBuffer :=
-      FSlots[SlotIdx].PipeBuffer + string(AnsiString(PAnsiChar(@Buf[0])));
+    FSlots[SlotIdx].PipeBuffer := FSlots[SlotIdx].PipeBuffer + string(AnsiString(PAnsiChar(@Buf[0])));
   end;
   repeat
     P := Pos(#10, FSlots[SlotIdx].PipeBuffer);
@@ -304,39 +324,37 @@ begin
   until False;
 end;
 
+
+
 procedure TFormBatIdent.CloseSlotPipe(SlotIdx: Integer);
 begin
-  if FSlots[SlotIdx].StdOutRead <> INVALID_HANDLE_VALUE then
-  begin
+  if FSlots[SlotIdx].StdOutRead <> INVALID_HANDLE_VALUE then begin
     CloseHandle(FSlots[SlotIdx].StdOutRead);
     FSlots[SlotIdx].StdOutRead := INVALID_HANDLE_VALUE;
   end;
   FSlots[SlotIdx].PipeBuffer := '';
 end;
 
+
+
 function TFormBatIdent.CsvExists(const OutCsv: string): Boolean;
 begin
   Result := FileExists(OutCsv);
 end;
+
+
 
 procedure TFormBatIdent.LaunchBatIdent(SlotIdx: Integer);
 var
   Cmd: string;
 begin
   ForceDirectories(EdtOutputFolder.Text);
-  Cmd := 'python3 "' + EdtBattyFolder.Text + '\bat_ident.py"' +
-    ' --i "' + FSlots[SlotIdx].WavFile + '"' +
-    ' --o "' + FSlots[SlotIdx].OutCsv + '"' +
-    ' --kHz ' + CbxKHz.Text +
-    ' --area ' + CbxArea.Text +
-    ' --sensitivity ' + EdtSensitivity.Text +
-    ' --min_conf ' + EdtMinConf.Text +
-    ' --sf_thresh ' + EdtSfThresh.Text +
+  Cmd := 'python3 "' + EdtBattyFolder.Text + '\bat_ident.py"' + ' --i "' + FSlots[SlotIdx].WavFile + '"' + ' --o "' + FSlots[SlotIdx].OutCsv + '"' + ' --kHz ' +
+    CbxKHz.Text + ' --area ' + CbxArea.Text + ' --sensitivity ' + EdtSensitivity.Text + ' --min_conf ' + EdtMinConf.Text + ' --sf_thresh ' + EdtSfThresh.Text +
     ' --threads 1';
   Log('Processing: ' + FSlots[SlotIdx].BaseName);
   FSlots[SlotIdx].ProcessHandle := LaunchProcess(Cmd, FSlots[SlotIdx].StdOutRead);
-  if FSlots[SlotIdx].ProcessHandle = INVALID_HANDLE_VALUE then
-  begin
+  if FSlots[SlotIdx].ProcessHandle = INVALID_HANDLE_VALUE then begin
     Log('Error: could not start bat_ident for ' + FSlots[SlotIdx].BaseName);
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
@@ -346,6 +364,8 @@ begin
   FSlots[SlotIdx].State := ssBatIdent;
 end;
 
+
+
 procedure TFormBatIdent.FinishSlot(SlotIdx: Integer);
 begin
   Log('Finished: ' + FSlots[SlotIdx].BaseName);
@@ -354,11 +374,15 @@ begin
   PrgBar.Position := FDoneCount;
 end;
 
+
+
 procedure TFormBatIdent.AdvanceSlot(SlotIdx: Integer);
 begin
   if FSlots[SlotIdx].State = ssBatIdent then
     FinishSlot(SlotIdx);
 end;
+
+
 
 procedure TFormBatIdent.FillSlot(SlotIdx: Integer);
 var
@@ -377,8 +401,7 @@ begin
   FSlots[SlotIdx].ProcessHandle := INVALID_HANDLE_VALUE;
   FSlots[SlotIdx].StdOutRead := INVALID_HANDLE_VALUE;
   FSlots[SlotIdx].PipeBuffer := '';
-  if CsvExists(OutCsv) then
-  begin
+  if CsvExists(OutCsv) then begin
     Log('Skipped: ' + BaseName);
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
@@ -387,6 +410,8 @@ begin
   end;
   LaunchBatIdent(SlotIdx);
 end;
+
+
 
 procedure TFormBatIdent.StartProcessing();
 var
@@ -402,15 +427,14 @@ begin
   ForceDirectories(EdtOutputFolder.Text);
   FPendingFiles.Clear();
   if FindFirst(WavDir + '\*.wav', faAnyFile - faDirectory, SR) = 0 then
-  try
-    repeat
-      FPendingFiles.Add(WavDir + '\' + SR.Name);
-    until FindNext(SR) <> 0;
-  finally
-    FindClose(SR);
-  end;
-  if FPendingFiles.Count = 0 then
-  begin
+    try
+      repeat
+        FPendingFiles.Add(WavDir + '\' + SR.Name);
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  if FPendingFiles.Count = 0 then begin
     MessageDlg('No WAV files found in the selected folder.', mtError, [mbOK], 0);
     Exit();
   end;
@@ -424,8 +448,7 @@ begin
   MemoLog.Clear();
   ParallelCount := CbxParallel.ItemIndex + 1;
   FSlotCount := ParallelCount;
-  for I := 0 to FSlotCount - 1 do
-  begin
+  for I := 0 to FSlotCount - 1 do begin
     FSlots[I].State := ssIdle;
     FSlots[I].ProcessHandle := INVALID_HANDLE_VALUE;
     FSlots[I].StdOutRead := INVALID_HANDLE_VALUE;
@@ -437,16 +460,15 @@ begin
   Timer.Enabled := True;
 end;
 
+
+
 procedure TFormBatIdent.StopAll();
 var
   I: Integer;
 begin
   Timer.Enabled := False;
-  for I := 0 to FSlotCount - 1 do
-  begin
-    if (FSlots[I].State = ssBatIdent) and
-      (FSlots[I].ProcessHandle <> INVALID_HANDLE_VALUE) then
-    begin
+  for I := 0 to FSlotCount - 1 do begin
+    if (FSlots[I].State = ssBatIdent) and (FSlots[I].ProcessHandle <> INVALID_HANDLE_VALUE) then begin
       TerminateProcess(FSlots[I].ProcessHandle, 0);
       CloseHandle(FSlots[I].ProcessHandle);
       FSlots[I].ProcessHandle := INVALID_HANDLE_VALUE;
@@ -459,6 +481,8 @@ begin
   Log('Stopped.');
 end;
 
+
+
 procedure TFormBatIdent.TimerTimer(Sender: TObject);
 var
   I: Integer;
@@ -468,17 +492,12 @@ begin
   for I := 0 to FSlotCount - 1 do
     if FSlots[I].State = ssBatIdent then
       DrainSlotPipe(I);
-  for I := 0 to FSlotCount - 1 do
-  begin
-    if (FSlots[I].State = ssBatIdent) and
-      (FSlots[I].ProcessHandle <> INVALID_HANDLE_VALUE) then
-    begin
-      if WaitForSingleObject(FSlots[I].ProcessHandle, 0) = WAIT_OBJECT_0 then
-      begin
+  for I := 0 to FSlotCount - 1 do begin
+    if (FSlots[I].State = ssBatIdent) and (FSlots[I].ProcessHandle <> INVALID_HANDLE_VALUE) then begin
+      if WaitForSingleObject(FSlots[I].ProcessHandle, 0) = WAIT_OBJECT_0 then begin
         ExitCode := 0;
         GetExitCodeProcess(FSlots[I].ProcessHandle, ExitCode);
-        OutputDebugString(PChar('[BatIdent] ' + FSlots[I].BaseName +
-          ' state=' + IntToStr(Ord(FSlots[I].State)) + ' exitcode=' + IntToStr(ExitCode)));
+        OutputDebugString(PChar('[BatIdent] ' + FSlots[I].BaseName + ' state=' + IntToStr(Ord(FSlots[I].State)) + ' exitcode=' + IntToStr(ExitCode)));
         CloseHandle(FSlots[I].ProcessHandle);
         FSlots[I].ProcessHandle := INVALID_HANDLE_VALUE;
         DrainSlotPipe(I);
@@ -493,13 +512,11 @@ begin
   AllDone := FPendingIdx >= FPendingFiles.Count;
   if AllDone then
     for I := 0 to FSlotCount - 1 do
-      if FSlots[I].State <> ssIdle then
-      begin
+      if FSlots[I].State <> ssIdle then begin
         AllDone := False;
         Break;
       end;
-  if AllDone then
-  begin
+  if AllDone then begin
     Timer.Enabled := False;
     FRunning := False;
     Completed := True;
@@ -509,14 +526,20 @@ begin
   end;
 end;
 
+
+
 procedure TFormBatIdent.BtnStartClick(Sender: TObject);
 begin
   StartProcessing();
 end;
 
+
+
 procedure TFormBatIdent.BtnStopClick(Sender: TObject);
 begin
   StopAll();
 end;
+
+
 
 end.

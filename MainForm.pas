@@ -188,51 +188,77 @@ type
     procedure BeginBusy(const AMessage: string);
     procedure TickBusy;
     procedure EndBusy;
-    type
-      TRowKind = (rkSpecies, rkDetection, rkFile);
-      TRowData = record
-        Kind: TRowKind;
-        SpeciesIdx: Integer;
-        FileIdx: Integer;
-        DetIdx: Integer;
-      end;
-      PRowData = ^TRowData;
-      TBatDetection = record
-        CommonName: string;
-        Confidence: Double;
-        StartSec: Double;
-        EndSec: Double;
-        DateTime: TDateTime;
-      end;
-      TBatFileEntry = record
-        FilePath: string;
-        FileName: string;
-        HasCsv: Boolean;
-        Detections: TArray<TBatDetection>;
-        RecordedAt: TDateTime;
-      end;
-      TFlatDet = record
-        CommonName: string;
-        FileIdx: Integer;
-        DetIdx: Integer;
-      end;
-      TDetRef = record
-        FileIdx: Integer;
-        DetIdx: Integer;
-      end;
-      TSpeciesEntry = record
-        CommonName: string;
-        Expanded: Boolean;
-        Refs: TArray<TDetRef>;
-      end;
-      TResultSortColumn = (rscTimestamp, rscConfidence);
-    var
-      FCurrentFilePath: string;
-      FFileEntries: TArray<TBatFileEntry>;
-      FSpeciesEntries: TArray<TSpeciesEntry>;
-      FSortColumn: TResultSortColumn;
-      FSortAscending: Boolean;
-      FDisplayLanguage: TDisplayLanguage;
+
+  type
+    TRowKind = (rkSpecies, rkDetection, rkFile);
+
+
+
+    TRowData = record
+      Kind: TRowKind;
+      SpeciesIdx: Integer;
+      FileIdx: Integer;
+      DetIdx: Integer;
+    end;
+
+
+
+    PRowData = ^TRowData;
+
+
+
+    TBatDetection = record
+      CommonName: string;
+      Confidence: Double;
+      StartSec: Double;
+      EndSec: Double;
+      DateTime: TDateTime;
+    end;
+
+
+
+    TBatFileEntry = record
+      FilePath: string;
+      FileName: string;
+      HasCsv: Boolean;
+      Detections: TArray<TBatDetection>;
+      RecordedAt: TDateTime;
+    end;
+
+
+
+    TFlatDet = record
+      CommonName: string;
+      FileIdx: Integer;
+      DetIdx: Integer;
+    end;
+
+
+
+    TDetRef = record
+      FileIdx: Integer;
+      DetIdx: Integer;
+    end;
+
+
+
+    TSpeciesEntry = record
+      CommonName: string;
+      Expanded: Boolean;
+      Refs: TArray<TDetRef>;
+    end;
+
+
+
+    TResultSortColumn = (rscTimestamp, rscConfidence);
+
+  var
+    FCurrentFilePath: string;
+    FFileEntries: TArray<TBatFileEntry>;
+    FSpeciesEntries: TArray<TSpeciesEntry>;
+    FSortColumn: TResultSortColumn;
+    FSortAscending: Boolean;
+    FDisplayLanguage: TDisplayLanguage;
     procedure LoadFile(const AFilePath: string);
     function ParseBatResults(const ACsvPath: string): TArray<TBatDetection>;
     function MergeConsecutiveDetections(const ADetections: TArray<TBatDetection>): TArray<TBatDetection>;
@@ -264,8 +290,6 @@ implementation
 
 
 {$R *.dfm}
-
-
 
 uses System.Generics.Collections, System.Generics.Defaults;
 
@@ -309,9 +333,7 @@ var
 begin
   RGB1 := ColorToRGB(C1);
   RGB2 := ColorToRGB(C2);
-  Result := RGB(
-    Round(GetRValue(RGB1) * (1.0 - T) + GetRValue(RGB2) * T),
-    Round(GetGValue(RGB1) * (1.0 - T) + GetGValue(RGB2) * T),
+  Result := RGB(Round(GetRValue(RGB1) * (1.0 - T) + GetRValue(RGB2) * T), Round(GetGValue(RGB1) * (1.0 - T) + GetGValue(RGB2) * T),
     Round(GetBValue(RGB1) * (1.0 - T) + GetBValue(RGB2) * T));
 end;
 
@@ -336,15 +358,24 @@ end;
 function TFormMain.GetFFTSize: Integer;
 begin
   case CbxFFTSize.ItemIndex of
-    0: Result := 64;
-    1: Result := 128;
-    2: Result := 256;
-    3: Result := 512;
-    4: Result := 1024;
-    5: Result := 2048;
-    6: Result := 4096;
-    7: Result := 8192;
-    8: Result := 16384;
+    0:
+      Result := 64;
+    1:
+      Result := 128;
+    2:
+      Result := 256;
+    3:
+      Result := 512;
+    4:
+      Result := 1024;
+    5:
+      Result := 2048;
+    6:
+      Result := 4096;
+    7:
+      Result := 8192;
+    8:
+      Result := 16384;
   else
     Result := 4096;
   end;
@@ -375,13 +406,20 @@ end;
 function TFormMain.GetPlaybackRate: Double;
 begin
   case CbxSpeed.ItemIndex of
-    0: Result := 0.05;
-    1: Result := 0.10;
-    2: Result := 0.125;
-    3: Result := 0.20;
-    4: Result := 0.25;
-    5: Result := 0.50;
-    6: Result := 1.00;
+    0:
+      Result := 0.05;
+    1:
+      Result := 0.10;
+    2:
+      Result := 0.125;
+    3:
+      Result := 0.20;
+    4:
+      Result := 0.25;
+    5:
+      Result := 0.50;
+    6:
+      Result := 1.00;
   else
     Result := 0.10;
   end;
@@ -629,12 +667,12 @@ begin
     set, so Top must be pushed below Splitter1 first -- left at the default 0
     it ties with WaveformBox and ends up docked before Splitter1 instead of
     after it. }
-//  DetectionMarkersBox := TPaintBox.Create(Self);
-//  DetectionMarkersBox.Parent := PanelMain;
-//  DetectionMarkersBox.Top := Splitter1.Top + Splitter1.Height;
-//  DetectionMarkersBox.Height := 4;
-//  DetectionMarkersBox.Align := alTop;
-//  DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
+  // DetectionMarkersBox := TPaintBox.Create(Self);
+  // DetectionMarkersBox.Parent := PanelMain;
+  // DetectionMarkersBox.Top := Splitter1.Top + Splitter1.Height;
+  // DetectionMarkersBox.Height := 4;
+  // DetectionMarkersBox.Align := alTop;
+  // DetectionMarkersBox.OnPaint := DetectionMarkersBoxPaint;
   PanelMain.ControlStyle := PanelMain.ControlStyle + [csOpaque];
   UpdateZoomBar();
   ResetPlaybackUI();
@@ -695,9 +733,8 @@ begin
       FWavFile := TWavFile.Create();
       FWavFile.LoadFromFile(AFilePath, TickBusy);
       FCurrentFilePath := AFilePath;
-      FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch',
-        [ExtractFileName(AFilePath), FWavFile.Info.DurationSec,
-         FWavFile.Info.SampleRate, FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
+      FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch', [ExtractFileName(AFilePath), FWavFile.Info.DurationSec, FWavFile.Info.SampleRate,
+        FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
       StatusBar.Panels[0].Text := FFileInfo;
       RecomputeSpectrogram();
       FZoomStart := 0.0;
@@ -717,8 +754,7 @@ begin
       BtnAutoGain.Enabled := True;
       Detections := GetCurrentFileDetections();
       for I := 0 to High(Detections) do
-        OutputDebugString(PChar(Format('%s: detection %d - %.3fs to %.3fs',
-          [ExtractFileName(AFilePath), I, Detections[I].StartSec, Detections[I].EndSec])));
+        OutputDebugString(PChar(Format('%s: detection %d - %.3fs to %.3fs', [ExtractFileName(AFilePath), I, Detections[I].StartSec, Detections[I].EndSec])));
     except
       on E: Exception do begin
         FreeAndNil(FWavFile);
@@ -768,8 +804,7 @@ const
   MIN_TIMESTAMP_COL_WIDTH = 60;
 begin
   FileListView.Columns[1].Width := CONFIDENCE_COL_WIDTH;
-  FileListView.Columns[0].Width :=
-    Max(MIN_TIMESTAMP_COL_WIDTH, FileListView.ClientWidth - CONFIDENCE_COL_WIDTH);
+  FileListView.Columns[0].Width := Max(MIN_TIMESTAMP_COL_WIDTH, FileListView.ClientWidth - CONFIDENCE_COL_WIDTH);
   { The common control sometimes shows a horizontal scrollbar for a tick after
     items are added even though the columns fit, and only clears it on the next
     scroll notification. Force it hidden rather than wait for that. }
@@ -788,7 +823,7 @@ begin
   TThread.ForceQueue(nil,
     procedure
     begin
-      if not (csDestroying in ComponentState) then
+      if not(csDestroying in ComponentState) then
         ApplyResultsColumnWidths();
     end);
 end;
@@ -844,7 +879,8 @@ begin
       Det.Confidence := StrToFloatDef(Trim(Parts[High(Parts)]), 0, FS);
       Name := '';
       for K := 3 to High(Parts) - 1 do begin
-        if K > 3 then Name := Name + ',';
+        if K > 3 then
+          Name := Name + ',';
         Name := Name + Trim(Parts[K]);
       end;
       Det.CommonName := Name;
@@ -893,9 +929,8 @@ begin
   GroupStart := 0;
   while GroupStart <= High(ADetections) do begin
     GroupEnd := GroupStart;
-    while (GroupEnd < High(ADetections))
-      and (ADetections[GroupEnd + 1].CommonName = ADetections[GroupStart].CommonName)
-      and (ADetections[GroupEnd + 1].StartSec <= ADetections[GroupEnd].EndSec + GAP_TOLERANCE_SEC) do
+    while (GroupEnd < High(ADetections)) and (ADetections[GroupEnd + 1].CommonName = ADetections[GroupStart].CommonName) and
+      (ADetections[GroupEnd + 1].StartSec <= ADetections[GroupEnd].EndSec + GAP_TOLERANCE_SEC) do
       Inc(GroupEnd);
     Merged := ADetections[GroupStart];
     Merged.EndSec := ADetections[GroupEnd].EndSec;
@@ -914,12 +949,18 @@ begin
   Result := False;
   if (Length(ABaseName) <> 15) or (ABaseName[9] <> '_') then
     Exit();
-  if not TryStrToInt(Copy(ABaseName, 1, 4), Y) then Exit();
-  if not TryStrToInt(Copy(ABaseName, 5, 2), Mo) then Exit();
-  if not TryStrToInt(Copy(ABaseName, 7, 2), D) then Exit();
-  if not TryStrToInt(Copy(ABaseName, 10, 2), H) then Exit();
-  if not TryStrToInt(Copy(ABaseName, 12, 2), Mi) then Exit();
-  if not TryStrToInt(Copy(ABaseName, 14, 2), S) then Exit();
+  if not TryStrToInt(Copy(ABaseName, 1, 4), Y) then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 5, 2), Mo) then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 7, 2), D) then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 10, 2), H) then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 12, 2), Mi) then
+    Exit();
+  if not TryStrToInt(Copy(ABaseName, 14, 2), S) then
+    Exit();
   Result := TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime);
 end;
 
@@ -937,7 +978,8 @@ begin
   if Modified <= Created then begin
     DurSec := GetWavDurationSec(AFilePath);
     Result := Modified - (DurSec / SECONDS_PER_DAY);
-  end else
+  end
+  else
     Result := Created;
 end;
 
@@ -1115,24 +1157,23 @@ begin
         FD.DetIdx := J;
         Flat := Flat + [FD];
       end;
-  TArray.Sort<TFlatDet>(Flat,
-    TComparer<TFlatDet>.Construct(
-      function(const A, B: TFlatDet): Integer
-      var
-        DA, DB: TBatDetection;
-      begin
-        Result := CompareText(A.CommonName, B.CommonName);
-        if Result <> 0 then
-          Exit;
-        DA := FFileEntries[A.FileIdx].Detections[A.DetIdx];
-        DB := FFileEntries[B.FileIdx].Detections[B.DetIdx];
-        if FSortColumn = rscTimestamp then
-          Result := CompareValue(DA.DateTime, DB.DateTime)
-        else
-          Result := CompareValue(DA.Confidence, DB.Confidence);
-        if not FSortAscending then
-          Result := -Result;
-      end));
+  TArray.Sort<TFlatDet>(Flat, TComparer<TFlatDet>.Construct(
+    function(const A, B: TFlatDet): Integer
+    var
+      DA, DB: TBatDetection;
+    begin
+      Result := CompareText(A.CommonName, B.CommonName);
+      if Result <> 0 then
+        Exit;
+      DA := FFileEntries[A.FileIdx].Detections[A.DetIdx];
+      DB := FFileEntries[B.FileIdx].Detections[B.DetIdx];
+      if FSortColumn = rscTimestamp then
+        Result := CompareValue(DA.DateTime, DB.DateTime)
+      else
+        Result := CompareValue(DA.Confidence, DB.Confidence);
+      if not FSortAscending then
+        Result := -Result;
+    end));
   SetLength(FSpeciesEntries, 0);
   I := 0;
   while I <= High(Flat) do begin
@@ -1148,14 +1189,11 @@ begin
     end;
     FSpeciesEntries := FSpeciesEntries + [Species];
   end;
-  TArray.Sort<TSpeciesEntry>(FSpeciesEntries,
-    TComparer<TSpeciesEntry>.Construct(
-      function(const A, B: TSpeciesEntry): Integer
-      begin
-        Result := CompareText(
-          TranslateSpeciesName(A.CommonName, FDisplayLanguage),
-          TranslateSpeciesName(B.CommonName, FDisplayLanguage));
-      end));
+  TArray.Sort<TSpeciesEntry>(FSpeciesEntries, TComparer<TSpeciesEntry>.Construct(
+    function(const A, B: TSpeciesEntry): Integer
+    begin
+      Result := CompareText(TranslateSpeciesName(A.CommonName, FDisplayLanguage), TranslateSpeciesName(B.CommonName, FDisplayLanguage));
+    end));
 end;
 
 
@@ -1193,8 +1231,7 @@ begin
         RD^.DetIdx := -1;
         Item.Data := RD;
       end;
-    end
-    else begin
+    end else begin
       for I := 0 to High(FSpeciesEntries) do begin
         Species := FSpeciesEntries[I];
         if Species.Expanded then
@@ -1215,8 +1252,7 @@ begin
             Entry := FFileEntries[Species.Refs[J].FileIdx];
             Det := Entry.Detections[Species.Refs[J].DetIdx];
             Item := FileListView.Items.Add;
-            Item.Caption := '    ' +
-              LowerCase(FormatDateTime('d mmmm, hh:nn:ss', Det.DateTime, TFormatSettings.Invariant));
+            Item.Caption := '    ' + LowerCase(FormatDateTime('d mmmm, hh:nn:ss', Det.DateTime, TFormatSettings.Invariant));
             Item.SubItems.Add(Format('%.2f%%', [Det.Confidence * 100]));
             New(RD);
             RD^.Kind := rkDetection;
@@ -1396,13 +1432,12 @@ begin
   SpectBmp := TBitmap.Create();
   try
     WavBmp.PixelFormat := pf24bit;
-    WavBmp.Width  := WaveformBox.Width;
+    WavBmp.Width := WaveformBox.Width;
     WavBmp.Height := WaveformBox.Height;
-    PaintWaveform(WavBmp.Canvas, WavBmp.Width, WavBmp.Height,
-      Rect(LEFT_MARGIN, WAVE_VPAD, WavBmp.Width - RIGHT_MARGIN, WavBmp.Height - WAVE_VPAD),
-      Samples, FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor, AxisColor, GridColor, AxisColor);
+    PaintWaveform(WavBmp.Canvas, WavBmp.Width, WavBmp.Height, Rect(LEFT_MARGIN, WAVE_VPAD, WavBmp.Width - RIGHT_MARGIN, WavBmp.Height - WAVE_VPAD), Samples,
+      FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor, AxisColor, GridColor, AxisColor);
     SpectBmp.PixelFormat := pf24bit;
-    SpectBmp.Width  := PaintBox.Width;
+    SpectBmp.Width := PaintBox.Width;
     SpectBmp.Height := PaintBox.Height;
     FDragging := False;
     WaveformBox.Invalidate();
@@ -1439,8 +1474,7 @@ begin
   try
     try
       SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
-      StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
-        [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+      StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)', [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
     except
       on E: Exception do
         MessageDlg('Error saving MP3:'#13#10 + E.Message, mtError, [mbOK], 0);
@@ -1535,7 +1569,7 @@ var
   OutRate, ActualRate: Cardinal;
   StartSample, EndSample: Integer;
 begin
-  if (FWavFile = nil) or not (FWavePlayer.IsPlaying() or FWavePlayer.IsPaused()) then
+  if (FWavFile = nil) or not(FWavePlayer.IsPlaying() or FWavePlayer.IsPaused()) then
     Exit();
   WasPaused := FWavePlayer.IsPaused();
   Pos := FWavePlayer.GetNormalizedPosition();
@@ -1553,8 +1587,7 @@ begin
   if WasPaused then
     FWavePlayer.Pause();
   if ActualRate <> OutRate then
-    StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)',
-      [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
+    StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
   else
     StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, GetPlaybackRate() * 100]);
 end;
@@ -1863,8 +1896,7 @@ begin
     FCursorPos := ClickFrac;
     if FWavePlayer.IsPlaying() or FWavePlayer.IsPaused() then
       FWavePlayer.SeekToNormalized(ClickFrac);
-  end
-  else if FDragCurrentX > FDragStartX then begin
+  end else if FDragCurrentX > FDragStartX then begin
     SelX1 := Max(ChartR.Left, Min(ChartR.Right, FDragStartX));
     SelX2 := Max(ChartR.Left, Min(ChartR.Right, FDragCurrentX));
     Frac1 := FZoomStart + (SelX1 - ChartR.Left) / W * (FZoomEnd - FZoomStart);
@@ -1875,8 +1907,7 @@ begin
       FZoomEnd := FZoomStart + 0.001;
     UpdateZoomBar();
     RenderSpectrogram();
-  end
-  else begin
+  end else begin
     { Dragging left zooms out, anchored at the drag start point (so that data
       point stays under the cursor), with the same distance-to-zoom-factor
       relationship used for the zoom-in drag above: covering a small fraction
@@ -2010,6 +2041,8 @@ begin
   StatusBar.Panels[2].Text := Format('%.4f s  |  %.1f kHz', [TimeAtCursor, FreqAtCursor]);
 end;
 
+
+
 procedure TFormMain.AppMouseWheel(var Msg: TMsg; var Handled: Boolean);
 var
   MousePos: TPoint;
@@ -2019,7 +2052,7 @@ var
   InPaintBox: Boolean;
   Frac, T, Span, NewSpan, NewStart, NewEnd, ZoomFactor: Double;
 begin
-  if Msg.message <> WM_MOUSEWHEEL then
+  if Msg.Message <> WM_MOUSEWHEEL then
     Exit();
   if FBusyDepth > 0 then
     Exit();
@@ -2033,7 +2066,7 @@ begin
     if not PtInRect(WaveformBox.ClientRect, LocalPos) then
       Exit();
   end;
-  WheelDelta := SmallInt(Msg.wParam shr 16);
+  WheelDelta := SmallInt(Msg.WPARAM shr 16);
   ChartLeft := LEFT_MARGIN;
   if InPaintBox then
     ChartRight := PaintBox.Width - RIGHT_MARGIN
@@ -2195,8 +2228,8 @@ begin
   if FWavFile <> nil then
     Samples := FWavFile.Samples;
   R := WaveRect();
-  PaintWaveform(WaveformBox.Canvas, WaveformBox.Width, WaveformBox.Height, R,
-    Samples, FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor, AxisColor, GridColor, AxisColor);
+  PaintWaveform(WaveformBox.Canvas, WaveformBox.Width, WaveformBox.Height, R, Samples, FZoomStart, FZoomEnd, FCursorPos, OuterColor, BgColor, WaveColor,
+    AxisColor, GridColor, AxisColor);
   if FDragging and (FDragCurrentX > FDragStartX) then begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));

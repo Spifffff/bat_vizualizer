@@ -43,8 +43,7 @@ type
       regardless. ActualRate is set to the rate that Windows accepted.
       Gain is a linear amplitude multiplier applied before the 16-bit
       conversion, clipping like the rest of the buffer. }
-    procedure Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
-      RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
+    procedure Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer; RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 
     procedure Play;
     procedure Pause;
@@ -204,8 +203,8 @@ end;
 
 
 
-procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer;
-  RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
+procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer; RequestedRate: Cardinal; Gain: Double;
+  out ActualRate: Cardinal);
 const
   Fallbacks: array [0 .. 3] of Cardinal = (22050, 16000, 11025, 44100);
 var
@@ -382,8 +381,10 @@ begin
   FSubmitted := False;
   FPaused := False;
 
-  if Pos < 0.0 then Pos := 0.0;
-  if Pos > 1.0 then Pos := 1.0;
+  if Pos < 0.0 then
+    Pos := 0.0;
+  if Pos > 1.0 then
+    Pos := 1.0;
   { Pos is relative to the whole file; translate to an offset within the
     (possibly zoom-limited) loaded range, clamping to its edges if Pos
     falls outside what was actually buffered. }
@@ -399,8 +400,7 @@ begin
   if WasPlaying then begin
     waveOutWrite(FDevHandle, H, SizeOf(TWaveHdr));
     FSubmitted := True;
-  end
-  else if WasPaused then begin
+  end else if WasPaused then begin
     waveOutWrite(FDevHandle, H, SizeOf(TWaveHdr));
     waveOutPause(FDevHandle);
     FSubmitted := True;

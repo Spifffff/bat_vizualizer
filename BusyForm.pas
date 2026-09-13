@@ -1,6 +1,10 @@
 unit BusyForm;
 
+
+
 interface
+
+
 
 uses
   Winapi.Windows, Winapi.Messages,
@@ -14,8 +18,14 @@ type
     PrgBar: TProgressBar;
   end;
 
+
+
 implementation
 
+
+
 {$R *.dfm}
+
+
 
 end.
