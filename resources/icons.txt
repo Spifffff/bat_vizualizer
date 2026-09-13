@@ -1,0 +1,2 @@
+https://phosphoricons.com/?size=16&weight=fill&color=dcdcdc
+Disabled: layer opacity to 55%
