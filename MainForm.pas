@@ -1456,6 +1456,7 @@ procedure TFormMain.BtnPlayClick(Sender: TObject);
 var
   OutRate, ActualRate: Cardinal;
   StartSample, EndSample: Integer;
+  StartFrac: Double;
 begin
   if FWavFile = nil then
     Exit();
@@ -1469,11 +1470,18 @@ begin
         16-bit playback buffer from ballooning to the size of the entire
         (possibly multi-hour) file. Playback also now stops at the zoom
         end instead of continuing into the rest of the file. }
-      StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+      { If the cursor was placed (by clicking) inside the current zoom
+        window before pressing Play, start from there instead of from the
+        start of the selection. }
+      if (FCursorPos >= FZoomStart) and (FCursorPos <= FZoomEnd) then
+        StartFrac := FCursorPos
+      else
+        StartFrac := FZoomStart;
+      StartSample := EnsureRange(Round(StartFrac * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
       EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
       FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, GetPlaybackGain(), ActualRate);
       FWavePlayer.Play();
-      FCursorPos := FZoomStart;
+      FCursorPos := StartFrac;
       if ActualRate <> OutRate then
         StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
       else
