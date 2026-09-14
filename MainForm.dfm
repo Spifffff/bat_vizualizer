@@ -728,6 +728,7 @@ object FormMain: TFormMain
         Width = 100
         Height = 17
         Caption = 'Measure'
+        Enabled = False
         TabOrder = 8
         OnClick = ChkMeasureClick
       end

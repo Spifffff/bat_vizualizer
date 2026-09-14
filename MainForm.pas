@@ -710,6 +710,13 @@ begin
   BtnZoomIn.Enabled := HasFile;
   BtnZoomOut.Enabled := HasFile and not FullyZoomedOut;
   BtnZoomFull.Enabled := HasFile and not FullyZoomedOut;
+
+  ChkMeasure.Enabled := HasFile;
+  if not HasFile and ChkMeasure.Checked then begin
+    ChkMeasure.Checked := False;
+    FMeasureMode := False;
+    ClearMeasurement();
+  end;
 end;
 
 { ---- form lifecycle -------------------------------------------------------- }
