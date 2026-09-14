@@ -706,6 +706,15 @@ object FormMain: TFormMain
         TabOrder = 4
         OnClick = BtnNextResultClick
       end
+      object ChkMeasure: TCheckBox
+        Left = 150
+        Top = 8
+        Width = 100
+        Height = 17
+        Caption = 'Measure'
+        TabOrder = 8
+        OnClick = ChkMeasureClick
+      end
       object BtnZoomIn: TButton
         Left = 615
         Top = 3

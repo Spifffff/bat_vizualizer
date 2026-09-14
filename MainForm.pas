@@ -72,6 +72,7 @@ type
     BtnZoomIn: TButton;
     BtnZoomOut: TButton;
     BtnZoomFull: TButton;
+    ChkMeasure: TCheckBox;
     OpenDialog: TOpenDialog;
     SaveDialog: TSaveDialog;
     Timer: TTimer;
@@ -114,6 +115,7 @@ type
     procedure BtnZoomInClick(Sender: TObject);
     procedure BtnZoomOutClick(Sender: TObject);
     procedure BtnZoomFullClick(Sender: TObject);
+    procedure ChkMeasureClick(Sender: TObject);
     procedure PaintBoxPaint(Sender: TObject);
     procedure PaintBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -164,6 +166,14 @@ type
     FDragStartX: Integer;
     FDragCurrentX: Integer;
 
+    FMeasureMode: Boolean;
+    FMeasuring: Boolean;
+    FHasMeasurement: Boolean;
+    FMeasureStartSec: Double;
+    FMeasureStartHz: Double;
+    FMeasureEndSec: Double;
+    FMeasureEndHz: Double;
+
     FBusyDepth: Integer;
     FBusyStartTick: Cardinal;
     FBusyShown: Boolean;
@@ -179,6 +189,11 @@ type
 
     function SpectRect: TRect;
     function WaveRect: TRect;
+    function SpectXToSec(X: Integer; const R: TRect): Double;
+    function SpectYToHz(Y: Integer; const R: TRect): Double;
+    function SecToSpectX(Sec: Double; const R: TRect): Integer;
+    function HzToSpectY(Hz: Double; const R: TRect): Integer;
+    procedure ClearMeasurement;
     procedure ApplyZoomDrag(const ChartR: TRect);
     procedure ZoomAroundCenter(Factor: Double);
     function GetFFTSize: Integer;
@@ -359,6 +374,54 @@ end;
 function TFormMain.WaveRect: TRect;
 begin
   Result := Rect(LEFT_MARGIN, WAVE_VPAD, WaveformBox.Width - RIGHT_MARGIN, WaveformBox.Height - WAVE_VPAD);
+end;
+
+
+
+function TFormMain.SpectXToSec(X: Integer; const R: TRect): Double;
+begin
+  if FWavFile = nil then begin
+    Result := 0.0;
+    Exit();
+  end;
+  Result := (FZoomStart + (X - R.Left) / Max(1, R.Right - R.Left) * (FZoomEnd - FZoomStart)) * FWavFile.Info.DurationSec;
+end;
+
+
+
+function TFormMain.SpectYToHz(Y: Integer; const R: TRect): Double;
+begin
+  Result := (1.0 - (Y - R.Top) / Max(1, R.Bottom - R.Top)) * FMaxPlotHz;
+end;
+
+
+
+function TFormMain.SecToSpectX(Sec: Double; const R: TRect): Integer;
+begin
+  if (FWavFile = nil) or (FWavFile.Info.DurationSec <= 0.0) or (FZoomEnd <= FZoomStart) then begin
+    Result := R.Left;
+    Exit();
+  end;
+  Result := R.Left + Round((Sec / FWavFile.Info.DurationSec - FZoomStart) / (FZoomEnd - FZoomStart) * (R.Right - R.Left));
+end;
+
+
+
+function TFormMain.HzToSpectY(Hz: Double; const R: TRect): Integer;
+begin
+  if FMaxPlotHz <= 0.0 then begin
+    Result := R.Bottom;
+    Exit();
+  end;
+  Result := R.Top + Round((1.0 - Hz / FMaxPlotHz) * (R.Bottom - R.Top));
+end;
+
+
+
+procedure TFormMain.ClearMeasurement;
+begin
+  FMeasuring := False;
+  FHasMeasurement := False;
 end;
 
 
@@ -728,6 +791,7 @@ begin
   Timer.Enabled := False;
   FWavePlayer.Stop();
   FCursorPos := -1;
+  ClearMeasurement();
   FreeAndNil(FSpecgram);
   FreeAndNil(FWavFile);
   BtnPlay.Enabled := False;
@@ -1938,6 +2002,16 @@ begin
   R := SpectRect();
   if not PtInRect(R, Point(X, Y)) then
     Exit();
+  if FMeasureMode or (ssShift in Shift) then begin
+    FMeasuring := True;
+    FHasMeasurement := True;
+    FMeasureStartSec := SpectXToSec(X, R);
+    FMeasureStartHz := SpectYToHz(Y, R);
+    FMeasureEndSec := FMeasureStartSec;
+    FMeasureEndHz := FMeasureStartHz;
+    PaintBox.Invalidate();
+    Exit();
+  end;
   FDragging := True;
   FDragStartX := X;
   FDragCurrentX := X;
@@ -2063,9 +2137,26 @@ end;
 
 
 
+procedure TFormMain.ChkMeasureClick(Sender: TObject);
+begin
+  FMeasureMode := ChkMeasure.Checked;
+  if not FMeasureMode then begin
+    ClearMeasurement();
+    PaintBox.Invalidate();
+  end;
+end;
+
+
+
 procedure TFormMain.PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  if (Button <> mbLeft) or not FDragging then
+  if Button <> mbLeft then
+    Exit();
+  if FMeasuring then begin
+    FMeasuring := False;
+    Exit();
+  end;
+  if not FDragging then
     Exit();
   FDragging := False;
   ApplyZoomDrag(SpectRect());
@@ -2087,6 +2178,12 @@ begin
     PaintBox.Invalidate();
     DetectionMarkersBox.Invalidate();
     WaveformBox.Invalidate();
+  end;
+
+  if FMeasuring then begin
+    FMeasureEndSec := SpectXToSec(X, R);
+    FMeasureEndHz := SpectYToHz(Y, R);
+    PaintBox.Invalidate();
   end;
 
   if (FSpecgram = nil) or (FWavFile = nil) then
@@ -2307,6 +2404,10 @@ var
   Msg: string;
   SelX1, SelX2: Integer;
   AxisColor, GridColor: TColor;
+  MX1, MY1, MX2, MY2: Integer;
+  MeasureColor: TColor;
+  DeltaTMs, DeltaFKhz: Double;
+  SlopeText, ReadoutText: string;
 begin
   R := SpectRect();
   W := R.Right - R.Left;
@@ -2342,6 +2443,37 @@ begin
     SelX1 := Max(R.Left, Min(R.Right, FDragStartX));
     SelX2 := Max(R.Left, Min(R.Right, FDragCurrentX));
     DrawSelectionOverlay(PaintBox.Canvas, R, SelX1, SelX2);
+  end;
+
+  if FHasMeasurement and (W > 0) and (H > 0) then begin
+    MX1 := SecToSpectX(FMeasureStartSec, R);
+    MY1 := HzToSpectY(FMeasureStartHz, R);
+    MX2 := SecToSpectX(FMeasureEndSec, R);
+    MY2 := HzToSpectY(FMeasureEndHz, R);
+    MeasureColor := StyleServices.GetSystemColor(clWindow);
+    PaintBox.Canvas.Pen.Color := MeasureColor;
+    PaintBox.Canvas.Pen.Width := 2;
+    PaintBox.Canvas.MoveTo(MX1, MY1);
+    PaintBox.Canvas.LineTo(MX2, MY2);
+    PaintBox.Canvas.Pen.Width := 1;
+    PaintBox.Canvas.Brush.Style := bsSolid;
+    PaintBox.Canvas.Brush.Color := MeasureColor;
+    PaintBox.Canvas.Ellipse(MX1 - 3, MY1 - 3, MX1 + 3, MY1 + 3);
+    PaintBox.Canvas.Ellipse(MX2 - 3, MY2 - 3, MX2 + 3, MY2 + 3);
+
+    DeltaTMs := Abs(FMeasureEndSec - FMeasureStartSec) * 1000.0;
+    DeltaFKhz := Abs(FMeasureEndHz - FMeasureStartHz) / 1000.0;
+    if DeltaTMs > 0.001 then
+      SlopeText := Format('%.2f kHz/ms', [(FMeasureEndHz - FMeasureStartHz) / 1000.0 / DeltaTMs])
+    else
+      SlopeText := 'n/a';
+    ReadoutText := Format(#$0394 + 't %.2f ms (duration)   ' + #$0394 + 'f %.1f kHz (bandwidth)   slope %s',
+      [DeltaTMs, DeltaFKhz, SlopeText]);
+
+    PaintBox.Canvas.Brush.Style := bsSolid;
+    PaintBox.Canvas.Brush.Color := MeasureColor;
+    PaintBox.Canvas.Font.Color := AxisColor;
+    PaintBox.Canvas.TextOut(R.Left + 6, R.Top + 4, ReadoutText);
   end;
 end;
 
