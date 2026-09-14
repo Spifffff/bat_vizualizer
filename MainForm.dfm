@@ -510,7 +510,7 @@ object FormMain: TFormMain
         Left = 0
         Top = 32
         Width = 318
-        Height = 685
+        Height = 647
         Align = alClient
         Columns = <
           item
@@ -533,15 +533,31 @@ object FormMain: TFormMain
       end
       object PanelFilesBottom: TPanel
         Left = 0
-        Top = 717
+        Top = 679
         Width = 318
-        Height = 56
+        Height = 94
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 2
+        object BtnNightlyActivity: TButton
+          AlignWithMargins = True
+          Left = 6
+          Top = 6
+          Width = 306
+          Height = 26
+          Margins.Left = 6
+          Margins.Top = 6
+          Margins.Right = 6
+          Margins.Bottom = 6
+          Align = alTop
+          Caption = 'Nightly activity...'
+          TabOrder = 1
+          Visible = False
+          OnClick = BtnNightlyActivityClick
+        end
         object GroupBox1: TGroupBox
           Left = 0
-          Top = 0
+          Top = 38
           Width = 318
           Height = 56
           Align = alClient

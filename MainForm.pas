@@ -13,7 +13,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
-  BatIdentForm, BusyForm;
+  BatIdentForm, BusyForm, NightlyActivityForm;
 
 const
   LEFT_MARGIN = 65;
@@ -98,6 +98,7 @@ type
     BtnNextFile: TButton;
     GroupBox1: TGroupBox;
     ImageListClose: TImageList;
+    BtnNightlyActivity: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
@@ -151,6 +152,7 @@ type
     procedure FileListViewColumnClick(Sender: TObject; Column: TListColumn);
     procedure CbxLanguageChange(Sender: TObject);
     procedure BtnCloseRightPanelClick(Sender: TObject);
+    procedure BtnNightlyActivityClick(Sender: TObject);
   private
     FWavFile: TWavFile;
     FSpecgram: TSpectrogramData;
@@ -1292,6 +1294,7 @@ begin
         Break;
       end;
     FileListView.ShowColumnHeaders := AnyCsv;
+    BtnNightlyActivity.Visible := AnyCsv;
     if not AnyCsv then begin
       for I := 0 to High(FFileEntries) do begin
         Item := FileListView.Items.Add;
@@ -1469,6 +1472,32 @@ procedure TFormMain.BtnCloseRightPanelClick(Sender: TObject);
 begin
   PanelRight.Visible := False;
   SplitterRight.Visible := False;
+end;
+
+
+
+procedure TFormMain.BtnNightlyActivityClick(Sender: TObject);
+var
+  Items: TArray<TNightlyActivityItem>;
+  Item: TNightlyActivityItem;
+  I, J, ParenPos: Integer;
+  DisplayName: string;
+begin
+  Items := [];
+  for I := 0 to High(FFileEntries) do
+    if FFileEntries[I].HasCsv then
+      for J := 0 to High(FFileEntries[I].Detections) do begin
+        { Strip the "(Scientific name)" suffix TranslateSpeciesName appends,
+          same as BuildDefaultExportFileName does, so the legend stays short. }
+        DisplayName := TranslateSpeciesName(FFileEntries[I].Detections[J].CommonName, FDisplayLanguage);
+        ParenPos := Pos(' (', DisplayName);
+        if ParenPos > 0 then
+          DisplayName := Copy(DisplayName, 1, ParenPos - 1);
+        Item.DateTime := FFileEntries[I].Detections[J].DateTime;
+        Item.SpeciesName := DisplayName;
+        Items := Items + [Item];
+      end;
+  ShowNightlyActivity(Self, Items);
 end;
 
 
