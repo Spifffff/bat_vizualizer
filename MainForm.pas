@@ -203,6 +203,7 @@ type
     function GetPlaybackRate: Double;
     function GetPlaybackGain: Double;
     procedure ApplyPlaybackSettingsLive;
+    procedure UpdateGainRange;
     procedure RecomputeSpectrogram;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
@@ -503,6 +504,30 @@ end;
 function TFormMain.GetPlaybackGain: Double;
 begin
   Result := Power(10.0, TrkGain.Position / 20.0);
+end;
+
+
+
+procedure TFormMain.UpdateGainRange;
+const
+  FALLBACK_MAX_GAIN_DB = 96;
+var
+  I: Integer;
+  PeakAbs: Double;
+  MaxGainDB: Double;
+begin
+  if FWavFile = nil then
+    Exit();
+  PeakAbs := 0.0;
+  for I := 0 to High(FWavFile.Samples) do
+    PeakAbs := Max(PeakAbs, Abs(FWavFile.Samples[I]));
+  if PeakAbs > 0.0 then
+    MaxGainDB := 20.0 * Log10(1.0 / PeakAbs)
+  else
+    MaxGainDB := FALLBACK_MAX_GAIN_DB;
+  TrkGain.Max := Max(1, Round(MaxGainDB));
+  if TrkGain.Position > TrkGain.Max then
+    TrkGain.Position := TrkGain.Max;
 end;
 
 
@@ -827,6 +852,7 @@ begin
       TrkMaxFreq.Position := TrkMaxFreq.Max;
       FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
       LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+      UpdateGainRange();
       BtnPlay.Enabled := True;
       BtnSavePNG.Enabled := True;
       BtnSaveMp3.Enabled := True;
@@ -1908,7 +1934,7 @@ begin
     PeakAbs := Max(PeakAbs, Abs(Samples[I]));
   if PeakAbs <= 0.0 then
     Exit();
-  GainDB := 5.0 * Log10(TARGET_PEAK / PeakAbs);
+  GainDB := 20.0 * Log10(TARGET_PEAK / PeakAbs);
   TrkGain.Position := EnsureRange(Round(GainDB), TrkGain.Min, TrkGain.Max);
   TrkGainChange(TrkGain);
 end;
