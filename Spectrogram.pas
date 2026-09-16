@@ -390,7 +390,7 @@ var
   X, Y, Bin, MaxBin: Integer;
   Frac, ZFrac: Double;
   CenterSample: Integer;
-  Mag, DB: Double;
+  Mag, DB, DBRange: Double;
   TLin, T: Double;
   VR, VG, VB: Byte;
   UseBg: Boolean;
@@ -416,6 +416,17 @@ begin
   MaxBin := FNumBins - 1;
   if (MaxFreqHz > 0) and (MaxFreqHz < FSampleRate / 2.0) then
     MaxBin := Min(FNumBins - 1, Round(MaxFreqHz / (FSampleRate / 2.0) * (FNumBins - 1)));
+
+  { Floor/Ceiling are two independent trackbars with overlapping ranges, so
+    the UI can hand us MaxDB = MinDB (or even MaxDB < MinDB). With a zero
+    denominator, bins that clamp DB to exactly MinDB (line below) produce
+    TLin = 0/0 = NaN, which survives the Min/Max clamp -- NaN compares false
+    to everything -- and blows up as a range-check error once GetColor()
+    truncates it into a color-table index. Guard the denominator instead of
+    relying on the sliders never meeting. }
+  DBRange := MaxDB - MinDB;
+  if Abs(DBRange) < 1.0E-6 then
+    DBRange := 1.0E-6;
 
   DestBmp.PixelFormat := pf24bit;
   DestBmp.Width := DestWidth;
@@ -484,7 +495,7 @@ begin
       else
         DB := MinDB;
 
-      TLin := (DB - MinDB) / (MaxDB - MinDB);
+      TLin := (DB - MinDB) / DBRange;
       if TLin < 0.0 then
         TLin := 0.0;
       if TLin > 1.0 then
