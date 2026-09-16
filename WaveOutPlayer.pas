@@ -213,6 +213,8 @@ var
   Res: MMRESULT;
   I, V, StartSample, EndSample: Integer;
   Rate: Cardinal;
+  PeakAbs: Double;
+  EffectiveGain: Double;
 begin
   CloseDevice();
 
@@ -224,10 +226,23 @@ begin
   if FTotalSamples = 0 then
     raise Exception.Create('No samples to load.');
 
+  { A gain high enough to clip almost the whole buffer collapses it toward a
+    near-constant (DC) signal -- a speaker can't reproduce a value that never
+    changes, so it comes out as near silence (just a click where the signal
+    enters/leaves the clipped region) even though every sample is at "full
+    volume". Cap the gain actually applied so the loudest sample in range
+    reaches, but doesn't exceed, full scale, instead of clipping past it. }
+  PeakAbs := 0.0;
+  for I := StartSample to EndSample - 1 do
+    PeakAbs := Max(PeakAbs, Abs(Samples[I]));
+  EffectiveGain := Gain;
+  if (PeakAbs > 0.0) and (Gain * PeakAbs > 1.0) then
+    EffectiveGain := 1.0 / PeakAbs;
+
   { Float -1..1 → Int16, only for the requested sub-range. }
   SetLength(FBuffer, FTotalSamples);
   for I := 0 to FTotalSamples - 1 do begin
-    V := Round(Samples[StartSample + I] * Gain * 32767.0);
+    V := Round(Samples[StartSample + I] * EffectiveGain * 32767.0);
     if V > 32767 then
       V := 32767;
     if V < -32768 then

@@ -78,6 +78,7 @@ var
   OutRate: Cardinal;
   TotalN, S0, S1, N, I, V, N_out, SrcIdx, Encoded: Integer;
   SrcPos, SrcFrac: Double;
+  PeakAbs, EffectiveGain: Double;
   Pcm: TArray<SmallInt>;
   Pcm_out: TArray<SmallInt>;
   Mp3Buf: TArray<Byte>;
@@ -112,10 +113,22 @@ begin
     if N <= 0 then
       raise Exception.Create('Selection contains no samples.');
 
+    { A gain high enough to clip almost the whole selection collapses it
+      toward a near-constant (DC) signal -- inaudible except for a click at
+      the edges of the clipped region, even though every sample is at "full
+      volume". Cap the gain actually applied so the loudest sample in range
+      reaches, but doesn't exceed, full scale, instead of clipping past it. }
+    PeakAbs := 0.0;
+    for I := 0 to N - 1 do
+      PeakAbs := Max(PeakAbs, Abs(Samples[S0 + I]));
+    EffectiveGain := Gain;
+    if (PeakAbs > 0.0) and (Gain * PeakAbs > 1.0) then
+      EffectiveGain := 1.0 / PeakAbs;
+
     { Convert float samples in the zoom window to 16-bit PCM. }
     SetLength(Pcm, N);
     for I := 0 to N - 1 do begin
-      V := Round(Samples[S0 + I] * Gain * 32767.0);
+      V := Round(Samples[S0 + I] * EffectiveGain * 32767.0);
       if V > 32767 then V := 32767;
       if V < -32768 then V := -32768;
       Pcm[I] := SmallInt(V);

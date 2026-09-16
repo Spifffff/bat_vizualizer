@@ -124,7 +124,7 @@ object FormMain: TFormMain
         Top = 82
         Width = 144
         Height = 26
-        Max = 80
+        Max = 96
         Frequency = 10
         TabOrder = 1
         TickStyle = tsNone
