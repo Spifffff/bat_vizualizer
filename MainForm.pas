@@ -846,9 +846,13 @@ begin
       end;
     end;
   finally
-    EndBusy();
+    { Re-enable the form before hiding the busy popup, not after: while the
+      form is still disabled Windows has nothing it can reactivate once the
+      popup (its owner's only visible window at that moment) disappears, so
+      the whole app can end up with no active window -- i.e. "hidden". }
     Enabled := True;
     Screen.Cursor := crDefault;
+    EndBusy();
   end;
   UpdateTransportButtons();
 end;
