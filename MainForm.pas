@@ -843,7 +843,12 @@ begin
       FFileInfo := Format('%s  |  %.2f s  |  %d Hz  |  %d-bit  |  %d ch', [ExtractFileName(AFilePath), FWavFile.Info.DurationSec, FWavFile.Info.SampleRate,
         FWavFile.Info.BitsPerSample, FWavFile.Info.Channels]);
       StatusBar.Panels[0].Text := FFileInfo;
-      RecomputeSpectrogram();
+      { Everything RenderSpectrogram() reads -- zoom window and max plot
+        frequency -- must be set for the NEW file before RecomputeSpectrogram
+        renders, not after: PaintBoxPaint only re-renders when FDisplayBmp's
+        size changes, so a render done here with the previous file's leftover
+        zoom/frequency stays cached and on-screen until something else (a
+        manual zoom or frequency change) happens to force a fresh one. }
       FZoomStart := 0.0;
       FZoomEnd := 1.0;
       UpdateZoomBar();
@@ -852,6 +857,7 @@ begin
       TrkMaxFreq.Position := TrkMaxFreq.Max;
       FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
       LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+      RecomputeSpectrogram();
       UpdateGainRange();
       BtnPlay.Enabled := True;
       BtnSavePNG.Enabled := True;
