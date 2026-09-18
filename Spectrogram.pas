@@ -45,6 +45,13 @@ type
       MinDB: Double = -100.0; MaxDB: Double = 0.0; ColorScheme: TColorScheme = csViridis; MaxFreqHz: Double = 0.0;
       UseHighPass: Boolean = False; UseEnergyGate: Boolean = False);
 
+    { Same suggestions as AutoFloorDB/AutoCeilingDB/AutoMaxFreqHz, but sampled
+      only from the given zoom window (0..1, normalised against the whole
+      file) instead of the whole file -- for the Auto buttons, which should
+      reflect what's currently on screen, not the file as a whole. Falls back
+      to the whole file if the window is narrower than one FFT frame. }
+    procedure ComputeAutoRangeForWindow(ZoomStart, ZoomEnd: Double; out AutoFloorDB, AutoCeilingDB, AutoMaxFreqHz: Double);
+
     property NumBins: Integer read FNumBins;
     property SampleRate: Cardinal read FSampleRate;
     { Suggested display range computed by Prepare from the 5th/99.5th
@@ -375,6 +382,120 @@ begin
 
   FHasBg := True;
   BiquadHighPass(Samples, FSampleRate, HP_CUTOFF_HZ, FFilteredSamples);
+end;
+
+
+
+procedure TSpectrogramData.ComputeAutoRangeForWindow(ZoomStart, ZoomEnd: Double; out AutoFloorDB, AutoCeilingDB, AutoMaxFreqHz: Double);
+const
+  MAX_FRAMES = 256;
+  AUTO_MIN_DB = -160.0;
+  AUTO_SIGNAL_SNR_DB = 22.5;
+  AUTO_MAXFREQ_HEADROOM = 1.15;
+var
+  Samples: TArray<Single>;
+  TotalSamples, StartSample, EndSample, WindowSamples: Integer;
+  Hop, N, Offset, Frame, B: Integer;
+  Mags: TArray<Double>;
+  RawMags: TArray<TArray<Double>>;
+  AllDB, BinMags, NoiseDBFlat, PeakMag: TArray<Double>;
+  Idx, SignalBin: Integer;
+  Mag, NoiseBaselineDB: Double;
+begin
+  AutoFloorDB := -100.0;
+  AutoCeilingDB := 0.0;
+  AutoMaxFreqHz := FSampleRate / 2.0;
+  if (FWavFile = nil) or (FNumBins = 0) then
+    Exit();
+
+  Samples := FWavFile.Samples;
+  TotalSamples := Length(Samples);
+  if TotalSamples < FFFTSize then
+    Exit();
+
+  StartSample := EnsureRange(Round(ZoomStart * TotalSamples), 0, TotalSamples);
+  EndSample := EnsureRange(Round(ZoomEnd * TotalSamples), StartSample, TotalSamples);
+  WindowSamples := EndSample - StartSample;
+  if WindowSamples < FFFTSize then begin
+    { Zoomed narrower than one FFT frame -- fall back to the whole file
+      rather than compute nothing useful. }
+    StartSample := 0;
+    EndSample := TotalSamples;
+    WindowSamples := TotalSamples;
+  end;
+
+  Hop := Max(FFFTSize, WindowSamples div MAX_FRAMES);
+  N := 0;
+  Offset := StartSample;
+  while Offset + FFFTSize <= EndSample do begin
+    Inc(N);
+    Inc(Offset, Hop);
+  end;
+  N := Min(N, MAX_FRAMES);
+  if N = 0 then
+    Exit();
+
+  SetLength(RawMags, N);
+  SetLength(PeakMag, FNumBins);
+  for B := 0 to FNumBins - 1 do
+    PeakMag[B] := 0.0;
+
+  Offset := StartSample;
+  for Frame := 0 to N - 1 do begin
+    ComputeWindowedFFT(Samples, Offset, FFFTSize, FWindow, Mags);
+    SetLength(RawMags[Frame], FNumBins);
+    Move(Mags[0], RawMags[Frame][0], FNumBins * SizeOf(Double));
+    for B := 0 to FNumBins - 1 do
+      if RawMags[Frame][B] > PeakMag[B] then
+        PeakMag[B] := RawMags[Frame][B];
+    Inc(Offset, Hop);
+  end;
+
+  // Auto floor/ceiling: 5th/99.6th percentile of the dB distribution over
+  // all sampled frames and bins in the window, same as Prepare().
+  SetLength(AllDB, N * FNumBins);
+  Idx := 0;
+  for Frame := 0 to N - 1 do
+    for B := 0 to FNumBins - 1 do begin
+      Mag := RawMags[Frame][B];
+      if Mag > 1.0E-12 then
+        AllDB[Idx] := 20.0 * Log10(Mag)
+      else
+        AllDB[Idx] := AUTO_MIN_DB;
+      Inc(Idx);
+    end;
+  TArray.Sort<Double>(AllDB);
+  AutoFloorDB := AllDB[EnsureRange(Ceil(Length(AllDB) * 0.4), 0, High(AllDB))];
+  AutoCeilingDB := AllDB[EnsureRange(Floor(Length(AllDB) * 0.99996), 0, High(AllDB))];
+
+  { Per-bin median magnitude across the window's frames stands in for
+    Prepare()'s per-bin rolling-median noise floor -- taking the median over
+    time (rather than lumping every raw magnitude into one flat median)
+    keeps a real call from inflating the estimated noise floor, which
+    matters more here since a zoomed-in window may be mostly signal. }
+  SetLength(BinMags, N);
+  SetLength(NoiseDBFlat, FNumBins);
+  for B := 0 to FNumBins - 1 do begin
+    for Frame := 0 to N - 1 do
+      BinMags[Frame] := RawMags[Frame][B];
+    TArray.Sort<Double>(BinMags);
+    Mag := BinMags[N div 2];
+    if Mag > 1.0E-12 then
+      NoiseDBFlat[B] := 20.0 * Log10(Mag)
+    else
+      NoiseDBFlat[B] := AUTO_MIN_DB;
+  end;
+  TArray.Sort<Double>(NoiseDBFlat);
+  NoiseBaselineDB := NoiseDBFlat[Length(NoiseDBFlat) div 2];
+
+  SignalBin := -1;
+  for B := FNumBins - 1 downto 0 do
+    if (PeakMag[B] > 1.0E-12) and (20.0 * Log10(PeakMag[B]) >= NoiseBaselineDB + AUTO_SIGNAL_SNR_DB) then begin
+      SignalBin := B;
+      Break;
+    end;
+  if SignalBin >= 0 then
+    AutoMaxFreqHz := Min(FSampleRate / 2.0, (SignalBin / (FNumBins - 1)) * (FSampleRate / 2.0) * AUTO_MAXFREQ_HEADROOM);
 end;
 
 

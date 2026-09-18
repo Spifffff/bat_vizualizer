@@ -511,21 +511,29 @@ end;
 procedure TFormMain.UpdateGainRange;
 const
   FALLBACK_MAX_GAIN_DB = 96;
+  MIN_MAX_GAIN_DB = 10;
 var
-  I: Integer;
+  I, StartSample, EndSample: Integer;
   PeakAbs: Double;
   MaxGainDB: Double;
 begin
   if FWavFile = nil then
     Exit();
+  { Scoped to the visible (zoomed) section, not the whole file, so the
+    slider's ceiling reflects what's actually on screen right now. }
+  StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+  EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
   PeakAbs := 0.0;
-  for I := 0 to High(FWavFile.Samples) do
+  for I := StartSample to EndSample - 1 do
     PeakAbs := Max(PeakAbs, Abs(FWavFile.Samples[I]));
   if PeakAbs > 0.0 then
     MaxGainDB := 20.0 * Log10(1.0 / PeakAbs)
   else
     MaxGainDB := FALLBACK_MAX_GAIN_DB;
-  TrkGain.Max := Max(1, Round(MaxGainDB));
+  { Never below MIN_MAX_GAIN_DB, even if that means clipping becomes
+    possible: an already-loud section shouldn't leave the user with no
+    boost headroom at all. }
+  TrkGain.Max := Max(MIN_MAX_GAIN_DB, Round(MaxGainDB));
   if TrkGain.Position > TrkGain.Max then
     TrkGain.Position := TrkGain.Max;
 end;
@@ -1183,6 +1191,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
 end;
 
@@ -2007,30 +2016,39 @@ end;
 
 
 procedure TFormMain.BtnAutoFloorClick(Sender: TObject);
+var
+  FloorDB, CeilingDB, MaxFreqHz: Double;
 begin
   if (FWavFile = nil) or (FSpecgram = nil) then
     Exit();
-  TrkFloor.Position := EnsureRange(Round(FSpecgram.AutoFloorDB), TrkFloor.Min, TrkFloor.Max);
+  FSpecgram.ComputeAutoRangeForWindow(FZoomStart, FZoomEnd, FloorDB, CeilingDB, MaxFreqHz);
+  TrkFloor.Position := EnsureRange(Round(FloorDB), TrkFloor.Min, TrkFloor.Max);
   TrkFloorChange(TrkFloor);
 end;
 
 
 
 procedure TFormMain.BtnAutoCeilingClick(Sender: TObject);
+var
+  FloorDB, CeilingDB, MaxFreqHz: Double;
 begin
   if (FWavFile = nil) or (FSpecgram = nil) then
     Exit();
-  TrkCeiling.Position := EnsureRange(Round(FSpecgram.AutoCeilingDB), TrkCeiling.Min, TrkCeiling.Max);
+  FSpecgram.ComputeAutoRangeForWindow(FZoomStart, FZoomEnd, FloorDB, CeilingDB, MaxFreqHz);
+  TrkCeiling.Position := EnsureRange(Round(CeilingDB), TrkCeiling.Min, TrkCeiling.Max);
   TrkCeilingChange(TrkCeiling);
 end;
 
 
 
 procedure TFormMain.BtnAutoMaxFreqClick(Sender: TObject);
+var
+  FloorDB, CeilingDB, MaxFreqHz: Double;
 begin
   if (FWavFile = nil) or (FSpecgram = nil) then
     Exit();
-  TrkMaxFreq.Position := EnsureRange(Round(FSpecgram.AutoMaxFreqHz / 1000.0), TrkMaxFreq.Min, TrkMaxFreq.Max);
+  FSpecgram.ComputeAutoRangeForWindow(FZoomStart, FZoomEnd, FloorDB, CeilingDB, MaxFreqHz);
+  TrkMaxFreq.Position := EnsureRange(Round(MaxFreqHz / 1000.0), TrkMaxFreq.Min, TrkMaxFreq.Max);
   TrkMaxFreqChange(TrkMaxFreq);
 end;
 
@@ -2058,6 +2076,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
 end;
 
@@ -2143,6 +2162,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
 end;
 
@@ -2174,6 +2194,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
 end;
 
@@ -2204,6 +2225,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
 end;
 
@@ -2328,6 +2350,7 @@ begin
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
   WaveformBox.Invalidate();
+  UpdateGainRange();
   UpdateTransportButtons();
   Handled := True;
 end;
