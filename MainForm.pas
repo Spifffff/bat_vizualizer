@@ -127,6 +127,7 @@ type
     procedure WaveformBoxPaint(Sender: TObject);
     procedure DetectionMarkersBoxPaint(Sender: TObject);
     procedure DetectionMarkersBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure DetectionMarkersBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -2528,6 +2529,36 @@ begin
       Exit();
     end;
   end;
+end;
+
+
+
+procedure TFormMain.DetectionMarkersBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+var
+  Detections: TArray<TBatDetection>;
+  DurationSec: Double;
+  Left, Right, I: Integer;
+  R: TRect;
+begin
+  if (FWavFile = nil) or (FZoomEnd <= FZoomStart) then begin
+    StatusBar.Panels[2].Text := '';
+    Exit();
+  end;
+  DurationSec := FWavFile.Info.DurationSec;
+  Left := LEFT_MARGIN;
+  Right := DetectionMarkersBox.Width - RIGHT_MARGIN;
+  if (DurationSec > 0.0) and (Right - Left > 0) then begin
+    Detections := GetCurrentFileDetections();
+    for I := 0 to High(Detections) do begin
+      R := GetMarkerRect(Detections[I], DurationSec, Left, Right);
+      if (X >= R.Left) and (X <= R.Right) then begin
+        StatusBar.Panels[2].Text := Format('%s — %.1f%%',
+          [TranslateSpeciesName(Detections[I].CommonName, FDisplayLanguage), Detections[I].Confidence * 100]);
+        Exit();
+      end;
+    end;
+  end;
+  StatusBar.Panels[2].Text := '';
 end;
 
 
