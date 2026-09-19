@@ -311,6 +311,7 @@ type
     function GetCurrentFileRecordedAt: TDateTime;
     function GetCurrentClipSpeciesName: string;
     function BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
+    function CanCopyOriginalForExport(const ATargetExt: string): Boolean;
   end;
 
 var
@@ -1301,6 +1302,20 @@ end;
 
 
 
+function TFormMain.CanCopyOriginalForExport(const ATargetExt: string): Boolean;
+begin
+  { A straight file copy is only equivalent to re-encoding when nothing
+    would actually change: same format, the whole file (not just a zoomed
+    section), no time expansion, no gain. Copying preserves the original's
+    exact bit depth and (for MP3) avoids a second lossy encode -- both of
+    which re-encoding through Samples always loses, even at these settings. }
+  Result := (FCurrentFilePath <> '') and SameText(ExtractFileExt(FCurrentFilePath), ATargetExt) and
+    SameValue(FZoomStart, 0.0) and SameValue(FZoomEnd, 1.0) and
+    SameValue(GetPlaybackRate(), 1.0) and (TrkGain.Position = 0);
+end;
+
+
+
 procedure TFormMain.BuildSpeciesEntries;
 var
   Flat: TArray<TFlatDet>;
@@ -1708,12 +1723,18 @@ begin
   SaveDialogMp3.FileName := BuildDefaultExportFileName(True);
   if not SaveDialogMp3.Execute() then
     Exit();
-  DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
   Screen.Cursor := crHourGlass;
   try
     try
-      SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
-      StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)', [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+      if CanCopyOriginalForExport('.mp3') then begin
+        TFile.Copy(FCurrentFilePath, SaveDialogMp3.FileName, True);
+        StatusBar.Panels[0].Text := 'MP3 saved — copied original file';
+      end else begin
+        DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+        SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
+        StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
+          [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+      end;
     except
       on E: Exception do
         MessageDlg('Error saving MP3:'#13#10 + E.Message, mtError, [mbOK], 0);
@@ -1734,12 +1755,18 @@ begin
   SaveDialogWav.FileName := BuildDefaultExportFileName(True);
   if not SaveDialogWav.Execute() then
     Exit();
-  DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
   Screen.Cursor := crHourGlass;
   try
     try
-      SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogWav.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
-      StatusBar.Panels[0].Text := Format('WAV saved — %d Hz (%.1f%% speed)', [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+      if CanCopyOriginalForExport('.wav') then begin
+        TFile.Copy(FCurrentFilePath, SaveDialogWav.FileName, True);
+        StatusBar.Panels[0].Text := 'WAV saved — copied original file';
+      end else begin
+        DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+        SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogWav.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
+        StatusBar.Panels[0].Text := Format('WAV saved — %d Hz (%.1f%% speed)',
+          [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+      end;
     except
       on E: Exception do
         MessageDlg('Error saving WAV:'#13#10 + E.Message, mtError, [mbOK], 0);
