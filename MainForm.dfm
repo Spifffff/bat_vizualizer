@@ -385,9 +385,16 @@ object FormMain: TFormMain
       object LblImage: TLabel
         Left = 8
         Top = 20
-        Width = 28
+        Width = 31
         Height = 13
         Caption = 'Image'
+      end
+      object LblAudio: TLabel
+        Left = 8
+        Top = 100
+        Width = 103
+        Height = 13
+        Caption = 'Audio (current view)'
       end
       object CbxSaveTarget: TComboBox
         Left = 8
@@ -412,13 +419,6 @@ object FormMain: TFormMain
         Enabled = False
         TabOrder = 1
         OnClick = BtnSavePNGClick
-      end
-      object LblAudio: TLabel
-        Left = 8
-        Top = 100
-        Width = 106
-        Height = 13
-        Caption = 'Audio (current view)'
       end
       object BtnSaveWav: TButton
         Left = 8

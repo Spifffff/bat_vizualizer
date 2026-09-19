@@ -2679,7 +2679,7 @@ begin
     MY1 := HzToSpectY(FMeasureStartHz, R);
     MX2 := SecToSpectX(FMeasureEndSec, R);
     MY2 := HzToSpectY(FMeasureEndHz, R);
-    MeasureColor := StyleServices.GetSystemColor(clWindow);
+    MeasureColor := StyleServices.GetSystemColor(clWindowText);
     PaintBox.Canvas.Pen.Color := MeasureColor;
     PaintBox.Canvas.Pen.Width := 2;
     PaintBox.Canvas.MoveTo(MX1, MY1);
