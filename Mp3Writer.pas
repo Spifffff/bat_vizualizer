@@ -63,9 +63,10 @@ end;
 procedure SaveMp3(const Samples: TArray<Single>; ZoomStart, ZoomEnd: Double;
   const FileName: string; DesiredRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 const
-  LAME_QUALITY    = 5;    // 2 = high quality, 5 = good, 7 = ok
-  LAME_KBPS       = 128;  // kbit/s
-  EXTRA_BUF_BYTES = 7200; // LAME: output buffer >= nsamples * 1.25 + 7200
+  LAME_QUALITY      = 5;      // 2 = high quality, 5 = good, 7 = ok
+  LAME_KBPS         = 128;    // kbit/s
+  EXTRA_BUF_BYTES   = 7200;   // LAME: output buffer >= nsamples * 1.25 + 7200
+  CHUNK_OUT_SAMPLES = 65536;  // resample+encode this many output-rate samples at a time
 var
   HLib: HMODULE;
   LameInit: TFnLameInit;
@@ -76,14 +77,33 @@ var
   LameClose: TFnLameClose;
   GFP: TLameGFP;
   OutRate: Cardinal;
-  TotalN, S0, S1, N, I, V, N_out, SrcIdx, Encoded: Integer;
-  SrcPos, SrcFrac: Double;
+  TotalN, S0, S1, N, I, N_out: Integer;
   PeakAbs, EffectiveGain: Double;
-  Pcm: TArray<SmallInt>;
-  Pcm_out: TArray<SmallInt>;
+  ChunkPcm: TArray<SmallInt>;
   Mp3Buf: TArray<Byte>;
-  BufSize: Integer;
+  BufSize, ChunkStart, ChunkLen, OutIdx, SrcIdx0, Encoded: Integer;
+  SrcPos, SrcFrac: Double;
   F: TFileStream;
+
+  { What Pcm[Idx] would have been under the old whole-buffer approach: the
+    gain-applied, clipped 16-bit value of sample Idx within the selection
+    (0 outside it). Computed on demand so no full-selection Int16 copy of
+    the selection ever has to exist at once -- see SaveWav for why that
+    matters for a large, especially heavily time-expanded, selection. }
+  function RawPcm(Idx: Integer): SmallInt;
+  var
+    V: Integer;
+  begin
+    if (Idx < 0) or (Idx >= N) then begin
+      Result := 0;
+      Exit();
+    end;
+    V := Round(Samples[S0 + Idx] * EffectiveGain * 32767.0);
+    if V > 32767 then V := 32767;
+    if V < -32768 then V := -32768;
+    Result := SmallInt(V);
+  end;
+
 begin
   HLib := LoadLibrary('lame_enc.dll');
   if HLib = 0 then
@@ -125,37 +145,14 @@ begin
     if (PeakAbs > 0.0) and (Gain * PeakAbs > 1.0) then
       EffectiveGain := 1.0 / PeakAbs;
 
-    { Convert float samples in the zoom window to 16-bit PCM. }
-    SetLength(Pcm, N);
-    for I := 0 to N - 1 do begin
-      V := Round(Samples[S0 + I] * EffectiveGain * 32767.0);
-      if V > 32767 then V := 32767;
-      if V < -32768 then V := -32768;
-      Pcm[I] := SmallInt(V);
-    end;
-
     { Linearly resample from DesiredRate to OutRate.
       The ratio OutRate/DesiredRate >= 1, so this is always an upsample (or 1:1).
       Frequencies above DesiredRate/2 (signal Nyquist) will be near-zero,
       giving a silent band between the signal content and OutRate/2. }
-    if OutRate = DesiredRate then begin
-      N_out := N;
-      Pcm_out := Pcm;
-    end else begin
+    if OutRate = DesiredRate then
+      N_out := N
+    else
       N_out := Round(Int64(N) * OutRate / DesiredRate);
-      SetLength(Pcm_out, N_out);
-      for I := 0 to N_out - 1 do begin
-        SrcPos := I * (DesiredRate / OutRate);
-        SrcIdx := Trunc(SrcPos);
-        SrcFrac := SrcPos - SrcIdx;
-        if SrcIdx + 1 < N then
-          Pcm_out[I] := SmallInt(Round(Pcm[SrcIdx] * (1.0 - SrcFrac) + Pcm[SrcIdx + 1] * SrcFrac))
-        else if SrcIdx < N then
-          Pcm_out[I] := Pcm[SrcIdx]
-        else
-          Pcm_out[I] := 0;
-      end;
-    end;
 
     GFP := LameInit();
     if GFP = nil then
@@ -168,18 +165,45 @@ begin
       if LameInitParams(GFP) < 0 then
         raise Exception.Create('lame_init_params() failed — unsupported sample rate.');
 
-      BufSize := Round(N_out * 1.25) + EXTRA_BUF_BYTES;
+      BufSize := Round(CHUNK_OUT_SAMPLES * 1.25) + EXTRA_BUF_BYTES;
       SetLength(Mp3Buf, BufSize);
-
-      { For mono, pass the same PCM pointer for left and right channels. }
-      Encoded := LameEncodeBuffer(GFP, @Pcm_out[0], @Pcm_out[0], N_out, @Mp3Buf[0], BufSize);
-      if Encoded < 0 then
-        raise Exception.CreateFmt('lame_encode_buffer() failed (%d).', [Encoded]);
+      SetLength(ChunkPcm, Min(N_out, CHUNK_OUT_SAMPLES));
 
       F := TFileStream.Create(FileName, fmCreate);
       try
-        if Encoded > 0 then
-          F.WriteBuffer(Mp3Buf[0], Encoded);
+        { Resample (if needed) and encode bounded-size chunks at a time
+          instead of building the whole resampled buffer -- and the whole
+          LAME output buffer -- in memory up front. For a large selection,
+          especially at a heavy time-expansion factor, that used to hold
+          three whole-selection-sized buffers at once on top of the
+          already-resident whole-file Samples array. }
+        ChunkStart := 0;
+        while ChunkStart < N_out do begin
+          ChunkLen := Min(CHUNK_OUT_SAMPLES, N_out - ChunkStart);
+          for OutIdx := 0 to ChunkLen - 1 do begin
+            if OutRate = DesiredRate then
+              ChunkPcm[OutIdx] := RawPcm(ChunkStart + OutIdx)
+            else begin
+              SrcPos := (ChunkStart + OutIdx) * (DesiredRate / OutRate);
+              SrcIdx0 := Trunc(SrcPos);
+              SrcFrac := SrcPos - SrcIdx0;
+              if SrcIdx0 + 1 < N then
+                ChunkPcm[OutIdx] := SmallInt(Round(RawPcm(SrcIdx0) * (1.0 - SrcFrac) + RawPcm(SrcIdx0 + 1) * SrcFrac))
+              else if SrcIdx0 < N then
+                ChunkPcm[OutIdx] := RawPcm(SrcIdx0)
+              else
+                ChunkPcm[OutIdx] := 0;
+            end;
+          end;
+
+          Encoded := LameEncodeBuffer(GFP, @ChunkPcm[0], @ChunkPcm[0], ChunkLen, @Mp3Buf[0], BufSize);
+          if Encoded < 0 then
+            raise Exception.CreateFmt('lame_encode_buffer() failed (%d).', [Encoded]);
+          if Encoded > 0 then
+            F.WriteBuffer(Mp3Buf[0], Encoded);
+          Inc(ChunkStart, ChunkLen);
+        end;
+
         Encoded := LameEncodeFlush(GFP, @Mp3Buf[0], BufSize);
         if Encoded > 0 then
           F.WriteBuffer(Mp3Buf[0], Encoded);

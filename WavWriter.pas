@@ -34,8 +34,15 @@ type
 
 procedure SaveWav(const Samples: TArray<Single>; ZoomStart, ZoomEnd: Double;
   const FileName: string; DesiredRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
+const
+  { Fixed-size conversion buffer, reused for every chunk, instead of one
+    allocation sized to the whole selection -- for a large section of a
+    long recording (especially handed a heavily time-expanded, and so very
+    long, selection) that single buffer could run a 32-bit process out of
+    address space on top of the already-resident whole-file Samples array. }
+  CHUNK_SAMPLES = 1 shl 20; // 1M samples (2 MB) per chunk
 var
-  TotalN, S0, S1, N, I, V: Integer;
+  TotalN, S0, S1, N, I, V, ChunkStart, ChunkLen: Integer;
   PeakAbs, EffectiveGain: Double;
   Pcm: TArray<SmallInt>;
   F: TFileStream;
@@ -61,16 +68,6 @@ begin
   if (PeakAbs > 0.0) and (Gain * PeakAbs > 1.0) then
     EffectiveGain := 1.0 / PeakAbs;
 
-  SetLength(Pcm, N);
-  for I := 0 to N - 1 do begin
-    V := Round(Samples[S0 + I] * EffectiveGain * 32767.0);
-    if V > 32767 then
-      V := 32767;
-    if V < -32768 then
-      V := -32768;
-    Pcm[I] := SmallInt(V);
-  end;
-
   FillChar(Header, SizeOf(Header), 0);
   Header.RiffTag := 'RIFF';
   Header.WaveTag := 'WAVE';
@@ -86,11 +83,24 @@ begin
   Header.DataSize := Cardinal(N) * Header.BlockAlign;
   Header.RiffSize := SizeOf(Header) - 8 + Header.DataSize;
 
+  SetLength(Pcm, Min(N, CHUNK_SAMPLES));
   F := TFileStream.Create(FileName, fmCreate);
   try
     F.WriteBuffer(Header, SizeOf(Header));
-    if N > 0 then
-      F.WriteBuffer(Pcm[0], Header.DataSize);
+    ChunkStart := 0;
+    while ChunkStart < N do begin
+      ChunkLen := Min(CHUNK_SAMPLES, N - ChunkStart);
+      for I := 0 to ChunkLen - 1 do begin
+        V := Round(Samples[S0 + ChunkStart + I] * EffectiveGain * 32767.0);
+        if V > 32767 then
+          V := 32767;
+        if V < -32768 then
+          V := -32768;
+        Pcm[I] := SmallInt(V);
+      end;
+      F.WriteBuffer(Pcm[0], ChunkLen * SizeOf(SmallInt));
+      Inc(ChunkStart, ChunkLen);
+    end;
   finally
     F.Free();
   end;
