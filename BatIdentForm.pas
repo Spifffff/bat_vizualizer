@@ -43,19 +43,21 @@ type
     LblBattyFolder: TLabel;
     EdtBattyFolder: TEdit;
     BtnBrowseBatty: TButton;
-    GrpParams: TGroupBox;
+    GrpClassifier: TGroupBox;
     LblArea: TLabel;
     CbxArea: TComboBox;
     LblKHz: TLabel;
     CbxKHz: TComboBox;
-    LblParallel: TLabel;
-    CbxParallel: TComboBox;
+    GrpSensitivity: TGroupBox;
     LblMinConf: TLabel;
     EdtMinConf: TEdit;
     LblSfThresh: TLabel;
     EdtSfThresh: TEdit;
     LblSensitivity: TLabel;
     EdtSensitivity: TEdit;
+    GrpPerformance: TGroupBox;
+    LblParallel: TLabel;
+    CbxParallel: TComboBox;
     PrgBar: TProgressBar;
     MemoLog: TMemo;
     BtnStart: TButton;
@@ -116,7 +118,7 @@ var
   SI: TSystemInfo;
   CPUCount, I: Integer;
 begin
-  CbxArea.Items.AddStrings(['Bavaria', 'EU', 'UK', 'USA', 'USA-EAST', 'USA-WEST']);
+  CbxArea.Items.AddStrings(['Bavaria', 'EU', 'UK', 'USA', 'USA-EAST', 'USA-WEST', 'Scotland', 'South-Wales', 'MarinCounty']);
   CbxArea.ItemIndex := 0;
   CbxKHz.Items.AddStrings(['144', '256']);
   CbxKHz.ItemIndex := 1;

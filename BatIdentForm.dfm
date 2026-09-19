@@ -3,7 +3,7 @@ object FormBatIdent: TFormBatIdent
   Top = 0
   BorderStyle = bsDialog
   Caption = 'BatIdent'
-  ClientHeight = 540
+  ClientHeight = 553
   ClientWidth = 640
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -94,139 +94,155 @@ object FormBatIdent: TFormBatIdent
       OnClick = BtnBrowseBattyClick
     end
   end
-  object GrpParams: TGroupBox
+  object GrpClassifier: TGroupBox
     Left = 8
     Top = 130
-    Width = 624
-    Height = 100
-    Caption = 'Parameters'
+    Width = 180
+    Height = 113
+    Caption = 'Classifier'
     TabOrder = 1
     object LblArea: TLabel
       Left = 8
-      Top = 24
+      Top = 20
       Width = 27
       Height = 13
       Caption = 'Area:'
     end
     object LblKHz: TLabel
-      Left = 160
-      Top = 24
+      Left = 8
+      Top = 66
       Width = 21
       Height = 13
       Caption = 'kHz:'
     end
-    object LblParallel: TLabel
-      Left = 276
-      Top = 24
-      Width = 60
-      Height = 13
-      Caption = 'Parallel files:'
-    end
-    object LblMinConf: TLabel
-      Left = 8
-      Top = 58
-      Width = 75
-      Height = 13
-      Caption = 'Min confidence:'
-    end
-    object LblSfThresh: TLabel
-      Left = 154
-      Top = 58
-      Width = 50
-      Height = 13
-      Caption = 'sf_thresh:'
-    end
-    object LblSensitivity: TLabel
-      Left = 278
-      Top = 58
-      Width = 53
-      Height = 13
-      Caption = 'Sensitivity:'
-    end
     object CbxArea: TComboBox
-      Left = 40
-      Top = 21
-      Width = 110
+      Left = 8
+      Top = 36
+      Width = 164
       Height = 21
       Style = csDropDownList
       TabOrder = 0
     end
     object CbxKHz: TComboBox
-      Left = 188
-      Top = 21
-      Width = 80
+      Left = 8
+      Top = 82
+      Width = 164
       Height = 21
       Style = csDropDownList
       TabOrder = 1
     end
-    object CbxParallel: TComboBox
-      Left = 352
-      Top = 21
-      Width = 60
-      Height = 21
-      Style = csDropDownList
-      TabOrder = 2
+  end
+  object GrpSensitivity: TGroupBox
+    Left = 196
+    Top = 130
+    Width = 296
+    Height = 113
+    Caption = 'Detection sensitivity'
+    TabOrder = 2
+    object LblMinConf: TLabel
+      Left = 8
+      Top = 20
+      Width = 75
+      Height = 13
+      Caption = 'Min confidence:'
+    end
+    object LblSfThresh: TLabel
+      Left = 104
+      Top = 20
+      Width = 68
+      Height = 13
+      Caption = 'Species filter:'
+    end
+    object LblSensitivity: TLabel
+      Left = 200
+      Top = 20
+      Width = 53
+      Height = 13
+      Caption = 'Sensitivity:'
     end
     object EdtMinConf: TEdit
-      Left = 94
-      Top = 55
-      Width = 52
+      Left = 8
+      Top = 36
+      Width = 88
       Height = 21
-      TabOrder = 3
+      TabOrder = 0
       Text = '0.80'
     end
     object EdtSfThresh: TEdit
-      Left = 206
-      Top = 55
-      Width = 52
+      Left = 104
+      Top = 36
+      Width = 88
       Height = 21
-      TabOrder = 4
+      TabOrder = 1
       Text = '0.80'
     end
     object EdtSensitivity: TEdit
-      Left = 338
-      Top = 55
-      Width = 52
+      Left = 200
+      Top = 36
+      Width = 88
       Height = 21
-      TabOrder = 5
+      TabOrder = 2
       Text = '1.0'
+    end
+  end
+  object GrpPerformance: TGroupBox
+    Left = 500
+    Top = 130
+    Width = 132
+    Height = 113
+    Caption = 'Performance'
+    TabOrder = 3
+    object LblParallel: TLabel
+      Left = 8
+      Top = 20
+      Width = 60
+      Height = 13
+      Caption = 'Parallel files:'
+    end
+    object CbxParallel: TComboBox
+      Left = 8
+      Top = 36
+      Width = 116
+      Height = 21
+      Style = csDropDownList
+      TabOrder = 0
     end
   end
   object PrgBar: TProgressBar
     Left = 8
-    Top = 238
+    Top = 251
     Width = 624
     Height = 22
     BarColor = clDodgerblue
-    TabOrder = 2
+    TabOrder = 4
   end
   object MemoLog: TMemo
     Left = 8
-    Top = 268
+    Top = 281
     Width = 624
     Height = 220
     ReadOnly = True
     ScrollBars = ssVertical
-    TabOrder = 3
+    TabOrder = 5
   end
   object BtnStart: TButton
     Left = 464
-    Top = 496
+    Top = 509
     Width = 80
     Height = 28
     Caption = 'Start'
     Default = True
-    TabOrder = 4
+    TabOrder = 6
     OnClick = BtnStartClick
   end
   object BtnStop: TButton
     Left = 552
-    Top = 496
+    Top = 509
     Width = 80
     Height = 28
     Caption = 'Stop'
     Enabled = False
-    TabOrder = 5
+    TabOrder = 7
     OnClick = BtnStopClick
   end
   object Timer: TTimer
@@ -234,6 +250,6 @@ object FormBatIdent: TFormBatIdent
     Interval = 500
     OnTimer = TimerTimer
     Left = 16
-    Top = 500
+    Top = 513
   end
 end
