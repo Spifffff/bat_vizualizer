@@ -647,6 +647,7 @@ object FormMain: TFormMain
       Width = 697
       Height = 4
       Align = alTop
+      OnMouseDown = DetectionMarkersBoxMouseDown
       OnPaint = DetectionMarkersBoxPaint
       ExplicitTop = 0
       ExplicitWidth = 1020

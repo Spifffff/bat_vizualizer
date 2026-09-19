@@ -126,6 +126,7 @@ type
     procedure PaintBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxPaint(Sender: TObject);
     procedure DetectionMarkersBoxPaint(Sender: TObject);
+    procedure DetectionMarkersBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure WaveformBoxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -305,6 +306,7 @@ type
     function GetCurrentFileIndex: Integer;
     function GetCurrentFileDetections: TArray<TBatDetection>;
     procedure JumpToDetection(const Det: TBatDetection);
+    function GetMarkerRect(const Det: TBatDetection; DurationSec: Double; ALeft, ARight: Integer): TRect;
     function GetCurrentFileRecordedAt: TDateTime;
     function GetCurrentClipSpeciesName: string;
     function BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
@@ -1198,6 +1200,31 @@ begin
   WaveformBox.Invalidate();
   UpdateGainRange();
   UpdateTransportButtons();
+end;
+
+
+
+function TFormMain.GetMarkerRect(const Det: TBatDetection; DurationSec: Double; ALeft, ARight: Integer): TRect;
+const
+  MARKER_MIN_WIDTH = 5;
+var
+  W, Mid: Integer;
+  Frac0, Frac1: Double;
+begin
+  W := ARight - ALeft;
+  Frac0 := (Det.StartSec / DurationSec - FZoomStart) / (FZoomEnd - FZoomStart);
+  Frac1 := (Det.EndSec / DurationSec - FZoomStart) / (FZoomEnd - FZoomStart);
+  Result.Left := ALeft + Round(Frac0 * W);
+  Result.Right := ALeft + Round(Frac1 * W);
+  if Result.Right - Result.Left < MARKER_MIN_WIDTH then begin
+    Mid := (Result.Left + Result.Right) div 2;
+    Result.Left := Mid - MARKER_MIN_WIDTH div 2;
+    Result.Right := Result.Left + MARKER_MIN_WIDTH;
+  end;
+  Result.Left := Max(ALeft, Result.Left);
+  Result.Right := Min(ARight, Result.Right);
+  Result.Top := 0;
+  Result.Bottom := 0;
 end;
 
 
@@ -2430,12 +2457,12 @@ end;
 
 procedure TFormMain.DetectionMarkersBoxPaint(Sender: TObject);
 const
-  MARKER_MIN_WIDTH = 5;
   BAR_HEIGHT = 3;
 var
   Detections: TArray<TBatDetection>;
-  I, Left, Right, W, X1, X2, Mid: Integer;
+  I, Left, Right, W: Integer;
   DurationSec, Frac0, Frac1: Double;
+  R: TRect;
 begin
   { Docked alTop above (not overlapping) PaintBox, one row taller than the bar
     itself so a 1px margin separates it from the spectrogram below -- that
@@ -2468,19 +2495,39 @@ begin
     Frac1 := (Detections[I].EndSec / DurationSec - FZoomStart) / (FZoomEnd - FZoomStart);
     if (Frac1 < 0.0) or (Frac0 > 1.0) then
       Continue;
-    X1 := Left + Round(Frac0 * W);
-    X2 := Left + Round(Frac1 * W);
-    if X2 - X1 < MARKER_MIN_WIDTH then begin
-      Mid := (X1 + X2) div 2;
-      X1 := Mid - MARKER_MIN_WIDTH div 2;
-      X2 := X1 + MARKER_MIN_WIDTH;
-    end;
-    X1 := Max(Left, X1);
-    X2 := Min(Right, X2);
-    if X2 > X1 then
-      DetectionMarkersBox.Canvas.FillRect(Rect(X1, 0, X2, BAR_HEIGHT));
+    R := GetMarkerRect(Detections[I], DurationSec, Left, Right);
+    if R.Right > R.Left then
+      DetectionMarkersBox.Canvas.FillRect(Rect(R.Left, 0, R.Right, BAR_HEIGHT));
   end;
   DetectionMarkersBox.Canvas.Pen.Style := psSolid;
+end;
+
+
+
+procedure TFormMain.DetectionMarkersBoxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  Detections: TArray<TBatDetection>;
+  DurationSec: Double;
+  Left, Right, I: Integer;
+  R: TRect;
+begin
+  if (Button <> mbLeft) or (FWavFile = nil) or (FZoomEnd <= FZoomStart) then
+    Exit();
+  DurationSec := FWavFile.Info.DurationSec;
+  if DurationSec <= 0.0 then
+    Exit();
+  Left := LEFT_MARGIN;
+  Right := DetectionMarkersBox.Width - RIGHT_MARGIN;
+  if Right - Left <= 0 then
+    Exit();
+  Detections := GetCurrentFileDetections();
+  for I := 0 to High(Detections) do begin
+    R := GetMarkerRect(Detections[I], DurationSec, Left, Right);
+    if (X >= R.Left) and (X <= R.Right) then begin
+      JumpToDetection(Detections[I]);
+      Exit();
+    end;
+  end;
 end;
 
 
