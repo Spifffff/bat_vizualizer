@@ -382,12 +382,12 @@ object FormMain: TFormMain
       Align = alClient
       Caption = 'Export'
       TabOrder = 5
-      object LblSave: TLabel
+      object LblImage: TLabel
         Left = 8
         Top = 20
-        Width = 65
+        Width = 28
         Height = 13
-        Caption = 'Save as PNG:'
+        Caption = 'Image'
       end
       object CbxSaveTarget: TComboBox
         Left = 8
@@ -413,14 +413,31 @@ object FormMain: TFormMain
         TabOrder = 1
         OnClick = BtnSavePNGClick
       end
-      object BtnSaveMp3: TButton
+      object LblAudio: TLabel
         Left = 8
-        Top = 96
-        Width = 164
+        Top = 100
+        Width = 106
+        Height = 13
+        Caption = 'Audio (current view)'
+      end
+      object BtnSaveWav: TButton
+        Left = 8
+        Top = 116
+        Width = 80
         Height = 26
-        Caption = 'Save MP3...'
+        Caption = 'WAV...'
         Enabled = False
         TabOrder = 2
+        OnClick = BtnSaveWavClick
+      end
+      object BtnSaveMp3: TButton
+        Left = 92
+        Top = 116
+        Width = 80
+        Height = 26
+        Caption = 'MP3...'
+        Enabled = False
+        TabOrder = 3
         OnClick = BtnSaveMp3Click
       end
     end
@@ -804,6 +821,13 @@ object FormMain: TFormMain
     Options = [ofOverwritePrompt, ofPathMustExist]
     Left = 1080
     Top = 104
+  end
+  object SaveDialogWav: TSaveDialog
+    DefaultExt = 'wav'
+    Filter = 'WAV audio|*.wav'
+    Options = [ofOverwritePrompt, ofPathMustExist]
+    Left = 1080
+    Top = 136
   end
   object Timer: TTimer
     Enabled = False

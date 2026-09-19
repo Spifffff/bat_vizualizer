@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
-  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer,
+  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer, WavWriter,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
   BatIdentForm, BusyForm, NightlyActivityForm;
 
@@ -80,11 +80,14 @@ type
     LivePlaybackTimer: TTimer;
     LblSpeed: TLabel;
     CbxSpeed: TComboBox;
-    LblSave: TLabel;
+    LblImage: TLabel;
     CbxSaveTarget: TComboBox;
     BtnSavePNG: TButton;
+    LblAudio: TLabel;
+    BtnSaveWav: TButton;
     BtnSaveMp3: TButton;
     SaveDialogMp3: TSaveDialog;
+    SaveDialogWav: TSaveDialog;
     PanelRight: TPanel;
     PanelFileContent: TPanel;
     PanelFileHeader: TPanel;
@@ -146,6 +149,7 @@ type
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
     procedure BtnSaveMp3Click(Sender: TObject);
+    procedure BtnSaveWavClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewDblClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
@@ -870,6 +874,7 @@ begin
       BtnPlay.Enabled := True;
       BtnSavePNG.Enabled := True;
       BtnSaveMp3.Enabled := True;
+      BtnSaveWav.Enabled := True;
       BtnAutoFloor.Enabled := True;
       BtnAutoCeiling.Enabled := True;
       BtnAutoMaxFreq.Enabled := True;
@@ -1691,6 +1696,30 @@ begin
 end;
 
 
+
+procedure TFormMain.BtnSaveWavClick(Sender: TObject);
+var
+  DesiredRate, ActualRate: Cardinal;
+begin
+  if FWavFile = nil then
+    Exit();
+  SaveDialogWav.FileName := BuildDefaultExportFileName(True);
+  if not SaveDialogWav.Execute() then
+    Exit();
+  DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+  Screen.Cursor := crHourGlass;
+  try
+    try
+      SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogWav.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
+      StatusBar.Panels[0].Text := Format('WAV saved — %d Hz (%.1f%% speed)', [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+    except
+      on E: Exception do
+        MessageDlg('Error saving WAV:'#13#10 + E.Message, mtError, [mbOK], 0);
+    end;
+  finally
+    Screen.Cursor := crDefault;
+  end;
+end;
 
 { ---- playback controls ----------------------------------------------------- }
 
