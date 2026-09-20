@@ -319,7 +319,7 @@ type
     function GetMarkerRect(const Det: TBatDetection; DurationSec: Double; ALeft, ARight: Integer): TRect;
     function GetCurrentFileRecordedAt: TDateTime;
     function GetCurrentClipSpeciesName: string;
-    function BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
+    function BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
     function CanCopyOriginalForExport(const ATargetExt: string): Boolean;
   end;
 
@@ -1317,7 +1317,7 @@ end;
 
 
 
-function TFormMain.BuildDefaultExportFileName(AIncludeTimeExpansion: Boolean): string;
+function TFormMain.BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
 const
   INVALID_CHARS: TSysCharSet = ['\', '/', ':', '*', '?', '"', '<', '>', '|'];
 var
@@ -1342,13 +1342,17 @@ begin
   end
   else
     Result := DateTimePart;
-  if AIncludeTimeExpansion then begin
-    ExpansionFactor := 1.0 / GetPlaybackRate();
-    if SameValue(Frac(ExpansionFactor), 0.0) then
-      Expansion := IntToStr(Round(ExpansionFactor))
-    else
-      Expansion := FormatFloat('0.#', ExpansionFactor, TFormatSettings.Invariant);
-    Result := Result + '_TE_x' + Expansion;
+  if AIncludePlaybackSuffix then begin
+    if RbHeterodyne.Checked then
+      Result := Result + '_HET_' + IntToStr(TrkTuneFreq.Position) + 'kHz'
+    else begin
+      ExpansionFactor := 1.0 / GetPlaybackRate();
+      if SameValue(Frac(ExpansionFactor), 0.0) then
+        Expansion := IntToStr(Round(ExpansionFactor))
+      else
+        Expansion := FormatFloat('0.#', ExpansionFactor, TFormatSettings.Invariant);
+      Result := Result + '_TE_x' + Expansion;
+    end;
   end;
 end;
 
