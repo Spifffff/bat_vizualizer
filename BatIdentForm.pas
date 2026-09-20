@@ -361,7 +361,7 @@ begin
     Line := StringReplace(Line, #13, '', [rfReplaceAll]);
     Line := Trim(Line);
     if Line <> '' then
-      Log('[' + FSlots[SlotIdx].BaseName + '] ' + Line);
+      Log('[' + ExtractFileName(FSlots[SlotIdx].WavFile) + '] ' + Line);
   until False;
 end;
 
@@ -448,10 +448,10 @@ begin
     ' --sensitivity ' + FormatFloat('0.00', TrkSensitivity.Position / 100.0, TFormatSettings.Invariant) +
     ' --min_conf ' + FormatFloat('0.00', TrkMinConf.Position / 100.0, TFormatSettings.Invariant) +
     ' --sf_thresh ' + FormatFloat('0.00', TrkSfThresh.Position / 100.0, TFormatSettings.Invariant) + ' --threads 1';
-  Log('Processing: ' + FSlots[SlotIdx].BaseName);
+  Log('Processing: ' + ExtractFileName(FSlots[SlotIdx].WavFile));
   FSlots[SlotIdx].ProcessHandle := LaunchProcess(Cmd, FSlots[SlotIdx].StdOutRead);
   if FSlots[SlotIdx].ProcessHandle = INVALID_HANDLE_VALUE then begin
-    Log('Error: could not start bat_ident for ' + FSlots[SlotIdx].BaseName);
+    Log('Error: could not start bat_ident for ' + ExtractFileName(FSlots[SlotIdx].WavFile));
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
     PrgBar.Position := FDoneCount;
@@ -464,7 +464,7 @@ end;
 
 procedure TFormBatIdent.FinishSlot(SlotIdx: Integer);
 begin
-  Log('Finished: ' + FSlots[SlotIdx].BaseName);
+  Log('Finished: ' + ExtractFileName(FSlots[SlotIdx].WavFile));
   FSlots[SlotIdx].State := ssIdle;
   Inc(FDoneCount);
   PrgBar.Position := FDoneCount;
@@ -499,7 +499,7 @@ begin
   FSlots[SlotIdx].StdOutRead := INVALID_HANDLE_VALUE;
   FSlots[SlotIdx].PipeBuffer := '';
   if CsvExists(OutCsv) then begin
-    Log('Skipped: ' + BaseName);
+    Log('Skipped: ' + ExtractFileName(WavFile));
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
     PrgBar.Position := FDoneCount;
