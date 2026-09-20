@@ -393,7 +393,8 @@ begin
     ResultWord := 'result'
   else
     ResultWord := 'results';
-  LblScore.Caption := Format('%d %s found, %d different species', [FTotalDetections, ResultWord, FSpeciesSeen.Count]);
+  LblScore.Caption := Format('%d of %d files processed, %d %s found, %d different species',
+    [FDoneCount, FTotalFiles, FTotalDetections, ResultWord, FSpeciesSeen.Count]);
 end;
 
 
@@ -455,6 +456,7 @@ begin
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
     PrgBar.Position := FDoneCount;
+    UpdateScoreLabel();
     Exit();
   end;
   FSlots[SlotIdx].State := ssBatIdent;
