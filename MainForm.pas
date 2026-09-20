@@ -13,7 +13,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Heterodyne, Mp3Writer, WavWriter,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
-  BatIdentForm, BusyForm, NightlyActivityForm;
+  BatIdentForm, BusyForm, NightlyActivityForm, settings;
 
 const
   LEFT_MARGIN = 65;
@@ -191,6 +191,9 @@ type
     FBusyStartTick: Cardinal;
     FBusyShown: Boolean;
     FBusyForm: TFormBusy;
+
+    Settings: TSettings;
+    FLastOpenFolder: string;
 
     { AllowDropFiles/OnDropFiles aren't published on TCustomForm -- streaming
       them from the dfm raised EReadError, and referencing AllowDropFiles in
@@ -849,6 +852,30 @@ begin
   UpdateTransportButtons();
   Application.OnMessage := AppMouseWheel;
   StatusBar.Panels[0].Text := 'Ready. Open an audio file.';
+
+  Settings := TSettings.Create(Self);
+  Settings.RaiseExceptions := False;
+  Settings.StoredProps.Add('CbxLanguage.ItemIndex');
+  Settings.StoredProps.Add('CbxColorScheme.ItemIndex');
+  Settings.StoredProps.Add('CbxWindow.ItemIndex');
+  Settings.StoredProps.Add('CbxFFTSize.ItemIndex');
+  Settings.StoredProps.Add('ChkBGSub.Checked');
+  Settings.StoredProps.Add('ChkFilter.Checked');
+  Settings.StoredProps.Add('CbxSpeed.ItemIndex');
+  Settings.StoredProps.Add('RbHeterodyne.Checked');
+  Settings.StoredProps.Add('CbxSaveTarget.ItemIndex');
+  Settings.StoredProps.Add('WaveformBox.Height');
+  Settings.StoredProps.Add('PanelRight.Width');
+  Settings.StoredProps.Add('OpenDialog.InitialDir');
+  Settings.LoadSettings();
+  Settings.ReadFormPositions(Self);
+  FDisplayLanguage := TDisplayLanguage(CbxLanguage.ItemIndex);
+  CbxSpeed.Enabled := RbTimeExpansion.Checked;
+  TrkTuneFreq.Enabled := RbHeterodyne.Checked;
+  FSortColumn := TResultSortColumn(EnsureRange(Settings.ReadInteger('SortColumn', Ord(FSortColumn)), 0, Ord(High(TResultSortColumn))));
+  FSortAscending := Settings.ReadBoolean('SortAscending', FSortAscending);
+  FLastOpenFolder := Settings.ReadString('LastOpenFolder', '');
+
   FitResultsColumns();
 end;
 
@@ -867,6 +894,12 @@ end;
 
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
+  Settings.WriteInteger('SortColumn', Ord(FSortColumn));
+  Settings.WriteBoolean('SortAscending', FSortAscending);
+  Settings.WriteString('LastOpenFolder', FLastOpenFolder);
+  Settings.WriteFormPositions(Self);
+  Settings.SaveSettings();
+
   Application.OnMessage := nil;
   Timer.Enabled := False;
   FWavePlayer.Stop();
@@ -964,6 +997,7 @@ procedure TFormMain.BtnOpenFileClick(Sender: TObject);
 begin
   if not OpenDialog.Execute() then
     Exit();
+  OpenDialog.InitialDir := ExtractFileDir(OpenDialog.FileName);
   LoadFile(OpenDialog.FileName);
   PanelRight.Visible := False;
   SplitterRight.Visible := False;
@@ -1525,8 +1559,12 @@ begin
   D := TFileOpenDialog.Create(nil);
   try
     D.Options := [fdoPickFolders, fdoPathMustExist];
-    if D.Execute then
-      ScanAndShowFolder(ExcludeTrailingPathDelimiter(D.FileName));
+    if FLastOpenFolder <> '' then
+      D.DefaultFolder := FLastOpenFolder;
+    if D.Execute then begin
+      FLastOpenFolder := ExcludeTrailingPathDelimiter(D.FileName);
+      ScanAndShowFolder(FLastOpenFolder);
+    end;
   finally
     D.Free;
   end;

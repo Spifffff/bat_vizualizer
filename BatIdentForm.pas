@@ -10,7 +10,7 @@ uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.IOUtils, System.Math,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl;
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl, settings;
 
 const
   MAX_SLOTS = 64;
@@ -85,6 +85,7 @@ type
     FRunning: Boolean;
     FTotalDetections: Integer;
     FSpeciesSeen: TStringList;
+    Settings: TSettings;
     procedure Log(const Msg: string);
     procedure StartProcessing();
     procedure StopAll();
@@ -138,6 +139,24 @@ begin
   FSpeciesSeen.Sorted := True;
   FSpeciesSeen.Duplicates := dupIgnore;
   FSpeciesSeen.CaseSensitive := False;
+
+  Settings := TSettings.Create(Self);
+  Settings.RaiseExceptions := False;
+  Settings.StoredProps.Add('EdtWavFolder.Text');
+  Settings.StoredProps.Add('EdtBattyFolder.Text');
+  Settings.StoredProps.Add('CbxArea.ItemIndex');
+  Settings.StoredProps.Add('CbxKHz.ItemIndex');
+  Settings.StoredProps.Add('TrkMinConf.Position');
+  Settings.StoredProps.Add('TrkSfThresh.Position');
+  Settings.StoredProps.Add('TrkSensitivity.Position');
+  Settings.StoredProps.Add('CbxParallel.ItemIndex');
+  Settings.LoadSettings();
+  { Position/size only matter when this form is its own program's main
+    window (the standalone BatIdent.exe) -- as a dialog opened from BatViz
+    it's a fixed-size bsDialog that always recenters over the main form. }
+  if Application.MainForm = Self then
+    Settings.ReadFormPositions(Self);
+
   TrkMinConfChange(TrkMinConf);
   TrkSfThreshChange(TrkSfThresh);
   TrkSensitivityChange(TrkSensitivity);
@@ -184,6 +203,9 @@ end;
 
 procedure TFormBatIdent.FormDestroy(Sender: TObject);
 begin
+  if Application.MainForm = Self then
+    Settings.WriteFormPositions(Self);
+  Settings.SaveSettings();
   FPendingFiles.Free();
   FSpeciesSeen.Free();
 end;
