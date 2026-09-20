@@ -2813,7 +2813,7 @@ begin
       [DeltaTMs, DeltaFKhz, SlopeText]);
 
     PaintBox.Canvas.Brush.Style := bsSolid;
-    PaintBox.Canvas.Brush.Color := MeasureColor;
+    PaintBox.Canvas.Brush.Color := StyleServices.GetSystemColor(clWindow);
     PaintBox.Canvas.Font.Color := AxisColor;
     PaintBox.Canvas.TextOut(R.Left + 6, R.Top + 4, ReadoutText);
   end;
