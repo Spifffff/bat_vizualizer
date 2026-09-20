@@ -35,7 +35,7 @@ object FormBatIdent: TFormBatIdent
     Left = 8
     Top = 8
     Width = 624
-    Height = 104
+    Height = 76
     Align = alTop
     Caption = 'Folders'
     TabOrder = 0
@@ -46,16 +46,9 @@ object FormBatIdent: TFormBatIdent
       Height = 13
       Caption = 'WAV folder:'
     end
-    object LblOutputFolder: TLabel
-      Left = 8
-      Top = 48
-      Width = 69
-      Height = 13
-      Caption = 'Output folder:'
-    end
     object LblBattyFolder: TLabel
       Left = 8
-      Top = 76
+      Top = 48
       Width = 98
       Height = 13
       Caption = 'BattyBirdNET folder:'
@@ -76,42 +69,26 @@ object FormBatIdent: TFormBatIdent
       TabOrder = 1
       OnClick = BtnBrowseWavClick
     end
-    object EdtOutputFolder: TEdit
+    object EdtBattyFolder: TEdit
       Left = 116
       Top = 44
       Width = 416
       Height = 21
       TabOrder = 2
     end
-    object BtnBrowseOutput: TButton
+    object BtnBrowseBatty: TButton
       Left = 534
       Top = 43
       Width = 80
       Height = 23
       Caption = 'Browse...'
       TabOrder = 3
-      OnClick = BtnBrowseOutputClick
-    end
-    object EdtBattyFolder: TEdit
-      Left = 116
-      Top = 72
-      Width = 416
-      Height = 21
-      TabOrder = 4
-    end
-    object BtnBrowseBatty: TButton
-      Left = 534
-      Top = 71
-      Width = 80
-      Height = 23
-      Caption = 'Browse...'
-      TabOrder = 5
       OnClick = BtnBrowseBattyClick
     end
   end
   object PanelParams: TPanel
     Left = 8
-    Top = 112
+    Top = 84
     Width = 624
     Height = 164
     Align = alTop

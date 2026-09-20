@@ -37,9 +37,6 @@ type
     LblWavFolder: TLabel;
     EdtWavFolder: TEdit;
     BtnBrowseWav: TButton;
-    LblOutputFolder: TLabel;
-    EdtOutputFolder: TEdit;
-    BtnBrowseOutput: TButton;
     LblBattyFolder: TLabel;
     EdtBattyFolder: TEdit;
     BtnBrowseBatty: TButton;
@@ -71,7 +68,6 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure BtnBrowseWavClick(Sender: TObject);
-    procedure BtnBrowseOutputClick(Sender: TObject);
     procedure BtnBrowseBattyClick(Sender: TObject);
     procedure BtnStartClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
@@ -106,7 +102,6 @@ type
     procedure UpdateScoreLabel();
   public
     WAVFolder: string;
-    OutputFolder: string;
     Completed: Boolean;
   end;
 
@@ -173,10 +168,8 @@ end;
 
 procedure TFormBatIdent.FormShow(Sender: TObject);
 begin
-  if (WAVFolder <> '') and (EdtWavFolder.Text = '') then begin
+  if (WAVFolder <> '') and (EdtWavFolder.Text = '') then
     EdtWavFolder.Text := WAVFolder;
-    EdtOutputFolder.Text := WAVFolder + '\output';
-  end;
 end;
 
 
@@ -185,7 +178,6 @@ procedure TFormBatIdent.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   if FRunning then
     StopAll();
-  OutputFolder := EdtOutputFolder.Text;
 end;
 
 
@@ -211,22 +203,8 @@ var
   Dir: string;
 begin
   Dir := EdtWavFolder.Text;
-  if SelectDirectory('Select WAV folder', '', Dir) then begin
+  if SelectDirectory('Select WAV folder', '', Dir) then
     EdtWavFolder.Text := Dir;
-    if EdtOutputFolder.Text = '' then
-      EdtOutputFolder.Text := Dir + '\output';
-  end;
-end;
-
-
-
-procedure TFormBatIdent.BtnBrowseOutputClick(Sender: TObject);
-var
-  Dir: string;
-begin
-  Dir := EdtOutputFolder.Text;
-  if SelectDirectory('Select output folder', '', Dir) then
-    EdtOutputFolder.Text := Dir;
 end;
 
 
@@ -272,8 +250,6 @@ begin
   BtnStop.Enabled := not AEnabled;
   EdtWavFolder.Enabled := AEnabled;
   BtnBrowseWav.Enabled := AEnabled;
-  EdtOutputFolder.Enabled := AEnabled;
-  BtnBrowseOutput.Enabled := AEnabled;
   EdtBattyFolder.Enabled := AEnabled;
   BtnBrowseBatty.Enabled := AEnabled;
   CbxArea.Enabled := AEnabled;
@@ -443,7 +419,6 @@ procedure TFormBatIdent.LaunchBatIdent(SlotIdx: Integer);
 var
   Cmd: string;
 begin
-  ForceDirectories(EdtOutputFolder.Text);
   Cmd := 'python3 "' + EdtBattyFolder.Text + '\bat_ident.py"' + ' --i "' + FSlots[SlotIdx].WavFile + '"' + ' --o "' + FSlots[SlotIdx].OutCsv + '"' + ' --kHz ' +
     CbxKHz.Text + ' --area ' + CbxArea.Text +
     ' --sensitivity ' + FormatFloat('0.00', TrkSensitivity.Position / 100.0, TFormatSettings.Invariant) +
@@ -485,15 +460,14 @@ end;
 
 procedure TFormBatIdent.FillSlot(SlotIdx: Integer);
 var
-  WavFile, BaseName, OutCsv, OutputDir: string;
+  WavFile, BaseName, OutCsv: string;
 begin
   if FPendingIdx >= FPendingFiles.Count then
     Exit();
   WavFile := FPendingFiles[FPendingIdx];
   Inc(FPendingIdx);
   BaseName := ChangeFileExt(ExtractFileName(WavFile), '');
-  OutputDir := EdtOutputFolder.Text;
-  OutCsv := OutputDir + '\' + BaseName + '.bat.results.csv';
+  OutCsv := ChangeFileExt(WavFile, '.bat.results.csv');
   FSlots[SlotIdx].WavFile := WavFile;
   FSlots[SlotIdx].BaseName := BaseName;
   FSlots[SlotIdx].OutCsv := OutCsv;
@@ -524,7 +498,6 @@ begin
   WavDir := ExcludeTrailingPathDelimiter(EdtWavFolder.Text);
   WAVFolder := WavDir;
   Completed := False;
-  ForceDirectories(EdtOutputFolder.Text);
   FPendingFiles.Clear();
   if FindFirst(WavDir + '\*.wav', faAnyFile - faDirectory, SR) = 0 then
     try
