@@ -50,16 +50,19 @@ type
     CbxKHz: TComboBox;
     GrpSensitivity: TGroupBox;
     LblMinConf: TLabel;
-    EdtMinConf: TEdit;
+    TrkMinConf: TTrackBar;
     LblSfThresh: TLabel;
-    EdtSfThresh: TEdit;
+    TrkSfThresh: TTrackBar;
     LblSensitivity: TLabel;
-    EdtSensitivity: TEdit;
+    TrkSensitivity: TTrackBar;
     GrpPerformance: TGroupBox;
     LblParallel: TLabel;
     CbxParallel: TComboBox;
+    PanelParams: TPanel;
     PrgBar: TProgressBar;
+    LblScore: TLabel;
     MemoLog: TMemo;
+    PanelButtons: TPanel;
     BtnStart: TButton;
     BtnStop: TButton;
     Timer: TTimer;
@@ -73,6 +76,9 @@ type
     procedure BtnStartClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
+    procedure TrkMinConfChange(Sender: TObject);
+    procedure TrkSfThreshChange(Sender: TObject);
+    procedure TrkSensitivityChange(Sender: TObject);
   private
     FSlots: array [0 .. MAX_SLOTS - 1] of TFileSlot;
     FSlotCount: Integer;
@@ -81,6 +87,8 @@ type
     FTotalFiles: Integer;
     FDoneCount: Integer;
     FRunning: Boolean;
+    FTotalDetections: Integer;
+    FSpeciesSeen: TStringList;
     procedure Log(const Msg: string);
     procedure StartProcessing();
     procedure StopAll();
@@ -94,6 +102,8 @@ type
     function LaunchProcess(const CmdLine: string; out PipeRead: THandle): THandle;
     function ValidateInputs(): Boolean;
     procedure SetControlsEnabled(AEnabled: Boolean);
+    procedure TallyResultsFromCsv(const ACsvPath: string);
+    procedure UpdateScoreLabel();
   public
     WAVFolder: string;
     OutputFolder: string;
@@ -129,6 +139,34 @@ begin
   CbxParallel.ItemIndex := Min(3, CPUCount - 1);
   FPendingFiles := TStringList.Create();
   FRunning := False;
+  FSpeciesSeen := TStringList.Create();
+  FSpeciesSeen.Sorted := True;
+  FSpeciesSeen.Duplicates := dupIgnore;
+  FSpeciesSeen.CaseSensitive := False;
+  TrkMinConfChange(TrkMinConf);
+  TrkSfThreshChange(TrkSfThresh);
+  TrkSensitivityChange(TrkSensitivity);
+end;
+
+
+
+procedure TFormBatIdent.TrkMinConfChange(Sender: TObject);
+begin
+  LblMinConf.Caption := Format('Min confidence: %.2f', [TrkMinConf.Position / 100.0]);
+end;
+
+
+
+procedure TFormBatIdent.TrkSfThreshChange(Sender: TObject);
+begin
+  LblSfThresh.Caption := Format('Species filter: %.2f', [TrkSfThresh.Position / 100.0]);
+end;
+
+
+
+procedure TFormBatIdent.TrkSensitivityChange(Sender: TObject);
+begin
+  LblSensitivity.Caption := Format('Sensitivity: %.2f', [TrkSensitivity.Position / 100.0]);
 end;
 
 
@@ -155,6 +193,7 @@ end;
 procedure TFormBatIdent.FormDestroy(Sender: TObject);
 begin
   FPendingFiles.Free();
+  FSpeciesSeen.Free();
 end;
 
 
@@ -240,9 +279,9 @@ begin
   CbxArea.Enabled := AEnabled;
   CbxKHz.Enabled := AEnabled;
   CbxParallel.Enabled := AEnabled;
-  EdtMinConf.Enabled := AEnabled;
-  EdtSfThresh.Enabled := AEnabled;
-  EdtSensitivity.Enabled := AEnabled;
+  TrkMinConf.Enabled := AEnabled;
+  TrkSfThresh.Enabled := AEnabled;
+  TrkSensitivity.Enabled := AEnabled;
 end;
 
 
@@ -346,14 +385,69 @@ end;
 
 
 
+procedure TFormBatIdent.UpdateScoreLabel();
+var
+  ResultWord: string;
+begin
+  if FTotalDetections = 1 then
+    ResultWord := 'result'
+  else
+    ResultWord := 'results';
+  LblScore.Caption := Format('%d %s found, %d different species', [FTotalDetections, ResultWord, FSpeciesSeen.Count]);
+end;
+
+
+
+{ Tallies detections and distinct species from a finished (or previously
+  skipped, already-analyzed) file's results CSV, using the same column
+  layout MainForm.ParseBatResults relies on: StartSec, EndSec, ..., Common
+  name (columns 3..High-1, rejoined in case it contains commas), Confidence. }
+procedure TFormBatIdent.TallyResultsFromCsv(const ACsvPath: string);
+var
+  Lines: TStringList;
+  I, K: Integer;
+  Parts: TArray<string>;
+  Name: string;
+begin
+  if not FileExists(ACsvPath) then
+    Exit();
+  Lines := TStringList.Create();
+  try
+    Lines.LoadFromFile(ACsvPath);
+    for I := 1 to Lines.Count - 1 do begin
+      if Trim(Lines[I]) = '' then
+        Continue;
+      Parts := Lines[I].Split([',']);
+      if Length(Parts) < 5 then
+        Continue;
+      Inc(FTotalDetections);
+      Name := '';
+      for K := 3 to High(Parts) - 1 do begin
+        if K > 3 then
+          Name := Name + ',';
+        Name := Name + Trim(Parts[K]);
+      end;
+      if Name <> '' then
+        FSpeciesSeen.Add(Name);
+    end;
+  finally
+    Lines.Free();
+  end;
+  UpdateScoreLabel();
+end;
+
+
+
 procedure TFormBatIdent.LaunchBatIdent(SlotIdx: Integer);
 var
   Cmd: string;
 begin
   ForceDirectories(EdtOutputFolder.Text);
   Cmd := 'python3 "' + EdtBattyFolder.Text + '\bat_ident.py"' + ' --i "' + FSlots[SlotIdx].WavFile + '"' + ' --o "' + FSlots[SlotIdx].OutCsv + '"' + ' --kHz ' +
-    CbxKHz.Text + ' --area ' + CbxArea.Text + ' --sensitivity ' + EdtSensitivity.Text + ' --min_conf ' + EdtMinConf.Text + ' --sf_thresh ' + EdtSfThresh.Text +
-    ' --threads 1';
+    CbxKHz.Text + ' --area ' + CbxArea.Text +
+    ' --sensitivity ' + FormatFloat('0.00', TrkSensitivity.Position / 100.0, TFormatSettings.Invariant) +
+    ' --min_conf ' + FormatFloat('0.00', TrkMinConf.Position / 100.0, TFormatSettings.Invariant) +
+    ' --sf_thresh ' + FormatFloat('0.00', TrkSfThresh.Position / 100.0, TFormatSettings.Invariant) + ' --threads 1';
   Log('Processing: ' + FSlots[SlotIdx].BaseName);
   FSlots[SlotIdx].ProcessHandle := LaunchProcess(Cmd, FSlots[SlotIdx].StdOutRead);
   if FSlots[SlotIdx].ProcessHandle = INVALID_HANDLE_VALUE then begin
@@ -374,6 +468,7 @@ begin
   FSlots[SlotIdx].State := ssIdle;
   Inc(FDoneCount);
   PrgBar.Position := FDoneCount;
+  TallyResultsFromCsv(FSlots[SlotIdx].OutCsv);
 end;
 
 
@@ -408,6 +503,7 @@ begin
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
     PrgBar.Position := FDoneCount;
+    TallyResultsFromCsv(OutCsv);
     Exit();
   end;
   LaunchBatIdent(SlotIdx);
@@ -444,6 +540,9 @@ begin
   FPendingIdx := 0;
   FDoneCount := 0;
   FRunning := True;
+  FTotalDetections := 0;
+  FSpeciesSeen.Clear();
+  UpdateScoreLabel();
   PrgBar.Min := 0;
   PrgBar.Max := FTotalFiles;
   PrgBar.Position := 0;

@@ -3,7 +3,7 @@ object FormBatIdent: TFormBatIdent
   Top = 0
   BorderStyle = bsDialog
   Caption = 'BatIdent'
-  ClientHeight = 553
+  ClientHeight = 583
   ClientWidth = 640
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -11,50 +11,65 @@ object FormBatIdent: TFormBatIdent
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  Padding.Left = 8
+  Padding.Top = 8
+  Padding.Right = 8
+  Padding.Bottom = 8
   Position = poMainFormCenter
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
   TextHeight = 13
+  object LblScore: TLabel
+    AlignWithMargins = True
+    Left = 11
+    Top = 311
+    Width = 618
+    Height = 22
+    Align = alTop
+    Caption = 'No results yet.'
+    Layout = tlCenter
+  end
   object GrpFolders: TGroupBox
     Left = 8
     Top = 8
     Width = 624
-    Height = 116
+    Height = 104
+    Align = alTop
     Caption = 'Folders'
     TabOrder = 0
     object LblWavFolder: TLabel
       Left = 8
-      Top = 24
+      Top = 20
       Width = 58
       Height = 13
       Caption = 'WAV folder:'
     end
     object LblOutputFolder: TLabel
       Left = 8
-      Top = 52
+      Top = 48
       Width = 69
       Height = 13
       Caption = 'Output folder:'
     end
     object LblBattyFolder: TLabel
       Left = 8
-      Top = 80
+      Top = 76
       Width = 98
       Height = 13
       Caption = 'BattyBirdNET folder:'
     end
     object EdtWavFolder: TEdit
-      Left = 80
-      Top = 20
-      Width = 448
+      Left = 116
+      Top = 16
+      Width = 416
       Height = 21
       TabOrder = 0
     end
     object BtnBrowseWav: TButton
       Left = 534
-      Top = 19
+      Top = 15
       Width = 80
       Height = 23
       Caption = 'Browse...'
@@ -62,15 +77,15 @@ object FormBatIdent: TFormBatIdent
       OnClick = BtnBrowseWavClick
     end
     object EdtOutputFolder: TEdit
-      Left = 80
-      Top = 48
-      Width = 448
+      Left = 116
+      Top = 44
+      Width = 416
       Height = 21
       TabOrder = 2
     end
     object BtnBrowseOutput: TButton
       Left = 534
-      Top = 47
+      Top = 43
       Width = 80
       Height = 23
       Caption = 'Browse...'
@@ -78,15 +93,15 @@ object FormBatIdent: TFormBatIdent
       OnClick = BtnBrowseOutputClick
     end
     object EdtBattyFolder: TEdit
-      Left = 124
-      Top = 76
-      Width = 404
+      Left = 116
+      Top = 72
+      Width = 416
       Height = 21
       TabOrder = 4
     end
     object BtnBrowseBatty: TButton
       Left = 534
-      Top = 75
+      Top = 71
       Width = 80
       Height = 23
       Caption = 'Browse...'
@@ -94,162 +109,229 @@ object FormBatIdent: TFormBatIdent
       OnClick = BtnBrowseBattyClick
     end
   end
-  object GrpClassifier: TGroupBox
+  object PanelParams: TPanel
     Left = 8
-    Top = 130
-    Width = 180
-    Height = 113
-    Caption = 'Classifier'
+    Top = 112
+    Width = 624
+    Height = 164
+    Align = alTop
+    BevelOuter = bvNone
     TabOrder = 1
-    object LblArea: TLabel
-      Left = 8
-      Top = 20
-      Width = 27
-      Height = 13
-      Caption = 'Area:'
-    end
-    object LblKHz: TLabel
-      Left = 8
-      Top = 66
-      Width = 21
-      Height = 13
-      Caption = 'kHz:'
-    end
-    object CbxArea: TComboBox
-      Left = 8
-      Top = 36
-      Width = 164
-      Height = 21
-      Style = csDropDownList
+    object GrpClassifier: TGroupBox
+      Left = 0
+      Top = 0
+      Width = 208
+      Height = 164
+      Align = alLeft
+      Caption = 'Classifier'
       TabOrder = 0
+      DesignSize = (
+        208
+        164)
+      object LblArea: TLabel
+        Left = 8
+        Top = 20
+        Width = 27
+        Height = 13
+        Caption = 'Area:'
+      end
+      object LblKHz: TLabel
+        Left = 8
+        Top = 66
+        Width = 21
+        Height = 13
+        Caption = 'kHz:'
+      end
+      object CbxArea: TComboBox
+        Left = 8
+        Top = 36
+        Width = 192
+        Height = 21
+        Anchors = [akLeft, akTop, akRight]
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object CbxKHz: TComboBox
+        Left = 8
+        Top = 82
+        Width = 192
+        Height = 21
+        Anchors = [akLeft, akTop, akRight]
+        Style = csDropDownList
+        TabOrder = 1
+      end
     end
-    object CbxKHz: TComboBox
-      Left = 8
-      Top = 82
-      Width = 164
-      Height = 21
-      Style = csDropDownList
+    object GrpSensitivity: TGroupBox
+      Left = 208
+      Top = 0
+      Width = 208
+      Height = 164
+      Align = alLeft
+      Caption = 'Detection sensitivity'
       TabOrder = 1
+      DesignSize = (
+        208
+        164)
+      object LblMinConf: TLabel
+        Left = 8
+        Top = 20
+        Width = 100
+        Height = 13
+        Caption = 'Min confidence: 0.80'
+      end
+      object LblSfThresh: TLabel
+        Left = 8
+        Top = 66
+        Width = 90
+        Height = 13
+        Caption = 'Species filter: 0.80'
+      end
+      object LblSensitivity: TLabel
+        Left = 8
+        Top = 112
+        Width = 78
+        Height = 13
+        Caption = 'Sensitivity: 1.00'
+      end
+      object TrkMinConf: TTrackBar
+        Left = 8
+        Top = 36
+        Width = 192
+        Height = 26
+        Anchors = [akLeft, akTop, akRight]
+        Max = 99
+        Min = 1
+        Frequency = 10
+        Position = 80
+        TabOrder = 0
+        TickStyle = tsNone
+        OnChange = TrkMinConfChange
+      end
+      object TrkSfThresh: TTrackBar
+        Left = 8
+        Top = 82
+        Width = 192
+        Height = 26
+        Anchors = [akLeft, akTop, akRight]
+        Max = 99
+        Min = 1
+        Frequency = 10
+        Position = 80
+        TabOrder = 1
+        TickStyle = tsNone
+        OnChange = TrkSfThreshChange
+      end
+      object TrkSensitivity: TTrackBar
+        Left = 8
+        Top = 128
+        Width = 192
+        Height = 26
+        Anchors = [akLeft, akTop, akRight]
+        Max = 150
+        Min = 50
+        Frequency = 10
+        Position = 100
+        TabOrder = 2
+        TickStyle = tsNone
+        OnChange = TrkSensitivityChange
+      end
     end
-  end
-  object GrpSensitivity: TGroupBox
-    Left = 196
-    Top = 130
-    Width = 296
-    Height = 113
-    Caption = 'Detection sensitivity'
-    TabOrder = 2
-    object LblMinConf: TLabel
-      Left = 8
-      Top = 20
-      Width = 75
-      Height = 13
-      Caption = 'Min confidence:'
-    end
-    object LblSfThresh: TLabel
-      Left = 104
-      Top = 20
-      Width = 68
-      Height = 13
-      Caption = 'Species filter:'
-    end
-    object LblSensitivity: TLabel
-      Left = 200
-      Top = 20
-      Width = 53
-      Height = 13
-      Caption = 'Sensitivity:'
-    end
-    object EdtMinConf: TEdit
-      Left = 8
-      Top = 36
-      Width = 88
-      Height = 21
-      TabOrder = 0
-      Text = '0.80'
-    end
-    object EdtSfThresh: TEdit
-      Left = 104
-      Top = 36
-      Width = 88
-      Height = 21
-      TabOrder = 1
-      Text = '0.80'
-    end
-    object EdtSensitivity: TEdit
-      Left = 200
-      Top = 36
-      Width = 88
-      Height = 21
+    object GrpPerformance: TGroupBox
+      Left = 416
+      Top = 0
+      Width = 208
+      Height = 164
+      Align = alClient
+      Caption = 'Performance'
       TabOrder = 2
-      Text = '1.0'
-    end
-  end
-  object GrpPerformance: TGroupBox
-    Left = 500
-    Top = 130
-    Width = 132
-    Height = 113
-    Caption = 'Performance'
-    TabOrder = 3
-    object LblParallel: TLabel
-      Left = 8
-      Top = 20
-      Width = 60
-      Height = 13
-      Caption = 'Parallel files:'
-    end
-    object CbxParallel: TComboBox
-      Left = 8
-      Top = 36
-      Width = 116
-      Height = 21
-      Style = csDropDownList
-      TabOrder = 0
+      DesignSize = (
+        208
+        164)
+      object LblParallel: TLabel
+        Left = 8
+        Top = 20
+        Width = 60
+        Height = 13
+        Caption = 'Parallel files:'
+      end
+      object CbxParallel: TComboBox
+        Left = 8
+        Top = 36
+        Width = 192
+        Height = 21
+        Anchors = [akLeft, akTop, akRight]
+        Style = csDropDownList
+        TabOrder = 0
+      end
     end
   end
   object PrgBar: TProgressBar
-    Left = 8
-    Top = 251
-    Width = 624
-    Height = 22
-    BarColor = clDodgerblue
-    TabOrder = 4
-  end
-  object MemoLog: TMemo
+    AlignWithMargins = True
     Left = 8
     Top = 281
     Width = 624
-    Height = 220
+    Height = 22
+    Margins.Left = 0
+    Margins.Top = 5
+    Margins.Right = 0
+    Margins.Bottom = 5
+    Align = alTop
+    BarColor = clDodgerblue
+    TabOrder = 2
+    ExplicitTop = 276
+  end
+  object MemoLog: TMemo
+    Left = 8
+    Top = 336
+    Width = 624
+    Height = 198
+    Align = alClient
     ReadOnly = True
     ScrollBars = ssVertical
-    TabOrder = 5
+    TabOrder = 3
+    ExplicitTop = 311
+    ExplicitHeight = 220
   end
-  object BtnStart: TButton
-    Left = 464
-    Top = 509
-    Width = 80
-    Height = 28
-    Caption = 'Start'
-    Default = True
-    TabOrder = 6
-    OnClick = BtnStartClick
-  end
-  object BtnStop: TButton
-    Left = 552
-    Top = 509
-    Width = 80
-    Height = 28
-    Caption = 'Stop'
-    Enabled = False
-    TabOrder = 7
-    OnClick = BtnStopClick
+  object PanelButtons: TPanel
+    Left = 8
+    Top = 534
+    Width = 624
+    Height = 41
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 4
+    ExplicitTop = 531
+    DesignSize = (
+      624
+      41)
+    object BtnStart: TButton
+      Left = 456
+      Top = 8
+      Width = 80
+      Height = 28
+      Anchors = [akTop, akRight]
+      Caption = 'Start'
+      Default = True
+      TabOrder = 0
+      OnClick = BtnStartClick
+    end
+    object BtnStop: TButton
+      Left = 544
+      Top = 8
+      Width = 80
+      Height = 28
+      Anchors = [akTop, akRight]
+      Caption = 'Stop'
+      Enabled = False
+      TabOrder = 1
+      OnClick = BtnStopClick
+    end
   end
   object Timer: TTimer
     Enabled = False
     Interval = 500
     OnTimer = TimerTimer
     Left = 16
-    Top = 513
+    Top = 540
   end
 end
