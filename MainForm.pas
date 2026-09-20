@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
-  FFT, WavReader, Spectrogram, WaveOutPlayer, Mp3Writer, WavWriter,
+  FFT, WavReader, Spectrogram, WaveOutPlayer, Heterodyne, Mp3Writer, WavWriter,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
   BatIdentForm, BusyForm, NightlyActivityForm;
 
@@ -78,8 +78,11 @@ type
     Timer: TTimer;
     RenderTimer: TTimer;
     LivePlaybackTimer: TTimer;
-    LblSpeed: TLabel;
+    RbTimeExpansion: TRadioButton;
     CbxSpeed: TComboBox;
+    RbHeterodyne: TRadioButton;
+    TrkTuneFreq: TTrackBar;
+    LblTuneFreq: TLabel;
     LblImage: TLabel;
     CbxSaveTarget: TComboBox;
     BtnSavePNG: TButton;
@@ -136,6 +139,8 @@ type
     procedure CbxWindowChange(Sender: TObject);
     procedure CbxFFTSizeChange(Sender: TObject);
     procedure CbxSpeedChange(Sender: TObject);
+    procedure PlaybackModeClick(Sender: TObject);
+    procedure TrkTuneFreqChange(Sender: TObject);
     procedure TrkGainChange(Sender: TObject);
     procedure BtnAutoGainClick(Sender: TObject);
     procedure LivePlaybackTimerTick(Sender: TObject);
@@ -208,6 +213,10 @@ type
     function GetWindowType: TWindowType;
     function GetPlaybackRate: Double;
     function GetPlaybackGain: Double;
+    function GetTuneFreqHz: Double;
+    procedure BuildPlaybackBuffer(AStartSample, AEndSample: Integer; out Buffer: TArray<Single>; out TimelineStart: Integer;
+      out TimeScale: Double; out OutRate: Cardinal);
+    procedure UpdatePlaybackStatus(OutRate, ActualRate: Cardinal; TimeScale: Double);
     procedure ApplyPlaybackSettingsLive;
     procedure UpdateGainRange;
     procedure RecomputeSpectrogram;
@@ -512,6 +521,45 @@ end;
 function TFormMain.GetPlaybackGain: Double;
 begin
   Result := Power(10.0, TrkGain.Position / 20.0);
+end;
+
+
+
+function TFormMain.GetTuneFreqHz: Double;
+begin
+  Result := TrkTuneFreq.Position * 1000.0;
+end;
+
+
+
+procedure TFormMain.BuildPlaybackBuffer(AStartSample, AEndSample: Integer; out Buffer: TArray<Single>; out TimelineStart: Integer;
+  out TimeScale: Double; out OutRate: Cardinal);
+var
+  DecimationFactor: Integer;
+begin
+  TimelineStart := AStartSample;
+  if RbHeterodyne.Checked then begin
+    MixHeterodyne(FWavFile.Samples, AStartSample, AEndSample, FWavFile.Info.SampleRate, GetTuneFreqHz(), Buffer, DecimationFactor,
+      OutRate);
+    TimeScale := DecimationFactor;
+  end else begin
+    Buffer := Copy(FWavFile.Samples, AStartSample, AEndSample - AStartSample);
+    TimeScale := 1.0;
+    OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
+  end;
+end;
+
+
+
+procedure TFormMain.UpdatePlaybackStatus(OutRate, ActualRate: Cardinal; TimeScale: Double);
+var
+  SpeedPct: Double;
+begin
+  SpeedPct := ActualRate * TimeScale / FWavFile.Info.SampleRate * 100.0;
+  if ActualRate <> OutRate then
+    StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, SpeedPct])
+  else
+    StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, SpeedPct]);
 end;
 
 
@@ -873,6 +921,10 @@ begin
       TrkMaxFreq.Position := TrkMaxFreq.Max;
       FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
       LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
+      TrkTuneFreq.Max := FWavFile.Info.SampleRate div 2000;
+      TrkTuneFreq.Min := 1;
+      TrkTuneFreq.Position := EnsureRange(45, TrkTuneFreq.Min, TrkTuneFreq.Max);
+      LblTuneFreq.Caption := Format('Tune frequency: %d kHz', [TrkTuneFreq.Position]);
       RecomputeSpectrogram();
       UpdateGainRange();
       BtnPlay.Enabled := True;
@@ -1783,8 +1835,10 @@ end;
 procedure TFormMain.BtnPlayClick(Sender: TObject);
 var
   OutRate, ActualRate: Cardinal;
-  StartSample, EndSample: Integer;
+  StartSample, EndSample, TimelineStart: Integer;
   StartFrac: Double;
+  TimeScale: Double;
+  Buffer: TArray<Single>;
 begin
   if FWavFile = nil then
     Exit();
@@ -1792,12 +1846,11 @@ begin
     if FWavePlayer.IsPaused() then
       FWavePlayer.Resume()
     else begin
-      OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
       { Only load/convert the current zoom window, not the whole file --
         for a large recording zoomed into a single call, this keeps the
-        16-bit playback buffer from ballooning to the size of the entire
-        (possibly multi-hour) file. Playback also now stops at the zoom
-        end instead of continuing into the rest of the file. }
+        playback buffer from ballooning to the size of the entire (possibly
+        multi-hour) file. Playback also now stops at the zoom end instead of
+        continuing into the rest of the file. }
       { If the cursor was placed (by clicking) inside the current zoom
         window before pressing Play, start from there instead of from the
         start of the selection. }
@@ -1807,13 +1860,11 @@ begin
         StartFrac := FZoomStart;
       StartSample := EnsureRange(Round(StartFrac * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
       EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
-      FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, GetPlaybackGain(), ActualRate);
+      BuildPlaybackBuffer(StartSample, EndSample, Buffer, TimelineStart, TimeScale, OutRate);
+      FWavePlayer.Load(Buffer, FWavFile.Info.NumSamples, TimelineStart, TimeScale, OutRate, GetPlaybackGain(), ActualRate);
       FWavePlayer.Play();
       FCursorPos := StartFrac;
-      if ActualRate <> OutRate then
-        StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
-      else
-        StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, GetPlaybackRate() * 100]);
+      UpdatePlaybackStatus(OutRate, ActualRate, TimeScale);
     end;
   except
     on E: Exception do begin
@@ -1857,29 +1908,28 @@ var
   WasPaused: Boolean;
   Pos: Double;
   OutRate, ActualRate: Cardinal;
-  StartSample, EndSample: Integer;
+  StartSample, EndSample, TimelineStart: Integer;
+  TimeScale: Double;
+  Buffer: TArray<Single>;
 begin
   if (FWavFile = nil) or not(FWavePlayer.IsPlaying() or FWavePlayer.IsPaused()) then
     Exit();
   WasPaused := FWavePlayer.IsPaused();
   Pos := FWavePlayer.GetNormalizedPosition();
-  OutRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
   StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
   EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
+  BuildPlaybackBuffer(StartSample, EndSample, Buffer, TimelineStart, TimeScale, OutRate);
   { Reload with the new speed/gain, then seek back to where playback was and
     resume -- SeekToNormalized() alone can't restart playback here since it
     decides whether to (re)submit the buffer from the state Load() just
     reset, not from the state we captured above, so Play()/Pause() below
     take care of that explicitly. }
-  FWavePlayer.Load(FWavFile.Samples, StartSample, EndSample, OutRate, GetPlaybackGain(), ActualRate);
+  FWavePlayer.Load(Buffer, FWavFile.Info.NumSamples, TimelineStart, TimeScale, OutRate, GetPlaybackGain(), ActualRate);
   FWavePlayer.SeekToNormalized(Pos);
   FWavePlayer.Play();
   if WasPaused then
     FWavePlayer.Pause();
-  if ActualRate <> OutRate then
-    StatusBar.Panels[0].Text := Format('Requested %d Hz, using %d Hz (%.1f%% speed)', [OutRate, ActualRate, ActualRate / FWavFile.Info.SampleRate * 100])
-  else
-    StatusBar.Panels[0].Text := Format('%d Hz  |  %.1f%% speed', [ActualRate, GetPlaybackRate() * 100]);
+  UpdatePlaybackStatus(OutRate, ActualRate, TimeScale);
 end;
 
 
@@ -2002,6 +2052,27 @@ end;
 procedure TFormMain.CbxSpeedChange(Sender: TObject);
 begin
   ApplyPlaybackSettingsLive();
+end;
+
+
+
+procedure TFormMain.PlaybackModeClick(Sender: TObject);
+begin
+  CbxSpeed.Enabled := RbTimeExpansion.Checked;
+  TrkTuneFreq.Enabled := RbHeterodyne.Checked;
+  ApplyPlaybackSettingsLive();
+end;
+
+
+
+procedure TFormMain.TrkTuneFreqChange(Sender: TObject);
+begin
+  LblTuneFreq.Caption := Format('Tune frequency: %d kHz', [TrkTuneFreq.Position]);
+  { Dragging the slider fires this on every intermediate position; debounce
+    so a live reload/reopen of the audio device only happens once dragging
+    settles, instead of on every pixel of movement. }
+  LivePlaybackTimer.Enabled := False;
+  LivePlaybackTimer.Enabled := True;
 end;
 
 

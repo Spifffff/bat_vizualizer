@@ -2,7 +2,7 @@ object FormMain: TFormMain
   Left = 100
   Top = 80
   Caption = 'Bat Visualizer'
-  ClientHeight = 796
+  ClientHeight = 864
   ClientWidth = 1205
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -75,39 +75,50 @@ object FormMain: TFormMain
       Left = 3
       Top = 86
       Width = 180
-      Height = 112
+      Height = 180
       Align = alTop
       Caption = 'Playback options'
       TabOrder = 1
-      object LblSpeed: TLabel
-        Left = 8
-        Top = 20
-        Width = 83
-        Height = 13
-        Caption = 'Time expansion:'
-      end
       object LblGainCaption: TLabel
         Left = 8
-        Top = 66
+        Top = 134
         Width = 27
         Height = 13
         Caption = 'Gain:'
       end
       object LblGainVal: TLabel
         Left = 50
-        Top = 66
+        Top = 134
         Width = 22
         Height = 13
         Caption = '0 dB'
       end
-      object CbxSpeed: TComboBox
+      object LblTuneFreq: TLabel
+        Left = 28
+        Top = 84
+        Width = 116
+        Height = 13
+        Caption = 'Tune frequency: 45 kHz'
+      end
+      object RbTimeExpansion: TRadioButton
         Left = 8
-        Top = 36
+        Top = 16
         Width = 164
+        Height = 17
+        Caption = 'Time expansion'
+        Checked = True
+        TabOrder = 0
+        TabStop = True
+        OnClick = PlaybackModeClick
+      end
+      object CbxSpeed: TComboBox
+        Left = 28
+        Top = 36
+        Width = 144
         Height = 21
         Style = csDropDownList
         ItemIndex = 1
-        TabOrder = 0
+        TabOrder = 1
         Text = '10x'
         OnChange = CbxSpeedChange
         Items.Strings = (
@@ -119,20 +130,43 @@ object FormMain: TFormMain
           '2x'
           '1x')
       end
+      object RbHeterodyne: TRadioButton
+        Left = 8
+        Top = 64
+        Width = 164
+        Height = 17
+        Caption = 'Heterodyne'
+        TabOrder = 2
+        OnClick = PlaybackModeClick
+      end
+      object TrkTuneFreq: TTrackBar
+        Left = 28
+        Top = 100
+        Width = 144
+        Height = 26
+        Max = 96
+        Min = 1
+        Frequency = 10
+        Position = 45
+        Enabled = False
+        TabOrder = 3
+        TickStyle = tsNone
+        OnChange = TrkTuneFreqChange
+      end
       object TrkGain: TTrackBar
         Left = 4
-        Top = 82
+        Top = 150
         Width = 144
         Height = 26
         Max = 96
         Frequency = 10
-        TabOrder = 1
+        TabOrder = 4
         TickStyle = tsNone
         OnChange = TrkGainChange
       end
       object BtnAutoGain: TButton
         Left = 146
-        Top = 80
+        Top = 148
         Width = 26
         Height = 26
         DisabledImageIndex = 1
@@ -140,13 +174,13 @@ object FormMain: TFormMain
         ImageAlignment = iaCenter
         ImageIndex = 0
         Images = ImageListButtons
-        TabOrder = 2
+        TabOrder = 5
         OnClick = BtnAutoGainClick
       end
     end
     object GroupFiltering: TGroupBox
       Left = 3
-      Top = 198
+      Top = 266
       Width = 180
       Height = 67
       Align = alTop
@@ -177,7 +211,7 @@ object FormMain: TFormMain
     end
     object GroupFFT: TGroupBox
       Left = 3
-      Top = 265
+      Top = 333
       Width = 180
       Height = 113
       Align = alTop
@@ -238,7 +272,7 @@ object FormMain: TFormMain
     end
     object GroupSpectrogram: TGroupBox
       Left = 3
-      Top = 378
+      Top = 446
       Width = 180
       Height = 196
       Align = alTop
@@ -376,7 +410,7 @@ object FormMain: TFormMain
     end
     object GroupExport: TGroupBox
       Left = 3
-      Top = 574
+      Top = 642
       Width = 180
       Height = 199
       Align = alClient

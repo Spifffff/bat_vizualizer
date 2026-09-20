@@ -25,6 +25,7 @@ type
     FRangeStart: Integer;
     FSeekOffset: Integer;
     FActualRate: Cardinal;
+    FTimeScale: Double;
     FLoaded: Boolean;
     FSubmitted: Boolean;
     FPaused: Boolean;
@@ -34,16 +35,20 @@ type
   public
     destructor Destroy; override;
 
-    { Convert samples[AStartSample..AEndSample) to 16-bit and open the device
-      at RequestedRate Hz (= SrcRate * PlaybackRate, e.g. 19 200 for
-      192 000 * 0.1). Only the requested sub-range is converted/buffered --
-      passing the current zoom window instead of the whole file keeps the
-      16-bit copy from ballooning memory use on long recordings, since
-      Samples itself (already a 4-byte-per-sample copy) stays alive
-      regardless. ActualRate is set to the rate that Windows accepted.
-      Gain is a linear amplitude multiplier applied before the 16-bit
-      conversion, clipping like the rest of the buffer. }
-    procedure Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer; RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
+    { Convert Samples (already exactly the buffer to be played -- a raw
+      sub-range for time-expansion, or a mixed/decimated baseband signal for
+      heterodyne) to 16-bit and open the device at RequestedRate Hz.
+      AFileTotalSamples/ATimelineStart describe where this buffer sits in
+      the ORIGINAL recording's timeline, for GetNormalizedPosition/
+      SeekToNormalized; TimeScale is how many original-timeline samples one
+      element of Samples represents (1.0 for time-expansion, where each
+      played sample is one original sample just clocked out slower; the
+      decimation factor for heterodyne, where each played sample stands in
+      for several original samples). ActualRate is set to the rate Windows
+      accepted. Gain is a linear amplitude multiplier applied before the
+      16-bit conversion, clipping like the rest of the buffer. }
+    procedure Load(const Samples: TArray<Single>; AFileTotalSamples, ATimelineStart: Integer; TimeScale: Double;
+      RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 
     procedure Play;
     procedure Pause;
@@ -203,28 +208,27 @@ end;
 
 
 
-procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AStartSample, AEndSample: Integer; RequestedRate: Cardinal; Gain: Double;
-  out ActualRate: Cardinal);
+procedure TWaveOutPlayer.Load(const Samples: TArray<Single>; AFileTotalSamples, ATimelineStart: Integer; TimeScale: Double;
+  RequestedRate: Cardinal; Gain: Double; out ActualRate: Cardinal);
 const
   Fallbacks: array [0 .. 3] of Cardinal = (22050, 16000, 11025, 44100);
 var
   Fmt: TWaveFormatEx;
   H: PWaveHdr;
   Res: MMRESULT;
-  I, V, StartSample, EndSample: Integer;
+  I, V: Integer;
   Rate: Cardinal;
   PeakAbs: Double;
   EffectiveGain: Double;
 begin
   CloseDevice();
 
-  FFileTotalSamples := Length(Samples);
-  StartSample := EnsureRange(AStartSample, 0, FFileTotalSamples);
-  EndSample := EnsureRange(AEndSample, StartSample, FFileTotalSamples);
-  FRangeStart := StartSample;
-  FTotalSamples := EndSample - StartSample;
+  FTotalSamples := Length(Samples);
   if FTotalSamples = 0 then
     raise Exception.Create('No samples to load.');
+  FFileTotalSamples := Max(1, AFileTotalSamples);
+  FRangeStart := EnsureRange(ATimelineStart, 0, FFileTotalSamples);
+  FTimeScale := Max(1.0e-9, TimeScale);
 
   { A gain high enough to clip almost the whole buffer collapses it toward a
     near-constant (DC) signal -- a speaker can't reproduce a value that never
@@ -233,16 +237,16 @@ begin
     volume". Cap the gain actually applied so the loudest sample in range
     reaches, but doesn't exceed, full scale, instead of clipping past it. }
   PeakAbs := 0.0;
-  for I := StartSample to EndSample - 1 do
+  for I := 0 to FTotalSamples - 1 do
     PeakAbs := Max(PeakAbs, Abs(Samples[I]));
   EffectiveGain := Gain;
   if (PeakAbs > 0.0) and (Gain * PeakAbs > 1.0) then
     EffectiveGain := 1.0 / PeakAbs;
 
-  { Float -1..1 → Int16, only for the requested sub-range. }
+  { Float -1..1 → Int16. }
   SetLength(FBuffer, FTotalSamples);
   for I := 0 to FTotalSamples - 1 do begin
-    V := Round(Samples[StartSample + I] * EffectiveGain * 32767.0);
+    V := Round(Samples[I] * EffectiveGain * 32767.0);
     if V > 32767 then
       V := 32767;
     if V < -32768 then
@@ -352,7 +356,7 @@ begin
   FillChar(MMT, SizeOf(MMT), 0);
   MMT.wType := TIME_SAMPLES;
   waveOutGetPosition(FDevHandle, @MMT, SizeOf(TMMTime));
-  Result := (FRangeStart + FSeekOffset + MMT.sample) / FFileTotalSamples;
+  Result := (FRangeStart + (FSeekOffset + MMT.sample) * FTimeScale) / FFileTotalSamples;
   if Result > 1.0 then
     Result := 1.0;
 end;
@@ -404,7 +408,7 @@ begin
     (possibly zoom-limited) loaded range, clamping to its edges if Pos
     falls outside what was actually buffered. }
   AbsSample := Round(Pos * FFileTotalSamples);
-  Offset := EnsureRange(AbsSample - FRangeStart, 0, FTotalSamples - 1);
+  Offset := EnsureRange(Round((AbsSample - FRangeStart) / FTimeScale), 0, FTotalSamples - 1);
   FSeekOffset := Offset;
 
   FillChar(H^, SizeOf(TWaveHdr), 0);
