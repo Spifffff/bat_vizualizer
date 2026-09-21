@@ -621,6 +621,12 @@ begin
     SetControlsEnabled(True);
     PrgBar.Position := PrgBar.Max;
     Log('Done. Processed ' + IntToStr(FDoneCount) + ' of ' + IntToStr(FTotalFiles) + ' files.');
+    MessageDlg(Format('Done. Processed %d of %d files.', [FDoneCount, FTotalFiles]), mtInformation, [mbOK], 0);
+    { Only when opened as a dialog from BatViz, not when this form is its
+      own program's main window (the standalone BatIdent.exe), where there
+      is nothing to hand control back to. }
+    if Application.MainForm <> Self then
+      Close();
   end;
 end;
 
