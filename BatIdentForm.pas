@@ -467,6 +467,12 @@ begin
   FSlots[SlotIdx].State := ssIdle;
   Inc(FDoneCount);
   PrgBar.Position := FDoneCount;
+  { bat_ident.py always also appends to an aggregate "<value passed to --o>
+    Results.csv" file, regardless of --rtype -- meant for the case where --o
+    is a folder, but since we pass the exact per-file CSV path, this just
+    leaves an unwanted "<name>.results.csvResults.csv" file next to the real
+    one. We only ever read the per-file CSV, so delete the aggregate one. }
+  DeleteFile(FSlots[SlotIdx].OutCsv + 'Results.csv');
   TallyResultsFromCsv(FSlots[SlotIdx].OutCsv);
 end;
 
@@ -489,7 +495,7 @@ begin
   WavFile := FPendingFiles[FPendingIdx];
   Inc(FPendingIdx);
   BaseName := ChangeFileExt(ExtractFileName(WavFile), '');
-  OutCsv := ChangeFileExt(WavFile, '.bat.results.csv');
+  OutCsv := ChangeFileExt(WavFile, '.results.csv');
   FSlots[SlotIdx].WavFile := WavFile;
   FSlots[SlotIdx].BaseName := BaseName;
   FSlots[SlotIdx].OutCsv := OutCsv;

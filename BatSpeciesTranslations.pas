@@ -24,7 +24,7 @@ type
     (github.com/rdz-oss/BattyBirdNET-Analyzer, checkpoints/bats/v1.0 and
     labels/bats), since bat_ident.py's default --locale is "en" and this app
     never passes --locale, so these are the exact strings that end up in the
-    "Common name" column of a .bat.results.csv. Some classifiers can't always
+    "Common name" column of a .results.csv. Some classifiers can't always
     distinguish two similar-sounding species and emit a merged name for both
     (e.g. "Daubentons or Whiskered bat") -- those merged names are kept as
     separate dictionary entries alongside the single-species ones, because

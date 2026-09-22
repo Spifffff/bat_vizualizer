@@ -1226,7 +1226,7 @@ begin
         BaseName := ChangeFileExt(SR.Name, '');
         if not TryParseFileNameDateTime(BaseName, Entry.RecordedAt) then
           Entry.RecordedAt := GetFileFallbackDateTime(Entry.FilePath);
-        CsvPath := ChangeFileExt(Entry.FilePath, '.bat.results.csv');
+        CsvPath := ChangeFileExt(Entry.FilePath, '.results.csv');
         Entry.HasCsv := FileExists(CsvPath);
         if Entry.HasCsv then
           Entry.Detections := MergeConsecutiveDetections(ParseBatResults(CsvPath))
