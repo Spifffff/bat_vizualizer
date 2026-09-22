@@ -10,7 +10,7 @@ uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.IOUtils, System.Math,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl, settings;
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl, settings, Vcl.Imaging.pngimage;
 
 const
   MAX_SLOTS = 64;
@@ -63,6 +63,12 @@ type
     BtnStart: TButton;
     BtnStop: TButton;
     Timer: TTimer;
+    ImgArea: TImage;
+    ImgKHz: TImage;
+    ImgMinConf: TImage;
+    ImgSfThresh: TImage;
+    ImgSensitivity: TImage;
+    ImgParallel: TImage;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -75,6 +81,7 @@ type
     procedure TrkMinConfChange(Sender: TObject);
     procedure TrkSfThreshChange(Sender: TObject);
     procedure TrkSensitivityChange(Sender: TObject);
+    procedure ImgInfoClick(Sender: TObject);
   private
     FSlots: array [0 .. MAX_SLOTS - 1] of TFileSlot;
     FSlotCount: Integer;
@@ -82,6 +89,8 @@ type
     FPendingIdx: Integer;
     FTotalFiles: Integer;
     FDoneCount: Integer;
+    FSkippedCount: Integer;
+    FFailedCount: Integer;
     FRunning: Boolean;
     FTotalDetections: Integer;
     FSpeciesSeen: TStringList;
@@ -189,6 +198,37 @@ procedure TFormBatIdent.FormShow(Sender: TObject);
 begin
   if (WAVFolder <> '') and (EdtWavFolder.Text = '') then
     EdtWavFolder.Text := WAVFolder;
+end;
+
+
+
+procedure TFormBatIdent.ImgInfoClick(Sender: TObject);
+const
+  MSG_AREA = 'Region used to narrow down which species are considered. Species rarely recorded in this area are ' +
+    'filtered out before analysis.';
+  MSG_KHZ = 'Sample rate the classifier model was trained on. Pick whichever is closest to the actual recording ' +
+    'sample rate.';
+  MSG_MIN_CONF = 'Minimum confidence a detection must reach to be kept. Higher means fewer, more certain ' +
+    'detections. Lower means more detections, but more false positives.';
+  MSG_SF_THRESH = 'How common a species must be in the selected area to be considered at all. Higher means only ' +
+    'common local species. Lower means rare species stay in the running too.';
+  MSG_SENSITIVITY = 'How sensitive the classifier is when scoring calls. Higher means more calls get flagged as ' +
+    'detections. Lower means stricter, fewer detections.';
+  MSG_PARALLEL = 'How many files are analyzed at the same time. Higher is faster, but each file uses its own ' +
+    'memory, so many long or high-rate files at once can run out of memory.';
+begin
+  if Sender = ImgArea then
+    MessageDlg(MSG_AREA, mtInformation, [mbOK], 0)
+  else if Sender = ImgKHz then
+    MessageDlg(MSG_KHZ, mtInformation, [mbOK], 0)
+  else if Sender = ImgMinConf then
+    MessageDlg(MSG_MIN_CONF, mtInformation, [mbOK], 0)
+  else if Sender = ImgSfThresh then
+    MessageDlg(MSG_SF_THRESH, mtInformation, [mbOK], 0)
+  else if Sender = ImgSensitivity then
+    MessageDlg(MSG_SENSITIVITY, mtInformation, [mbOK], 0)
+  else if Sender = ImgParallel then
+    MessageDlg(MSG_PARALLEL, mtInformation, [mbOK], 0);
 end;
 
 
@@ -391,8 +431,8 @@ begin
     ResultWord := 'result'
   else
     ResultWord := 'results';
-  LblScore.Caption := Format('%d of %d files processed, %d %s found, %d different species',
-    [FDoneCount, FTotalFiles, FTotalDetections, ResultWord, FSpeciesSeen.Count]);
+  LblScore.Caption := Format('%d of %d files processed (%d skipped, %d failed), %d %s found, %d different species',
+    [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount, FTotalDetections, ResultWord, FSpeciesSeen.Count]);
 end;
 
 
@@ -452,6 +492,7 @@ begin
     Log('Error: could not start bat_ident for ' + ExtractFileName(FSlots[SlotIdx].WavFile));
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
+    Inc(FFailedCount);
     PrgBar.Position := FDoneCount;
     UpdateScoreLabel();
     Exit();
@@ -473,6 +514,10 @@ begin
     leaves an unwanted "<name>.results.csvResults.csv" file next to the real
     one. We only ever read the per-file CSV, so delete the aggregate one. }
   DeleteFile(FSlots[SlotIdx].OutCsv + 'Results.csv');
+  if not FileExists(FSlots[SlotIdx].OutCsv) then begin
+    Inc(FFailedCount);
+    Log('Failed: ' + ExtractFileName(FSlots[SlotIdx].WavFile) + ' (no results CSV produced)');
+  end;
   TallyResultsFromCsv(FSlots[SlotIdx].OutCsv);
 end;
 
@@ -506,6 +551,7 @@ begin
     Log('Skipped: ' + ExtractFileName(WavFile));
     FSlots[SlotIdx].State := ssIdle;
     Inc(FDoneCount);
+    Inc(FSkippedCount);
     PrgBar.Position := FDoneCount;
     TallyResultsFromCsv(OutCsv);
     Exit();
@@ -542,6 +588,8 @@ begin
   FTotalFiles := FPendingFiles.Count;
   FPendingIdx := 0;
   FDoneCount := 0;
+  FSkippedCount := 0;
+  FFailedCount := 0;
   FRunning := True;
   FTotalDetections := 0;
   FSpeciesSeen.Clear();
@@ -626,8 +674,9 @@ begin
     Completed := True;
     SetControlsEnabled(True);
     PrgBar.Position := PrgBar.Max;
-    Log('Done. Processed ' + IntToStr(FDoneCount) + ' of ' + IntToStr(FTotalFiles) + ' files.');
-    MessageDlg(Format('Done. Processed %d of %d files.', [FDoneCount, FTotalFiles]), mtInformation, [mbOK], 0);
+    Log(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]));
+    MessageDlg(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]),
+      mtInformation, [mbOK], 0);
     { Only when opened as a dialog from BatViz, not when this form is its
       own program's main window (the standalone BatIdent.exe), where there
       is nothing to hand control back to. }
