@@ -121,7 +121,9 @@ Once that installation is complete, Bat identifyer can be opened either through 
 Bat vizualizer or by running `BatIdent.exe` on its own. Pointing it at a WAV folder and at the
 BattyBirdNET-Analyzer installation folder, then adjusting the classifier and sensitivity settings if the defaults
 do not suit a given set of recordings, is all that is needed before pressing Start; each setting has an
-accompanying info icon that explains what it controls.
+accompanying info icon that explains what it controls. The tool also checks the BattyBirdNET folder for the
+classifier belonging to the chosen area and sample rate; if it is missing, a note under the Classifier settings
+says which rates are available for that area, and Start is blocked until a valid combination is selected.
 
 Results are written next to each WAV file and are shown in the results list, including species, confidence,
 per-file and per-species counts, and any files that were skipped or failed during processing. Common names are

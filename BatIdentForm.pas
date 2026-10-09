@@ -26,12 +26,13 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages,
-  System.SysUtils, System.Classes, System.IOUtils, System.Math,
+  System.SysUtils, System.Classes, System.IOUtils, System.Math, System.StrUtils,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl, settings, Vcl.Imaging.pngimage;
 
 const
   MAX_SLOTS = 64;
+  MODEL_RATES: array[0..1] of Integer = (144, 256);
 
 type
   TSlotState = (ssIdle, ssBatIdent);
@@ -87,6 +88,7 @@ type
     ImgSfThresh: TImage;
     ImgSensitivity: TImage;
     ImgParallel: TImage;
+    LblModelHint: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -100,6 +102,7 @@ type
     procedure TrkSfThreshChange(Sender: TObject);
     procedure TrkSensitivityChange(Sender: TObject);
     procedure ImgInfoClick(Sender: TObject);
+    procedure ModelSettingChange(Sender: TObject);
   private
     FSlots: array [0 .. MAX_SLOTS - 1] of TFileSlot;
     FSlotCount: Integer;
@@ -128,6 +131,10 @@ type
     procedure SetControlsEnabled(AEnabled: Boolean);
     procedure TallyResultsFromCsv(const ACsvPath: string);
     procedure UpdateScoreLabel();
+    function GetModelFolder(): string;
+    function IsModelAvailable(const AArea: string; AkHz: Integer): Boolean;
+    function CheckModelAvailable(out AMessage: string): Boolean;
+    procedure UpdateModelHint();
   public
     WAVFolder: string;
     Completed: Boolean;
@@ -151,7 +158,7 @@ var
   SI: TSystemInfo;
   CPUCount, I: Integer;
 begin
-  CbxArea.Items.AddStrings(['Bavaria', 'EU', 'UK', 'USA', 'USA-EAST', 'USA-WEST', 'Scotland', 'South-Wales', 'MarinCounty']);
+  CbxArea.Items.AddStrings(['Bavaria', 'EU', 'UK', 'USA', 'USA-EAST', 'USA-WEST', 'Sweden', 'South-Wales']);
   CbxArea.ItemIndex := 1;
   CbxKHz.Items.AddStrings(['144', '256']);
   CbxKHz.ItemIndex := 1;
@@ -187,6 +194,7 @@ begin
   TrkMinConfChange(TrkMinConf);
   TrkSfThreshChange(TrkSfThresh);
   TrkSensitivityChange(TrkSensitivity);
+  UpdateModelHint();
 end;
 
 
@@ -300,7 +308,110 @@ end;
 
 
 
+function TFormBatIdent.GetModelFolder(): string;
+const
+  DEFAULT_LOCATION = 'checkpoints/bats/v1.0';
+var
+  Lines: TStringList;
+  Line, Location: string;
+  P1, P2: Integer;
+begin
+  Location := DEFAULT_LOCATION;
+  { BattyBirdNET names the classifier folder in config.py (BAT_CLASSIFIER_LOCATION: str = '...'). }
+  if FileExists(TPath.Combine(EdtBattyFolder.Text, 'config.py')) then begin
+    Lines := TStringList.Create();
+    try
+      try
+        Lines.LoadFromFile(TPath.Combine(EdtBattyFolder.Text, 'config.py'));
+        for Line in Lines do
+          if Pos('BAT_CLASSIFIER_LOCATION', Line) = 1 then begin
+            P1 := Pos('''', Line);
+            P2 := PosEx('''', Line, P1 + 1);
+            if (P1 > 0) and (P2 > P1) then
+              Location := Copy(Line, P1 + 1, P2 - P1 - 1);
+            Break;
+          end;
+      except
+        // An unreadable config.py just means the default location is used.
+      end;
+    finally
+      Lines.Free();
+    end;
+  end;
+  Result := TPath.Combine(EdtBattyFolder.Text, StringReplace(Location, '/', '\', [rfReplaceAll]));
+end;
+
+
+
+function TFormBatIdent.IsModelAvailable(const AArea: string; AkHz: Integer): Boolean;
+var
+  AreaPart, BasePath: string;
+begin
+  { The script's --area value 'South-Wales' belongs to model files named 'SouthWales'. }
+  if AArea = 'South-Wales' then
+    AreaPart := 'SouthWales'
+  else
+    AreaPart := AArea;
+  BasePath := TPath.Combine(GetModelFolder(), Format('BattyBirdNET-%s-%dkHz', [AreaPart, AkHz]));
+  Result := FileExists(BasePath + '.tflite') and FileExists(BasePath + '_Labels.txt');
+end;
+
+
+
+function TFormBatIdent.CheckModelAvailable(out AMessage: string): Boolean;
+var
+  Area, Available: string;
+  KHz, Rate: Integer;
+begin
+  AMessage := '';
+  Result := True;
+  if not FileExists(TPath.Combine(EdtBattyFolder.Text, 'bat_ident.py')) then
+    Exit();
+  if not DirectoryExists(GetModelFolder()) then begin
+    AMessage := 'The BattyBirdNET classifier folder was not found: ' + GetModelFolder();
+    Result := False;
+    Exit();
+  end;
+  Area := CbxArea.Text;
+  KHz := StrToIntDef(CbxKHz.Text, 0);
+  if IsModelAvailable(Area, KHz) then
+    Exit();
+  Result := False;
+  Available := '';
+  for Rate in MODEL_RATES do
+    if IsModelAvailable(Area, Rate) then begin
+      if Available <> '' then
+        Available := Available + ' and ';
+      Available := Available + IntToStr(Rate);
+    end;
+  if Available = '' then
+    AMessage := Format('No %s classifier is installed in the BattyBirdNET folder.', [Area])
+  else
+    AMessage := Format('There is no %s classifier for %d kHz. Available: %s kHz.', [Area, KHz, Available]);
+end;
+
+
+
+procedure TFormBatIdent.UpdateModelHint();
+var
+  Msg: string;
+begin
+  CheckModelAvailable(Msg);
+  LblModelHint.Caption := Msg;
+end;
+
+
+
+procedure TFormBatIdent.ModelSettingChange(Sender: TObject);
+begin
+  UpdateModelHint();
+end;
+
+
+
 function TFormBatIdent.ValidateInputs(): Boolean;
+var
+  ModelMsg: string;
 begin
   Result := False;
   if EdtWavFolder.Text = '' then begin
@@ -317,6 +428,10 @@ begin
   end;
   if not FileExists(EdtBattyFolder.Text + '\bat_ident.py') then begin
     MessageDlg('bat_ident.py not found in the BattyBirdNET folder.', mtError, [mbOK], 0);
+    Exit();
+  end;
+  if not CheckModelAvailable(ModelMsg) then begin
+    MessageDlg(ModelMsg, mtError, [mbOK], 0);
     Exit();
   end;
   Result := True;

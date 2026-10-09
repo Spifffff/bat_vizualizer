@@ -76,6 +76,7 @@ object FormBatIdent: TFormBatIdent
       Width = 416
       Height = 21
       TabOrder = 2
+      OnChange = ModelSettingChange
     end
     object BtnBrowseBatty: TButton
       Left = 534
@@ -176,6 +177,7 @@ object FormBatIdent: TFormBatIdent
         Style = csDropDownList
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 0
+        OnChange = ModelSettingChange
       end
       object CbxKHz: TComboBox
         Left = 8
@@ -185,6 +187,21 @@ object FormBatIdent: TFormBatIdent
         Style = csDropDownList
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 1
+        OnChange = ModelSettingChange
+      end
+      object LblModelHint: TLabel
+        Left = 8
+        Top = 110
+        Width = 192
+        Height = 48
+        AutoSize = False
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clMaroon
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        WordWrap = True
       end
     end
     object GrpSensitivity: TGroupBox
