@@ -18,7 +18,8 @@ tool called Bat identifyer can additionally run automated species identification
   bandwidth, and slope, in kHz per millisecond, between the two selected points.
 - Noise reduction and a high-pass plus gate filter, each with its own independent switch, together with a
   configurable FFT window function and size.
-- Ten spectrogram color schemes, including Viridis, Magma, and grayscale in both directions.
+- Ten spectrogram color schemes, including Viridis, Magma, and grayscale in both directions. The floor and ceiling
+  of the color range are set automatically whenever a file or a detection is opened, and can be adjusted by hand.
 - Export of the current view as a PNG, and export of a zoomed selection as WAV or MP3, the latter by way of LAME.
   The export filename reflects whichever playback mode was selected at the time.
 - Export of detection clips: short WAV files cut around each detection in a folder, optionally limited to the best
@@ -81,23 +82,30 @@ files or between individual detections.
 Playback begins with the play button. In time expansion mode, the whole spectrum plays back more slowly, at
 whichever factor is selected from the dropdown. In heterodyne mode, the recording instead plays back in real
 time while tuned to one frequency band, so dragging the tune-frequency slider sweeps that band across the
-spectrogram, much as turning the dial on a handheld detector would. Changes to gain take effect immediately,
-even while playback is in progress.
+spectrogram, much as turning the dial on a handheld detector would. The tuned frequency is shown in the
+Heterodyne label. Changes to gain take effect immediately, even while playback is in progress.
 
 To measure a call by hand, hold Shift and drag across the spectrogram. Its duration, the frequency range it
 swept, and the steepness of that sweep are reported on screen at once. Noise reduction and the high-pass plus
 gate filter can each be switched on independently when a recording is noisy, and any of the ten available color
-schemes for the spectrogram can be selected according to preference or to suit a particular recording.
+schemes for the spectrogram can be selected according to preference or to suit a particular recording. The
+floor and ceiling of the color range are chosen automatically each time a file or a detection is opened, which
+usually gives a clear picture at once; the Auto buttons next to the sliders repeat this for the current view,
+and the sliders can be moved by hand when a different contrast is wanted.
 
 The Export button in the left panel saves the current view. The file type chosen in the save dialog decides what is
 written: the waveform, the spectrogram, or both together as a PNG, or the current zoomed selection as a WAV or an
 MP3 file.
 
-Once a folder with Bat identifyer results has been opened, the Export clips button at the bottom of the right panel cuts
-a separate WAV file around every detection in that folder. A dialog offers two optional limits, which can be
-combined: only the best N detections per species, and only detections above a given confidence. It also sets the
-margin, in seconds, that is kept before and after each detection. The clips are written unmodified at the original
-sample rate, and a progress bar with a Cancel button is shown while they are being written.
+Once a folder with Bat identifyer results has been opened, the Export clips button at the bottom of the right
+panel cuts a separate WAV file around every detection in that folder. A dialog offers two optional limits,
+which can be combined: only the best N detections per species, and only detections above a given confidence. It
+also sets the margin, in seconds, that is kept before and after each detection. The clips are written unmodified
+at the original sample rate, and a progress bar with a Cancel button is shown while they are being written.
+
+The Nightly activity button, also at the bottom of the right panel, opens a summary of the detections in the opened
+folder, showing for each species how many were recorded in each hour of the night, either for all nights
+together or for a single night.
 
 ### Species identification
 
@@ -108,11 +116,11 @@ installation process, so BattyBirdNET-Analyzer should first be installed by foll
 
 ![Bat identifyer results after analyzing a folder of recordings](docs/screenshots/batident.png)
 
-Once that installation is complete, Bat identifyer can be opened either through the "Identify..." button inside Bat vizualizer
-or by running `BatIdent.exe` on its own. Pointing it at a WAV folder and at the BattyBirdNET-Analyzer
-installation folder, then adjusting the classifier and sensitivity settings if the defaults do not suit a given
-set of recordings, is all that is needed before pressing Start; each setting has an accompanying info icon that
-explains what it controls.
+Once that installation is complete, Bat identifyer can be opened either through the "Identify..." button inside
+Bat vizualizer or by running `BatIdent.exe` on its own. Pointing it at a WAV folder and at the
+BattyBirdNET-Analyzer installation folder, then adjusting the classifier and sensitivity settings if the defaults
+do not suit a given set of recordings, is all that is needed before pressing Start; each setting has an
+accompanying info icon that explains what it controls.
 
 Results are written next to each WAV file and are shown in the results list, including species, confidence,
 per-file and per-species counts, and any files that were skipped or failed during processing. Common names are
@@ -141,7 +149,7 @@ process, from [BatIdentForm.pas](BatIdentForm.pas).
 | [BatIdentForm.pas](BatIdentForm.pas) | Bat identifyer UI: folder selection, analysis options, results |
 | [BusyForm.pas](BusyForm.pas) | Busy indicator with optional progress bar and Cancel button for longer operations |
 | [ClipExportForm.pas](ClipExportForm.pas) | Dialog for choosing which detection clips to export and the margin around them |
-| [NightlyActivityForm.pas](NightlyActivityForm.pas) | Nightly activity summary view, still in development and not yet enabled in the UI |
+| [NightlyActivityForm.pas](NightlyActivityForm.pas) | Nightly activity summary dialog, with per-species bars by hour |
 | [WavReader.pas](WavReader.pas) | WAV file parsing and sample access |
 | [WavWriter.pas](WavWriter.pas) | Streaming WAV export of a selection |
 | [Mp3Writer.pas](Mp3Writer.pas) | Streaming MP3 export via LAME |
