@@ -1,7 +1,7 @@
 object FormMain: TFormMain
   Left = 100
   Top = 80
-  Caption = 'Bat Visualizer'
+  Caption = 'Bat vizualizer'
   ClientHeight = 703
   ClientWidth = 1205
   Color = clBtnFace

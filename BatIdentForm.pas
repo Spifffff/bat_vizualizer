@@ -1,4 +1,4 @@
-{ BatViz
+{ Bat vizualizer
   Copyright (C) 2026
 
   This program is free software: you can redistribute it and/or modify
@@ -179,7 +179,7 @@ begin
   Settings.StoredProps.Add('CbxParallel.ItemIndex');
   Settings.LoadSettings();
   { Position/size only matter when this form is its own program's main
-    window (the standalone BatIdent.exe) -- as a dialog opened from BatViz
+    window (the standalone BatIdent.exe) -- as a dialog opened from Bat vizualizer
     it's a fixed-size bsDialog that always recenters over the main form. }
   if Application.MainForm = Self then
     Settings.ReadFormPositions(Self);
@@ -357,13 +357,13 @@ begin
   SA.lpSecurityDescriptor := nil;
   SA.bInheritHandle := True;
   if not CreatePipe(PipeRead, PipeWrite, @SA, 0) then begin
-    OutputDebugString('[BatIdent] CreatePipe failed');
+    OutputDebugString('[Bat identifyer] CreatePipe failed');
     Exit();
   end;
   SetHandleInformation(PipeRead, HANDLE_FLAG_INHERIT, 0);
   NulHandle := CreateFile('nul', GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_WRITE, @SA, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   Cmd := CmdLine;
-  OutputDebugString(PChar('[BatIdent] CMD: ' + Cmd));
+  OutputDebugString(PChar('[Bat identifyer] CMD: ' + Cmd));
   FillChar(SI, SizeOf(SI), 0);
   SI.cb := SizeOf(SI);
   SI.dwFlags := STARTF_USESHOWWINDOW or STARTF_USESTDHANDLES;
@@ -377,7 +377,7 @@ begin
     if NulHandle <> INVALID_HANDLE_VALUE then
       CloseHandle(NulHandle);
     Result := PI.hProcess;
-    OutputDebugString(PChar('[BatIdent] launched PID=' + IntToStr(PI.dwProcessId)));
+    OutputDebugString(PChar('[Bat identifyer] launched PID=' + IntToStr(PI.dwProcessId)));
   end else begin
     Err := GetLastError();
     CloseHandle(PipeWrite);
@@ -385,7 +385,7 @@ begin
       CloseHandle(NulHandle);
     CloseHandle(PipeRead);
     PipeRead := INVALID_HANDLE_VALUE;
-    OutputDebugString(PChar('[BatIdent] CreateProcess failed, error=' + IntToStr(Err)));
+    OutputDebugString(PChar('[Bat identifyer] CreateProcess failed, error=' + IntToStr(Err)));
   end;
 end;
 
@@ -667,7 +667,7 @@ begin
       if WaitForSingleObject(FSlots[I].ProcessHandle, 0) = WAIT_OBJECT_0 then begin
         ExitCode := 0;
         GetExitCodeProcess(FSlots[I].ProcessHandle, ExitCode);
-        OutputDebugString(PChar('[BatIdent] ' + FSlots[I].BaseName + ' state=' + IntToStr(Ord(FSlots[I].State)) + ' exitcode=' + IntToStr(ExitCode)));
+        OutputDebugString(PChar('[Bat identifyer] ' + FSlots[I].BaseName + ' state=' + IntToStr(Ord(FSlots[I].State)) + ' exitcode=' + IntToStr(ExitCode)));
         CloseHandle(FSlots[I].ProcessHandle);
         FSlots[I].ProcessHandle := INVALID_HANDLE_VALUE;
         DrainSlotPipe(I);
@@ -695,7 +695,7 @@ begin
     Log(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]));
     MessageDlg(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]),
       mtInformation, [mbOK], 0);
-    { Only when opened as a dialog from BatViz, not when this form is its
+    { Only when opened as a dialog from Bat vizualizer, not when this form is its
       own program's main window (the standalone BatIdent.exe), where there
       is nothing to hand control back to. }
     if Application.MainForm <> Self then

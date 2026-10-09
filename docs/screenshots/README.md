@@ -6,8 +6,8 @@ there is no need to crop out the window chrome.
 
 | Filename | What to capture |
 |---|---|
-| `main-window.png` | The main BatViz window with a recording loaded: waveform at the top, spectrogram below, a call visibly zoomed in, and a color scheme of your choosing. |
-| `batident.png` | BatIdent partway through, or finished with, a folder: the progress bar, the results label showing the processed, skipped, and failed breakdown, and the log listing a few completed files. |
+| `main-window.png` | The main Bat vizualizer window with a recording loaded: waveform at the top, spectrogram below, a call visibly zoomed in, and a color scheme of your choosing. |
+| `batident.png` | Bat identifyer partway through, or finished with, a folder: the progress bar, the results label showing the processed, skipped, and failed breakdown, and the log listing a few completed files. |
 
 ## Optional extras
 

@@ -2,7 +2,7 @@ object FormBatIdent: TFormBatIdent
   Left = 0
   Top = 0
   BorderStyle = bsDialog
-  Caption = 'BatIdent'
+  Caption = 'Bat identifyer'
   ClientHeight = 583
   ClientWidth = 640
   Color = clBtnFace
