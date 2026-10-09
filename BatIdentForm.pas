@@ -26,7 +26,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages,
-  System.SysUtils, System.Classes, System.IOUtils, System.Math, System.StrUtils,
+  System.SysUtils, System.Classes, System.IOUtils, System.Math, System.StrUtils, System.UITypes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.FileCtrl, settings, Vcl.Imaging.pngimage;
 
