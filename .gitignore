@@ -18,3 +18,7 @@ __recovery/
 # Debug output
 *.rsm
 *.drc
+
+# Prebuilt programs shipped in the repository
+!release/BatViz.exe
+!release/BatIdent.exe

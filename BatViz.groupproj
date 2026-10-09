@@ -1,0 +1,48 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{90A01ACC-164F-4396-95AE-7CE3BF42679A}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="BatViz.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BatIdent.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="BatViz">
+        <MSBuild Projects="BatViz.dproj"/>
+    </Target>
+    <Target Name="BatViz:Clean">
+        <MSBuild Projects="BatViz.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BatViz:Make">
+        <MSBuild Projects="BatViz.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BatIdent">
+        <MSBuild Projects="BatIdent.dproj"/>
+    </Target>
+    <Target Name="BatIdent:Clean">
+        <MSBuild Projects="BatIdent.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BatIdent:Make">
+        <MSBuild Projects="BatIdent.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="BatViz;BatIdent"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="BatViz:Clean;BatIdent:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="BatViz:Make;BatIdent:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -38,11 +38,12 @@ tool called Bat identifyer can additionally run automated species identification
 No installation is required to use Bat vizualizer, and no development tools such as Delphi or Python are needed either.
 A Windows machine is sufficient.
 
-To begin, visit the Releases page of this repository and download the latest release archive. Once it has been
-extracted, the files `BatViz.exe`, `BatIdent.exe`, and `lame_enc.dll` should be kept together in the same
-location, since `BatViz.exe` depends on `lame_enc.dll` being present alongside it for MP3 export. Running the
-program is then a matter of double-clicking `BatViz.exe`; there is no installer, and no administrator rights are
-required.
+The ready-to-run programs are kept in the [release](release) folder of this repository:
+[BatViz.exe](release/BatViz.exe) is the viewer and [BatIdent.exe](release/BatIdent.exe) is the species
+identification tool. Both files should be downloaded to the same location. MP3 export additionally needs
+`lame_enc.dll` next to `BatViz.exe`; that library is not part of this repository and can be obtained as described
+under Requirements. Running the program is then a matter of double-clicking `BatViz.exe`; there is no installer,
+and no administrator rights are required.
 
 On first launch, Windows will likely display a "Windows protected your PC" warning, because the executable is
 not digitally signed. Selecting "More info" and then "Run anyway" proceeds past this warning. This is expected
@@ -61,9 +62,8 @@ project. That process is described under Species identification below.
 - Windows. The application is built for 32-bit, though it also runs correctly on 64-bit Windows.
 - No additional software for viewing, playback, measurement, or PNG and WAV export, since audio playback uses
   the built-in Windows audio API directly.
-- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. It is already included in the
-  release archive; if a separate copy is ever needed, it can be obtained from
-  [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
+- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. It is not included in this
+  repository, but can be obtained from [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
 - Automatic species identification requires a working installation of
   [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), meaning Python together with
   `bat_ident.py`. No other part of Bat vizualizer depends on it.
@@ -166,10 +166,10 @@ process, from [BatIdentForm.pas](BatIdentForm.pas).
 ### Building
 
 Delphi 12, or a compatible version, with the VCL Win32 platform installed, is required to build the project. The
-free Community Edition of Delphi is sufficient; no paid edition or add-on is needed. `BatViz.dproj` (or
-`BatIdent.dproj`) can then be opened in the IDE and built directly. Both projects target Win32 only, which is a
-fixed constraint rather than a preference, since `lame_enc.dll` is available only as a 32-bit library and
-determines the platform for the whole build.
+free Community Edition of Delphi is sufficient; no paid edition or add-on is needed. `BatViz.groupproj`
+opens both programs in the IDE at once, and either `BatViz.dproj` or `BatIdent.dproj` can also be opened and
+built on its own. Both projects target Win32 only, which is a fixed constraint rather than a preference, since
+`lame_enc.dll` is available only as a 32-bit library and determines the platform for the whole build.
 
 No third-party Delphi packages are required, as LAME is loaded dynamically at runtime rather than linked at
 compile time. To test MP3 export locally, `lame_enc.dll` should be placed next to the compiled executable.
