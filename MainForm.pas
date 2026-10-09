@@ -236,6 +236,7 @@ type
     procedure ApplyPlaybackSettingsLive;
     procedure UpdateGainRange;
     procedure RecomputeSpectrogram;
+    procedure ApplyAutoFloorCeiling;
     procedure RenderSpectrogram;
     procedure ScheduleRender;
     procedure ResetPlaybackUI;
@@ -999,6 +1000,7 @@ begin
       TrkTuneFreq.Position := EnsureRange(45, TrkTuneFreq.Min, TrkTuneFreq.Max);
       RbHeterodyne.Caption := Format('Heterodyne (%d kHz)', [TrkTuneFreq.Position]);
       RecomputeSpectrogram();
+      ApplyAutoFloorCeiling();
       UpdateGainRange();
       BtnPlay.Enabled := True;
       BtnExport.Enabled := True;
@@ -1320,6 +1322,7 @@ begin
   if FZoomEnd <= FZoomStart then
     FZoomEnd := Min(1.0, FZoomStart + 0.01);
   UpdateZoomBar();
+  ApplyAutoFloorCeiling();
   RenderSpectrogram();
   PaintBox.Invalidate();
   DetectionMarkersBox.Invalidate();
@@ -2525,6 +2528,21 @@ begin
   FMaxPlotHz := TrkMaxFreq.Position * 1000.0;
   LblMaxFreq.Caption := Format('Max: %d kHz', [TrkMaxFreq.Position]);
   ScheduleRender();
+end;
+
+
+
+procedure TFormMain.ApplyAutoFloorCeiling;
+var
+  FloorDB, CeilingDB, MaxFreqHz: Double;
+begin
+  if (FWavFile = nil) or (FSpecgram = nil) then
+    Exit();
+  FSpecgram.ComputeAutoRangeForWindow(FZoomStart, FZoomEnd, FloorDB, CeilingDB, MaxFreqHz);
+  TrkFloor.Position := EnsureRange(Round(FloorDB), TrkFloor.Min, TrkFloor.Max);
+  TrkFloorChange(TrkFloor);
+  TrkCeiling.Position := EnsureRange(Round(CeilingDB), TrkCeiling.Min, TrkCeiling.Max);
+  TrkCeilingChange(TrkCeiling);
 end;
 
 
