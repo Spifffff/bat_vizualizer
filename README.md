@@ -28,7 +28,8 @@ tool called Bat identifyer can additionally run automated species identification
   per-species detection counts sortable by timestamp or confidence. Species common names are translated into
   Dutch, English, German, French, or Spanish.
 - Persistent settings: window position and the most recently used values are restored automatically between
-  sessions.
+  sessions. They are stored per user in `%APPDATA%\BatViz` and `%APPDATA%\BatIdent`, so the programs also work
+  when installed in a folder that is not writable, such as Program Files.
 - Bat identifyer, the species identification front end for
   [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), which can be run either from inside
   Bat vizualizer or as its own standalone `BatIdent.exe`.
@@ -161,7 +162,7 @@ process, from [BatIdentForm.pas](BatIdentForm.pas).
 | [Heterodyne.pas](Heterodyne.pas) | Mixes and decimates a band down to audible range for heterodyne playback |
 | [PngExport.pas](PngExport.pas) | PNG export of waveform/spectrogram bitmaps |
 | [BatSpeciesTranslations.pas](BatSpeciesTranslations.pas) | Species common name translations |
-| [settings.pas](settings.pas) | Generic ini file backed settings persistence: window position, last-used values |
+| [settings.pas](settings.pas) | Generic ini file backed settings persistence in the per-user application data folder |
 
 ### Building
 

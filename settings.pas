@@ -84,7 +84,24 @@ implementation
 
 
 uses
-  Dialogs, SysUtils, TypInfo, Registry, winapi.windows;
+  Dialogs, SysUtils, TypInfo, Registry, winapi.windows, System.IOUtils;
+
+
+
+{ :@desc Per-user ini file location: %APPDATA%\<AppName>\<AppName>.ini. The folder next to the executable is
+  often not writable (Program Files), so it is only used as a fallback when the per-user folder cannot be created.
+}
+function DefaultIniFilePath: string;
+var
+  AppName, Dir: string;
+begin
+  AppName := ChangeFileExt(ExtractFileName(Application.ExeName), '');
+  Dir := TPath.Combine(TPath.GetHomePath(), AppName);
+  if ForceDirectories(Dir) then
+    Result := TPath.Combine(Dir, AppName + '.ini')
+  else
+    Result := ChangeFileExt(Application.ExeName, '.ini');
+end;
 
 
 { TSettings }
@@ -97,7 +114,7 @@ constructor TSettings.Create(Aowner: TComponent);
 begin
   inherited Create(Aowner);
   _FStoreTarget := stIniFile;
-  _FIniFile := ChangeFileExt(Application.ExeName, '.ini');
+  _FIniFile := DefaultIniFilePath();
   _FRegKey := 'Software\' + ChangeFileExt(extractFileName(Application.ExeName), '');
   _FStoredProps := TStringList.Create();
   _FRaiseExceptions := true;

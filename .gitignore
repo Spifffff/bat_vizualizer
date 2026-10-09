@@ -23,3 +23,4 @@ __recovery/
 !release/BatViz.exe
 !release/BatIdent.exe
 !release/lame_enc.dll
+*.ini
