@@ -152,7 +152,7 @@ var
   CPUCount, I: Integer;
 begin
   CbxArea.Items.AddStrings(['Bavaria', 'EU', 'UK', 'USA', 'USA-EAST', 'USA-WEST', 'Scotland', 'South-Wales', 'MarinCounty']);
-  CbxArea.ItemIndex := 0;
+  CbxArea.ItemIndex := 1;
   CbxKHz.Items.AddStrings(['144', '256']);
   CbxKHz.ItemIndex := 1;
   GetSystemInfo(SI);
