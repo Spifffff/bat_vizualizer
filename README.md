@@ -40,10 +40,17 @@ No installation is required to use Bat vizualizer, and no development tools such
 A Windows machine is sufficient.
 
 The ready-to-run programs are published on the
-[Releases page](https://github.com/Spifffff/bat_vizualizer/releases/latest) of this repository. Each release contains
-`BatViz.exe`, the viewer, and `BatIdent.exe`, the species identification tool, together with `lame_enc.dll`, which
-`BatViz.exe` needs for MP3 export. The three files should be downloaded to the same location. Running the program is
-then a matter of double-clicking `BatViz.exe`; there is no installer, and no administrator rights are required.
+[Releases page](https://github.com/Spifffff/bat_vizualizer/releases/latest) of this repository, and can also be
+downloaded directly:
+
+- [BatViz.exe](https://github.com/Spifffff/bat_vizualizer/releases/latest/download/BatViz.exe), the viewer.
+- [BatIdent.exe](https://github.com/Spifffff/bat_vizualizer/releases/latest/download/BatIdent.exe), the species
+  identification tool.
+- [lame_enc.dll](https://github.com/Spifffff/bat_vizualizer/releases/latest/download/lame_enc.dll), which `BatViz.exe`
+  needs for MP3 export.
+
+The three files should be downloaded to the same location. Running the program is then a matter of double-clicking
+`BatViz.exe`; there is no installer, and no administrator rights are required.
 
 On first launch, Windows will likely display a "Windows protected your PC" warning, because the executable is
 not digitally signed. Selecting "More info" and then "Run anyway" proceeds past this warning. This is expected
