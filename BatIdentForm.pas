@@ -232,8 +232,8 @@ const
     'common local species. Lower means rare species stay in the running too.';
   MSG_SENSITIVITY = 'How sensitive the classifier is when scoring calls. Higher means more calls get flagged as ' +
     'detections. Lower means stricter, fewer detections.';
-  MSG_PARALLEL = 'How many files are analyzed at the same time. Higher is faster, but each file uses its own ' +
-    'memory, so many long or high-rate files at once can run out of memory.';
+  MSG_PARALLEL = 'How many files are analyzed at the same time. More is faster, but it uses more processor power ' +
+    'and memory. If your computer slows down or runs out of memory, choose a lower number.';
 begin
   if Sender = ImgArea then
     MessageDlg(MSG_AREA, mtInformation, [mbOK], 0)
