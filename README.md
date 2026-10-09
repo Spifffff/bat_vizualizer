@@ -1,70 +1,126 @@
 # BatViz
 
-A Windows desktop app for viewing and analyzing bat echolocation recordings. BatViz loads 192 kHz WAV files, shows
-a waveform and a color spectrogram side by side, and lets you play back, zoom, export and (via the bundled BatIdent
-tool) identify bat species in your recordings.
+BatViz is a Windows desktop application for viewing and analyzing bat echolocation recordings. It loads WAV
+files at any sample rate, typically the high rates used by ultrasonic bat detectors, and displays a waveform and
+a color spectrogram side by side, with tools to zoom, play back, measure, and export the recording. A bundled
+tool called BatIdent can additionally run automated species identification over a whole folder of recordings.
 
 ![BatViz main window showing waveform and spectrogram](docs/screenshots/main-window.png)
 
 ## Features
 
-- Waveform and spectrogram view of WAV recordings, with independent zoom and cursor placement
-- Playback with adjustable speed / time-expansion and gain, applied live during playback
-- Multiple spectrogram color schemes: Viridis, Inferno, Magma, Plasma, Cividis, Mako, Rocket, Spectral, Turbo, Hot
-  and grayscale (normal and inverted)
-- Export the current view as a PNG (waveform, spectrogram, or both combined)
-- Export a zoomed selection as an MP3 (via LAME)
-- **BatIdent**: a Windows GUI front-end for [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer),
-  running batch species identification over a folder of recordings, with results shown per file and per species,
-  and translated common names (Dutch, English, German, French, Spanish)
+- Waveform and spectrogram view of WAV recordings, each with independent zoom and cursor placement.
+- Two playback modes, switchable while a recording is playing. Time expansion slows the whole recording down by
+  a chosen factor so the full ultrasonic spectrum becomes audible. Heterodyne instead mixes one narrow, tunable
+  frequency band down to audible range in real time, in the same way a handheld bat detector's dial works. Gain
+  can be adjusted live in either mode.
+- A time and frequency measurement tool. Holding Shift and dragging across the spectrogram reports the duration,
+  bandwidth, and slope, in kHz per millisecond, between the two selected points.
+- Noise reduction and a high-pass plus gate filter, each with its own independent switch, together with a
+  configurable FFT window function and size.
+- Ten spectrogram color schemes, including Viridis, Magma, and grayscale in both directions.
+- Export of the current view as a PNG, and export of a zoomed selection as WAV or MP3, the latter by way of LAME.
+  The export filename reflects whichever playback mode was selected at the time.
+- Folder browsing, so that an entire directory of recordings can be reviewed at once, with per-file and
+  per-species detection counts sortable by timestamp or confidence. Species common names are translated into
+  Dutch, English, German, French, or Spanish.
+- Persistent settings: window position and the most recently used values are restored automatically between
+  sessions.
+- BatIdent, the species identification front end for
+  [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), which can be run either from inside
+  BatViz or as its own standalone `BatIdent.exe`.
+
+## Quick start
+
+No installation is required to use BatViz, and no development tools such as Delphi or Python are needed either.
+A Windows machine is sufficient.
+
+To begin, visit the Releases page of this repository and download the latest release archive. Once it has been
+extracted, the files `BatViz.exe`, `BatIdent.exe`, and `lame_enc.dll` should be kept together in the same
+location, since `BatViz.exe` depends on `lame_enc.dll` being present alongside it for MP3 export. Running the
+program is then a matter of double-clicking `BatViz.exe`; there is no installer, and no administrator rights are
+required.
+
+On first launch, Windows will likely display a "Windows protected your PC" warning, because the executable is
+not digitally signed. Selecting "More info" and then "Run anyway" proceeds past this warning. This is expected
+behavior for a small open-source tool distributed without a paid code-signing certificate, and is not an
+indication of a problem with the software itself.
+
+With the exception of automatic species identification, every feature works immediately after extraction: opening
+files, both playback modes, filtering, measurement, and PNG, WAV, and MP3 export. Species identification requires
+a separate, one-time setup, since it relies on an external Python-based classifier that is not part of this
+project. That process is described under Species identification below.
 
 ## For users
 
 ### Requirements
 
-- Windows (32-bit application)
-- [VLC media player](https://www.videolan.org/vlc/) installed, for audio playback (BatViz looks for `libvlc.dll` in
-  the standard VLC install locations)
-- `lame_enc.dll` next to `BatViz.exe`, only needed for MP3 export (already included in the [release](../release)
-  folder; otherwise download from [lame.buanzo.org](https://lame.buanzo.org/#lamewindl))
-- For species identification: a working install of
-  [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer) (Python + `bat_ident.py`)
-
-### Installation
-
-1. Download the latest release, or grab the prebuilt binaries from the [release](../release) folder.
-2. Keep `BatViz.exe`, `BatIdent.exe`, `lame_enc.dll` and the `resources` folder together in the same directory.
-3. Install VLC if you don't already have it, so playback works.
-4. Run `BatViz.exe`.
+- Windows. The application is built for 32-bit, though it also runs correctly on 64-bit Windows.
+- No additional software for viewing, playback, measurement, or PNG and WAV export, since audio playback uses
+  the built-in Windows audio API directly.
+- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. It is already included in the
+  release archive; if a separate copy is ever needed, it can be obtained from
+  [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
+- Automatic species identification requires a working installation of
+  [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), meaning Python together with
+  `bat_ident.py`. No other part of BatViz depends on it.
 
 ### Usage
 
-- **Open a file**: use File > Open (or drag a WAV file onto the window) to load a recording. The waveform appears
-  on top, the spectrogram below.
-- **Zoom and navigate**: select a region on the waveform to zoom the spectrogram into that range; use the
-  transport controls to move between files in a folder.
-- **Playback**: press play to hear the recording; adjust time-expansion (speed) and gain, which apply
-  immediately even while playing.
-- **Color scheme**: pick a spectrogram color scheme from the toolbar/menu to suit the recording or your preference.
-- **Export**:
-  - Save the current waveform, spectrogram, or both as a PNG.
-  - Save the current zoomed selection as an MP3.
-- **Identify species**: open BatIdent, point it at a folder of recordings and your BattyBirdNET-Analyzer
-  installation, and run the analysis. Results (species, confidence, counts) are shown per file, with common names
-  translated to your selected language.
+A single recording can be loaded with "Open file", or by dragging a WAV file onto the window, after which the
+waveform appears at the top of the window and the spectrogram below it. "Open folder" instead browses every
+recording in a chosen folder at once. BattyBirdNET-Analyzer is not required for this: if none of the files in the
+folder have been analyzed by BatIdent yet, the list on the right simply shows their file names, and it fills in
+with species and detection counts once results become available.
+
+Dragging a region on the waveform zooms the spectrogram into that range, and the transport controls step between
+files or between individual detections.
+
+Playback begins with the play button. In time expansion mode, the whole spectrum plays back more slowly, at
+whichever factor is selected from the dropdown. In heterodyne mode, the recording instead plays back in real
+time while tuned to one frequency band, so dragging the tune-frequency slider sweeps that band across the
+spectrogram, much as turning the dial on a handheld detector would. Changes to gain take effect immediately,
+even while playback is in progress.
+
+To measure a call by hand, hold Shift and drag across the spectrogram. Its duration, the frequency range it
+swept, and the steepness of that sweep are reported on screen at once. Noise reduction and the high-pass plus
+gate filter can each be switched on independently when a recording is noisy, and any of the ten available color
+schemes for the spectrogram can be selected according to preference or to suit a particular recording.
+
+Exporting saves the current waveform, spectrogram, or both together as a PNG, or saves the current zoomed
+selection as a WAV or an MP3 file.
+
+### Species identification
+
+BatIdent is a graphical front end for the third-party
+[BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer) project, which performs the actual
+classification. It is not bundled with BatViz, since it is a separate Python-based project with its own
+installation process, so BattyBirdNET-Analyzer should first be installed by following its own instructions.
 
 ![BatIdent results after analyzing a folder of recordings](docs/screenshots/batident.png)
 
+Once that installation is complete, BatIdent can be opened either through the "Identify..." button inside BatViz
+or by running `BatIdent.exe` on its own. Pointing it at a WAV folder and at the BattyBirdNET-Analyzer
+installation folder, then adjusting the classifier and sensitivity settings if the defaults do not suit a given
+set of recordings, is all that is needed before pressing Start; each setting has an accompanying info icon that
+explains what it controls.
+
+Results are written next to each WAV file and are shown in the results list, including species, confidence,
+per-file and per-species counts, and any files that were skipped or failed during processing. Common names are
+displayed in whichever language has been selected.
+
 ## For developers
 
-### Tech stack
+### Implementation
 
-- Delphi (VCL, Win32), developed with Delphi 12
-- [LibVLC](https://www.videolan.org/vlc/) for audio playback, bound dynamically at runtime (see
-  [LibVLC.pas](LibVLC.pas))
-- [LAME](https://lame.sourceforge.io/) for MP3 encoding (see [Mp3Writer.pas](Mp3Writer.pas))
-- BatIdent is a GUI wrapper around [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer)'s
-  `bat_ident.py`, which it drives as an external process from [BatIdentForm.pas](BatIdentForm.pas)
+BatViz is written in Delphi, targeting VCL and Win32, and was developed with Delphi 12. Audio playback calls the
+native Win32 `waveOut` API directly, bound dynamically at runtime in [WaveOutPlayer.pas](WaveOutPlayer.pas), so
+there is no runtime dependency beyond Windows itself. WAV files are parsed directly in
+[WavReader.pas](WavReader.pas), and MP3 files, where opened, are decoded through Windows Media Foundation rather
+than through LAME. [LAME](https://lame.sourceforge.io/) is used only on the export side, to encode a selection to
+MP3 in [Mp3Writer.pas](Mp3Writer.pas); it plays no part in loading or playing audio. BatIdent drives
+[BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer)'s `bat_ident.py` as an external
+process, from [BatIdentForm.pas](BatIdentForm.pas).
 
 ### Project structure
 
@@ -72,43 +128,52 @@ tool) identify bat species in your recordings.
 |---|---|
 | [BatViz.dpr](BatViz.dpr) | Entry point for the main viewer application |
 | [BatIdent.dpr](BatIdent.dpr) | Entry point for the standalone species identification tool |
-| [MainForm.pas](MainForm.pas) | Main viewer window: file handling, zoom, playback, export |
+| [MainForm.pas](MainForm.pas) | Main viewer window: file handling, zoom, playback, filtering, measuring, export |
 | [BatIdentForm.pas](BatIdentForm.pas) | BatIdent UI: folder selection, analysis options, results |
 | [BusyForm.pas](BusyForm.pas) | Modal busy indicator shown during longer operations |
+| [NightlyActivityForm.pas](NightlyActivityForm.pas) | Nightly activity summary view, still in development and not yet enabled in the UI |
 | [WavReader.pas](WavReader.pas) | WAV file parsing and sample access |
+| [WavWriter.pas](WavWriter.pas) | Streaming WAV export of a selection |
+| [Mp3Writer.pas](Mp3Writer.pas) | Streaming MP3 export via LAME |
 | [FFT.pas](FFT.pas) | Fast Fourier transform used to build the spectrogram |
 | [Spectrogram.pas](Spectrogram.pas) | Spectrogram computation and color mapping |
 | [SpectrogramPainter.pas](SpectrogramPainter.pas) | Renders the spectrogram bitmap |
 | [WaveformPainter.pas](WaveformPainter.pas) | Renders the waveform bitmap |
-| [WaveOutPlayer.pas](WaveOutPlayer.pas) | Audio playback via LibVLC |
-| [Mp3Writer.pas](Mp3Writer.pas) | MP3 export via LAME |
+| [WaveOutPlayer.pas](WaveOutPlayer.pas) | Audio playback via the Win32 `waveOut` API |
+| [Heterodyne.pas](Heterodyne.pas) | Mixes and decimates a band down to audible range for heterodyne playback |
 | [PngExport.pas](PngExport.pas) | PNG export of waveform/spectrogram bitmaps |
-| [BatSpeciesTranslations.pas](BatSpeciesTranslations.pas) | Species common-name translations |
+| [BatSpeciesTranslations.pas](BatSpeciesTranslations.pas) | Species common name translations |
+| [settings.pas](settings.pas) | Generic ini file backed settings persistence: window position, last-used values |
 
 ### Building
 
-1. Install Delphi 12 (or compatible) with the VCL Win32 platform.
-2. Open `BatViz.dproj` (or `BatIdent.dproj`) in the Delphi IDE.
-3. Build/Run. No third-party Delphi packages are required; LibVLC and LAME are loaded dynamically at runtime, not
-   linked at compile time.
-4. To test playback and MP3 export locally, make sure VLC is installed and `lame_enc.dll` sits next to the
-   compiled exe.
+Delphi 12, or a compatible version, with the VCL Win32 platform installed, is required to build the project. The
+free Community Edition of Delphi is sufficient; no paid edition or add-on is needed. `BatViz.dproj` (or
+`BatIdent.dproj`) can then be opened in the IDE and built directly. Both projects target Win32 only, which is a
+fixed constraint rather than a preference, since `lame_enc.dll` is available only as a 32-bit library and
+determines the platform for the whole build.
+
+No third-party Delphi packages are required, as LAME is loaded dynamically at runtime rather than linked at
+compile time. To test MP3 export locally, `lame_enc.dll` should be placed next to the compiled executable.
 
 ### Contributing
 
-Issues and pull requests are welcome. A few conventions used in this codebase:
+Issues and pull requests are welcome. This codebase follows a few conventions:
 
-- 2-space indentation, no manual alignment of adjacent lines
-- Keep lines under 140 characters
-- Prefer small, focused commits with a clear single-line message
+- Two-space indentation, with no manual alignment of adjacent lines.
+- Lines kept under 140 characters.
+- Every zero-argument call written with empty parentheses, for example `Exit()`, `Obj.Free()`, and
+  `TWavFile.Create()`, rather than the bare form.
+- Small, focused commits, each with a clear single-line message.
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+BatViz is licensed under the GNU General Public License version 3. It may be copied, studied, and modified
+freely, and modified versions may be distributed as well, provided they remain under GPLv3 and are accompanied
+by their source code. See [LICENSE](LICENSE) for the full text.
 
 ## Acknowledgments
 
-- [VideoLAN VLC](https://www.videolan.org/vlc/) for audio playback
-- [LAME](https://lame.sourceforge.io/) for MP3 encoding
-- [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer) for bat species classification and the
-  species/label data used for name translation
+- [LAME](https://lame.sourceforge.io/), for MP3 encoding.
+- [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), for bat species classification and
+  for the species and label data behind the name translations.
