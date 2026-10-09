@@ -40,10 +40,9 @@ A Windows machine is sufficient.
 
 The ready-to-run programs are kept in the [release](release) folder of this repository:
 [BatViz.exe](release/BatViz.exe) is the viewer and [BatIdent.exe](release/BatIdent.exe) is the species
-identification tool. Both files should be downloaded to the same location. MP3 export additionally needs
-`lame_enc.dll` next to `BatViz.exe`; that library is not part of this repository and can be obtained as described
-under Requirements. Running the program is then a matter of double-clicking `BatViz.exe`; there is no installer,
-and no administrator rights are required.
+identification tool. The folder also holds [lame_enc.dll](release/lame_enc.dll), which `BatViz.exe` needs for MP3
+export. The three files should be downloaded to the same location. Running the program is then a matter of
+double-clicking `BatViz.exe`; there is no installer, and no administrator rights are required.
 
 On first launch, Windows will likely display a "Windows protected your PC" warning, because the executable is
 not digitally signed. Selecting "More info" and then "Run anyway" proceeds past this warning. This is expected
@@ -62,8 +61,9 @@ project. That process is described under Species identification below.
 - Windows. The application is built for 32-bit, though it also runs correctly on 64-bit Windows.
 - No additional software for viewing, playback, measurement, or PNG and WAV export, since audio playback uses
   the built-in Windows audio API directly.
-- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. It is not included in this
-  repository, but can be obtained from [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
+- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. A copy is included in the
+  release folder; if another one is ever needed, it can be obtained from
+  [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
 - Automatic species identification requires a working installation of
   [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), meaning Python together with
   `bat_ident.py`. No other part of Bat vizualizer depends on it.
