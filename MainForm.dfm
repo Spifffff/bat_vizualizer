@@ -2,7 +2,7 @@ object FormMain: TFormMain
   Left = 100
   Top = 80
   Caption = 'Bat Visualizer'
-  ClientHeight = 864
+  ClientHeight = 945
   ClientWidth = 1205
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -412,7 +412,7 @@ object FormMain: TFormMain
       Left = 3
       Top = 642
       Width = 180
-      Height = 199
+      Height = 280
       Align = alClient
       Caption = 'Export'
       TabOrder = 5
@@ -473,6 +473,47 @@ object FormMain: TFormMain
         Enabled = False
         TabOrder = 3
         OnClick = BtnSaveMp3Click
+      end
+      object LblSections: TLabel
+        Left = 8
+        Top = 150
+        Width = 110
+        Height = 13
+        Caption = 'Sections (per detection)'
+      end
+      object CbxSectionFormat: TComboBox
+        Left = 8
+        Top = 166
+        Width = 164
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 4
+        Text = 'WAV'
+        Items.Strings = (
+          'WAV'
+          'MP3'
+          'WAV + MP3')
+      end
+      object BtnExportSectionsFile: TButton
+        Left = 8
+        Top = 197
+        Width = 80
+        Height = 26
+        Caption = 'This File...'
+        Enabled = False
+        TabOrder = 5
+        OnClick = BtnExportSectionsFileClick
+      end
+      object BtnExportSectionsFolder: TButton
+        Left = 92
+        Top = 197
+        Width = 80
+        Height = 26
+        Caption = 'Whole Folder...'
+        Enabled = False
+        TabOrder = 6
+        OnClick = BtnExportSectionsFolderClick
       end
     end
   end
