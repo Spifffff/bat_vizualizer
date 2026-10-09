@@ -39,11 +39,11 @@ tool called Bat identifyer can additionally run automated species identification
 No installation is required to use Bat vizualizer, and no development tools such as Delphi or Python are needed either.
 A Windows machine is sufficient.
 
-The ready-to-run programs are kept in the [release](release) folder of this repository:
-[BatViz.exe](release/BatViz.exe) is the viewer and [BatIdent.exe](release/BatIdent.exe) is the species
-identification tool. The folder also holds [lame_enc.dll](release/lame_enc.dll), which `BatViz.exe` needs for MP3
-export. The three files should be downloaded to the same location. Running the program is then a matter of
-double-clicking `BatViz.exe`; there is no installer, and no administrator rights are required.
+The ready-to-run programs are published on the
+[Releases page](https://github.com/Spifffff/bat_vizualizer/releases/latest) of this repository. Each release contains
+`BatViz.exe`, the viewer, and `BatIdent.exe`, the species identification tool, together with `lame_enc.dll`, which
+`BatViz.exe` needs for MP3 export. The three files should be downloaded to the same location. Running the program is
+then a matter of double-clicking `BatViz.exe`; there is no installer, and no administrator rights are required.
 
 On first launch, Windows will likely display a "Windows protected your PC" warning, because the executable is
 not digitally signed. Selecting "More info" and then "Run anyway" proceeds past this warning. This is expected
@@ -62,8 +62,8 @@ project. That process is described under Species identification below.
 - Windows. The application is built for 32-bit, though it also runs correctly on 64-bit Windows.
 - No additional software for viewing, playback, measurement, or PNG and WAV export, since audio playback uses
   the built-in Windows audio API directly.
-- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. A copy is included in the
-  release folder; if another one is ever needed, it can be obtained from
+- `lame_enc.dll`, placed next to `BatViz.exe`, is required for MP3 export only. A copy is included with each
+  release; if another one is ever needed, it can be obtained from
   [lame.buanzo.org](https://lame.buanzo.org/#lamewindl).
 - Automatic species identification requires a working installation of
   [BattyBirdNET-Analyzer](https://github.com/rdz-oss/BattyBirdNET-Analyzer), meaning Python together with

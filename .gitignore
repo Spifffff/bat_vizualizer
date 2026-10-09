@@ -19,8 +19,5 @@ __recovery/
 *.rsm
 *.drc
 
-# Prebuilt programs shipped in the repository
-!release/BatViz.exe
-!release/BatIdent.exe
-!release/lame_enc.dll
+# Settings files
 *.ini
