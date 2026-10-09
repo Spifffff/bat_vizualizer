@@ -31,7 +31,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Heterodyne, Mp3Writer, WavWriter,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
-  BatIdentForm, BusyForm, NightlyActivityForm, settings;
+  BatIdentForm, BusyForm, NightlyActivityForm, ClipExportForm, settings;
 
 const
   LEFT_MARGIN = 65;
@@ -40,6 +40,8 @@ const
   RIGHT_MARGIN = 10;
   SPECTROGRAM_GAMMA = 2.5;
   WAVE_VPAD = 12;
+  PANEL_FILES_BOTTOM_HEIGHT_WITH_CSV = 132;
+  PANEL_FILES_BOTTOM_HEIGHT_NO_CSV = 94;
 
 type
   TFormMain = class(TForm)
@@ -76,7 +78,6 @@ type
     BtnAutoFloor: TButton;
     BtnAutoCeiling: TButton;
     BtnAutoMaxFreq: TButton;
-    GroupExport: TGroupBox;
     StatusBar: TStatusBar;
     ZoomBar: TScrollBar;
     PanelMain: TPanel;
@@ -92,7 +93,6 @@ type
     BtnZoomFull: TButton;
     ChkMeasure: TCheckBox;
     OpenDialog: TOpenDialog;
-    SaveDialog: TSaveDialog;
     Timer: TTimer;
     RenderTimer: TTimer;
     LivePlaybackTimer: TTimer;
@@ -101,18 +101,7 @@ type
     RbHeterodyne: TRadioButton;
     TrkTuneFreq: TTrackBar;
     LblTuneFreq: TLabel;
-    LblImage: TLabel;
-    CbxSaveTarget: TComboBox;
-    BtnSavePNG: TButton;
-    LblAudio: TLabel;
-    BtnSaveWav: TButton;
-    BtnSaveMp3: TButton;
-    LblSections: TLabel;
-    CbxSectionFormat: TComboBox;
-    BtnExportSectionsFile: TButton;
-    BtnExportSectionsFolder: TButton;
-    SaveDialogMp3: TSaveDialog;
-    SaveDialogWav: TSaveDialog;
+    BtnExport: TButton;
     PanelRight: TPanel;
     PanelFileContent: TPanel;
     PanelFileHeader: TPanel;
@@ -127,6 +116,7 @@ type
     GroupBox1: TGroupBox;
     ImageListClose: TImageList;
     BtnNightlyActivity: TButton;
+    BtnExportClips: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
@@ -135,7 +125,6 @@ type
     procedure BtnPrevFileClick(Sender: TObject);
     procedure BtnNextFileClick(Sender: TObject);
     procedure BtnIdentifyClick(Sender: TObject);
-    procedure BtnSavePNGClick(Sender: TObject);
     procedure BtnPlayClick(Sender: TObject);
     procedure BtnPauseClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
@@ -177,10 +166,8 @@ type
     procedure BtnAutoMaxFreqClick(Sender: TObject);
     procedure RenderTimerTick(Sender: TObject);
     procedure ZoomBarChange(Sender: TObject);
-    procedure BtnSaveMp3Click(Sender: TObject);
-    procedure BtnSaveWavClick(Sender: TObject);
-    procedure BtnExportSectionsFileClick(Sender: TObject);
-    procedure BtnExportSectionsFolderClick(Sender: TObject);
+    procedure BtnExportClick(Sender: TObject);
+    procedure BtnExportClipsClick(Sender: TObject);
     procedure FileListViewClick(Sender: TObject);
     procedure FileListViewDblClick(Sender: TObject);
     procedure FileListViewResize(Sender: TObject);
@@ -219,6 +206,8 @@ type
     Settings: TSettings;
     FLastOpenFolder: string;
     FLastSectionsFolder: string;
+    FExportTypeIdx: Integer;
+    FClipFilter: TClipFilter;
 
     { AllowDropFiles/OnDropFiles aren't published on TCustomForm -- streaming
       them from the dfm raised EReadError, and referencing AllowDropFiles in
@@ -321,8 +310,6 @@ type
 
     TResultSortColumn = (rscTimestamp, rscConfidence);
 
-    TSectionFormat = (sfWav, sfMp3, sfWavAndMp3);
-
   var
     FCurrentFilePath: string;
     FFileEntries: TArray<TBatFileEntry>;
@@ -352,13 +339,16 @@ type
     function BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
     function CanCopyOriginalForExport(const ATargetExt: string): Boolean;
     function SanitizeSpeciesForFileName(const ASpecies: string): string;
-    function GetSectionFormat: TSectionFormat;
     function BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection): string;
+    function SelectClips(const AFilter: TClipFilter): TArray<TFlatDet>;
+    procedure ExportImage(const AFileName: string; ATarget: Integer);
+    procedure ExportAudio(const AFileName, AExt: string);
     procedure ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFileEntry; const Det: TBatDetection;
-      const AOutputFolder: string; AFormat: TSectionFormat; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
-    procedure ExportSectionsForFile(const AEntry: TBatFileEntry; const AOutputFolder: string; AFormat: TSectionFormat;
-      var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
-    procedure ReportSectionExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+      const AOutputFolder: string; AMarginSec: Double; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+    procedure ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; const AOutputFolder: string;
+      var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
+    procedure ReportClipExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount, ATotal: Integer; ACancelled: Boolean;
+      AErrorLog: TStrings);
   end;
 
 var
@@ -699,6 +689,8 @@ begin
   FBusyStartTick := GetTickCount();
   FBusyShown := False;
   EnsureBusyForm();
+  FBusyForm.SetMarquee();
+  FBusyForm.ShowCancel(False);
   FBusyForm.LblMessage.Caption := AMessage;
 end;
 
@@ -898,8 +890,6 @@ begin
   Settings.StoredProps.Add('ChkFilter.Checked');
   Settings.StoredProps.Add('CbxSpeed.ItemIndex');
   Settings.StoredProps.Add('RbHeterodyne.Checked');
-  Settings.StoredProps.Add('CbxSaveTarget.ItemIndex');
-  Settings.StoredProps.Add('CbxSectionFormat.ItemIndex');
   Settings.StoredProps.Add('WaveformBox.Height');
   Settings.StoredProps.Add('PanelRight.Width');
   Settings.StoredProps.Add('OpenDialog.InitialDir');
@@ -912,6 +902,13 @@ begin
   FSortAscending := Settings.ReadBoolean('SortAscending', FSortAscending);
   FLastOpenFolder := Settings.ReadString('LastOpenFolder', '');
   FLastSectionsFolder := Settings.ReadString('LastSectionsFolder', '');
+  FExportTypeIdx := Settings.ReadInteger('ExportType', 1);
+  FClipFilter := DefaultClipFilter();
+  FClipFilter.UseBestN := Settings.ReadBoolean('ClipUseBestN', FClipFilter.UseBestN);
+  FClipFilter.BestN := Settings.ReadInteger('ClipBestN', FClipFilter.BestN);
+  FClipFilter.UseMinConfidence := Settings.ReadBoolean('ClipUseMinConfidence', FClipFilter.UseMinConfidence);
+  FClipFilter.MinConfidence := Settings.ReadFloat('ClipMinConfidence', FClipFilter.MinConfidence);
+  FClipFilter.MarginSec := Settings.ReadFloat('ClipMarginSec', FClipFilter.MarginSec);
 
   FitResultsColumns();
 end;
@@ -935,6 +932,12 @@ begin
   Settings.WriteBoolean('SortAscending', FSortAscending);
   Settings.WriteString('LastOpenFolder', FLastOpenFolder);
   Settings.WriteString('LastSectionsFolder', FLastSectionsFolder);
+  Settings.WriteInteger('ExportType', FExportTypeIdx);
+  Settings.WriteBoolean('ClipUseBestN', FClipFilter.UseBestN);
+  Settings.WriteInteger('ClipBestN', FClipFilter.BestN);
+  Settings.WriteBoolean('ClipUseMinConfidence', FClipFilter.UseMinConfidence);
+  Settings.WriteFloat('ClipMinConfidence', FClipFilter.MinConfidence);
+  Settings.WriteFloat('ClipMarginSec', FClipFilter.MarginSec);
   Settings.WriteFormPositions(Self);
   Settings.SaveSettings();
 
@@ -999,10 +1002,7 @@ begin
       RecomputeSpectrogram();
       UpdateGainRange();
       BtnPlay.Enabled := True;
-      BtnSavePNG.Enabled := True;
-      BtnSaveMp3.Enabled := True;
-      BtnSaveWav.Enabled := True;
-      BtnExportSectionsFile.Enabled := True;
+      BtnExport.Enabled := True;
       BtnAutoFloor.Enabled := True;
       BtnAutoCeiling.Enabled := True;
       BtnAutoMaxFreq.Enabled := True;
@@ -1410,9 +1410,63 @@ end;
 
 
 
-function TFormMain.GetSectionFormat: TSectionFormat;
+function TFormMain.SelectClips(const AFilter: TClipFilter): TArray<TFlatDet>;
+var
+  Candidates: TArray<TFlatDet>;
+  I, J, GroupStart, KeepCount, Count: Integer;
+  Det: TBatDetection;
 begin
-  Result := TSectionFormat(CbxSectionFormat.ItemIndex);
+  SetLength(Candidates, 0);
+  Count := 0;
+  for I := 0 to High(FFileEntries) do
+    for J := 0 to High(FFileEntries[I].Detections) do begin
+      Det := FFileEntries[I].Detections[J];
+      if AFilter.UseMinConfidence and (Det.Confidence < AFilter.MinConfidence) then
+        Continue;
+      if Count >= Length(Candidates) then
+        SetLength(Candidates, Max(64, Length(Candidates) * 2));
+      Candidates[Count].CommonName := Det.CommonName;
+      Candidates[Count].FileIdx := I;
+      Candidates[Count].DetIdx := J;
+      Inc(Count);
+    end;
+  SetLength(Candidates, Count);
+
+  if AFilter.UseBestN then begin
+    TArray.Sort<TFlatDet>(Candidates, TComparer<TFlatDet>.Construct(
+      function(const A, B: TFlatDet): Integer
+      begin
+        Result := CompareText(A.CommonName, B.CommonName);
+        if Result <> 0 then
+          Exit();
+        Result := CompareValue(FFileEntries[B.FileIdx].Detections[B.DetIdx].Confidence,
+          FFileEntries[A.FileIdx].Detections[A.DetIdx].Confidence);
+      end));
+    SetLength(Result, Count);
+    Count := 0;
+    I := 0;
+    while I <= High(Candidates) do begin
+      GroupStart := I;
+      while (I <= High(Candidates)) and SameText(Candidates[I].CommonName, Candidates[GroupStart].CommonName) do
+        Inc(I);
+      KeepCount := Min(AFilter.BestN, I - GroupStart);
+      for J := GroupStart to GroupStart + KeepCount - 1 do begin
+        Result[Count] := Candidates[J];
+        Inc(Count);
+      end;
+    end;
+    SetLength(Result, Count);
+  end
+  else
+    Result := Candidates;
+
+  TArray.Sort<TFlatDet>(Result, TComparer<TFlatDet>.Construct(
+    function(const A, B: TFlatDet): Integer
+    begin
+      Result := CompareValue(A.FileIdx, B.FileIdx);
+      if Result = 0 then
+        Result := CompareValue(A.DetIdx, B.DetIdx);
+    end));
 end;
 
 
@@ -1468,28 +1522,20 @@ end;
 
 
 procedure TFormMain.ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFileEntry; const Det: TBatDetection;
-  const AOutputFolder: string; AFormat: TSectionFormat; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
-const
-  SECTION_PAD_SEC = 2.0;
+  const AOutputFolder: string; AMarginSec: Double; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
 var
   ZoomStart, ZoomEnd: Double;
   BaseName, FileName: string;
   ActualRate: Cardinal;
 begin
-  ZoomStart := Max(0.0, (Det.StartSec - SECTION_PAD_SEC) / AWav.Info.DurationSec);
-  ZoomEnd := Min(1.0, (Det.EndSec + SECTION_PAD_SEC) / AWav.Info.DurationSec);
+  ZoomStart := Max(0.0, (Det.StartSec - AMarginSec) / AWav.Info.DurationSec);
+  ZoomEnd := Min(1.0, (Det.EndSec + AMarginSec) / AWav.Info.DurationSec);
   if ZoomEnd <= ZoomStart then
     ZoomEnd := Min(1.0, ZoomStart + 0.01);
   BaseName := BuildSectionFileName(AEntry, Det);
   try
-    if AFormat in [sfWav, sfWavAndMp3] then begin
-      FileName := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName + '.wav';
-      SaveWav(AWav.Samples, ZoomStart, ZoomEnd, FileName, AWav.Info.SampleRate, 1.0, ActualRate);
-    end;
-    if AFormat in [sfMp3, sfWavAndMp3] then begin
-      FileName := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName + '.mp3';
-      SaveMp3(AWav.Samples, ZoomStart, ZoomEnd, FileName, AWav.Info.SampleRate, 1.0, ActualRate);
-    end;
+    FileName := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName + '.wav';
+    SaveWav(AWav.Samples, ZoomStart, ZoomEnd, FileName, AWav.Info.SampleRate, 1.0, ActualRate);
     Inc(ASavedCount);
   except
     on E: Exception do begin
@@ -1501,53 +1547,80 @@ end;
 
 
 
-procedure TFormMain.ExportSectionsForFile(const AEntry: TBatFileEntry; const AOutputFolder: string; AFormat: TSectionFormat;
-  var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+procedure TFormMain.ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; const AOutputFolder: string;
+  var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
 var
   Wav: TWavFile;
-  I: Integer;
+  Entry: TBatFileEntry;
+  Loaded: Boolean;
+  I, J, FileStart, FileIdx, Total: Integer;
 begin
-  if Length(AEntry.Detections) = 0 then
-    Exit();
-  Wav := TWavFile.Create();
-  try
+  Total := Length(ASelected);
+  I := 0;
+  while (I < Total) and not ACancelled do begin
+    FileIdx := ASelected[I].FileIdx;
+    FileStart := I;
+    while (I < Total) and (ASelected[I].FileIdx = FileIdx) do
+      Inc(I);
+    Entry := FFileEntries[FileIdx];
+    FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
+    FBusyForm.LblMessage.Caption := Format('Loading %s...', [Entry.FileName]);
+    Wav := TWavFile.Create();
     try
-      Wav.LoadFromFile(AEntry.FilePath, TickBusy);
-    except
-      on E: Exception do begin
-        AErrorLog.Add(AEntry.FileName + ': ' + E.Message);
-        Inc(ASkippedCount, Length(AEntry.Detections));
-        Exit();
+      Loaded := True;
+      try
+        Wav.LoadFromFile(Entry.FilePath, TickBusy);
+      except
+        on E: Exception do begin
+          Loaded := False;
+          AErrorLog.Add(Entry.FileName + ': ' + E.Message);
+          Inc(ASkippedCount, I - FileStart);
+        end;
       end;
+      if Loaded then
+        for J := FileStart to I - 1 do begin
+          FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
+          FBusyForm.LblMessage.Caption := Format('Exporting clip %d of %d: %s', [ASavedCount + ASkippedCount + 1, Total, Entry.FileName]);
+          TickBusy();
+          if FBusyForm.Cancelled then begin
+            ACancelled := True;
+            Break;
+          end;
+          ExportDetectionSection(Wav, Entry, Entry.Detections[ASelected[J].DetIdx], AOutputFolder, AMarginSec, ASavedCount,
+            ASkippedCount, AErrorLog);
+        end;
+    finally
+      Wav.Free();
     end;
-    for I := 0 to High(AEntry.Detections) do begin
-      TickBusy();
-      ExportDetectionSection(Wav, AEntry, AEntry.Detections[I], AOutputFolder, AFormat, ASavedCount, ASkippedCount, AErrorLog);
-    end;
-  finally
-    Wav.Free();
+    if FBusyForm.Cancelled then
+      ACancelled := True;
   end;
 end;
 
 
 
-procedure TFormMain.ReportSectionExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+procedure TFormMain.ReportClipExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount, ATotal: Integer;
+  ACancelled: Boolean; AErrorLog: TStrings);
 const
   MAX_ERROR_LINES = 5;
 var
   Msg: string;
   I: Integer;
 begin
-  if AErrorLog.Count = 0 then begin
-    MessageDlg(Format('Exported %d section(s) to %s.', [ASavedCount, AOutputFolder]), mtInformation, [mbOK], 0);
-    Exit();
-  end;
-  Msg := Format('Exported %d section(s), %d skipped, to %s.', [ASavedCount, ASkippedCount, AOutputFolder]);
+  if ACancelled then
+    Msg := Format('Cancelled. Exported %d of %d section(s) to %s.', [ASavedCount, ATotal, AOutputFolder])
+  else if ASkippedCount = 0 then
+    Msg := Format('Exported %d section(s) to %s.', [ASavedCount, AOutputFolder])
+  else
+    Msg := Format('Exported %d section(s), %d skipped, to %s.', [ASavedCount, ASkippedCount, AOutputFolder]);
   for I := 0 to Min(MAX_ERROR_LINES, AErrorLog.Count) - 1 do
     Msg := Msg + #13#10 + AErrorLog[I];
   if AErrorLog.Count > MAX_ERROR_LINES then
     Msg := Msg + #13#10 + Format('(%d more)', [AErrorLog.Count - MAX_ERROR_LINES]);
-  MessageDlg(Msg, mtWarning, [mbOK], 0);
+  if (AErrorLog.Count = 0) and not ACancelled then
+    MessageDlg(Msg, mtInformation, [mbOK], 0)
+  else
+    MessageDlg(Msg, mtWarning, [mbOK], 0);
 end;
 
 
@@ -1631,7 +1704,11 @@ begin
       end;
     FileListView.ShowColumnHeaders := AnyCsv;
     BtnNightlyActivity.Visible := AnyCsv;
-    BtnExportSectionsFolder.Enabled := AnyCsv;
+    BtnExportClips.Enabled := AnyCsv;
+    if AnyCsv then
+      PanelFilesBottom.Height := PANEL_FILES_BOTTOM_HEIGHT_WITH_CSV
+    else
+      PanelFilesBottom.Height := PANEL_FILES_BOTTOM_HEIGHT_NO_CSV;
     if not AnyCsv then begin
       for I := 0 to High(FFileEntries) do begin
         Item := FileListView.Items.Add;
@@ -1895,13 +1972,29 @@ begin
   JumpToDetection(Entry.Detections[RD^.DetIdx]);
 end;
 
-
-
-{ ---- PNG export ------------------------------------------------------------ }
+{ ---- export ---------------------------------------------------------------- }
 
 
 
-procedure TFormMain.BtnSavePNGClick(Sender: TObject);
+type
+  TExportType = record
+    DisplayName: string;
+    Mask: string;
+    Ext: string;
+  end;
+
+const
+  EXPORT_TYPES: array[0..4] of TExportType = (
+    (DisplayName: 'PNG image: waveform and spectrogram'; Mask: '*.png'; Ext: '.png'),
+    (DisplayName: 'PNG image: spectrogram only'; Mask: '*.png'; Ext: '.png'),
+    (DisplayName: 'PNG image: waveform only'; Mask: '*.png'; Ext: '.png'),
+    (DisplayName: 'WAV audio'; Mask: '*.wav'; Ext: '.wav'),
+    (DisplayName: 'MP3 audio'; Mask: '*.mp3'; Ext: '.mp3'));
+  EXPORT_TYPE_FIRST_AUDIO = 4;
+
+
+
+procedure TFormMain.ExportImage(const AFileName: string; ATarget: Integer);
 var
   WavBmp, SpectBmp: TBitmap;
   Scheme: TColorScheme;
@@ -1910,9 +2003,6 @@ var
   Samples: TArray<Single>;
 begin
   if FSpecgram = nil then
-    Exit();
-  SaveDialog.FileName := BuildDefaultExportFileName(False);
-  if not SaveDialog.Execute() then
     Exit();
   Scheme := IdxToColorScheme(CbxColorScheme.ItemIndex);
   FSpecgram.GetColor(0.0, Scheme, VR, VG, VB);
@@ -1938,7 +2028,7 @@ begin
     WaveformBox.Invalidate();
     PaintBox.Perform(WM_PAINT, WPARAM(SpectBmp.Canvas.Handle), 0);
     try
-      SavePng(WavBmp, SpectBmp, CbxSaveTarget.ItemIndex, SaveDialog.FileName);
+      SavePng(WavBmp, SpectBmp, ATarget, AFileName);
     except
       on E: Exception do
         MessageDlg('Error saving PNG:'#13#10 + E.Message, mtError, [mbOK], 0);
@@ -1951,34 +2041,32 @@ end;
 
 
 
-{ ---- MP3 export ------------------------------------------------------------ }
-
-
-
-procedure TFormMain.BtnSaveMp3Click(Sender: TObject);
+procedure TFormMain.ExportAudio(const AFileName, AExt: string);
 var
   DesiredRate, ActualRate: Cardinal;
+  Fmt: string;
 begin
   if FWavFile = nil then
     Exit();
-  SaveDialogMp3.FileName := BuildDefaultExportFileName(True);
-  if not SaveDialogMp3.Execute() then
-    Exit();
+  Fmt := UpperCase(Copy(AExt, 2, MaxInt));
   Screen.Cursor := crHourGlass;
   try
     try
-      if CanCopyOriginalForExport('.mp3') then begin
-        TFile.Copy(FCurrentFilePath, SaveDialogMp3.FileName, True);
-        StatusBar.Panels[0].Text := 'MP3 saved — copied original file';
+      if CanCopyOriginalForExport(AExt) then begin
+        TFile.Copy(FCurrentFilePath, AFileName, True);
+        StatusBar.Panels[0].Text := Fmt + ' saved — copied original file';
       end else begin
         DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
-        SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogMp3.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
-        StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
-          [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+        if SameText(AExt, '.mp3') then
+          SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, DesiredRate, GetPlaybackGain(), ActualRate)
+        else
+          SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, DesiredRate, GetPlaybackGain(), ActualRate);
+        StatusBar.Panels[0].Text := Format('%s saved — %d Hz (%.1f%% speed)',
+          [Fmt, ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
       end;
     except
       on E: Exception do
-        MessageDlg('Error saving MP3:'#13#10 + E.Message, mtError, [mbOK], 0);
+        MessageDlg('Error saving ' + Fmt + ':'#13#10 + E.Message, mtError, [mbOK], 0);
     end;
   finally
     Screen.Cursor := crDefault;
@@ -1987,94 +2075,83 @@ end;
 
 
 
-procedure TFormMain.BtnSaveWavClick(Sender: TObject);
+procedure TFormMain.BtnExportClick(Sender: TObject);
 var
-  DesiredRate, ActualRate: Cardinal;
+  D: TFileSaveDialog;
+  Item: TFileTypeItem;
+  I, TypeIdx: Integer;
+  FileName, Ext, TypedExt: string;
 begin
   if FWavFile = nil then
     Exit();
-  SaveDialogWav.FileName := BuildDefaultExportFileName(True);
-  if not SaveDialogWav.Execute() then
-    Exit();
-  Screen.Cursor := crHourGlass;
+  D := TFileSaveDialog.Create(nil);
   try
-    try
-      if CanCopyOriginalForExport('.wav') then begin
-        TFile.Copy(FCurrentFilePath, SaveDialogWav.FileName, True);
-        StatusBar.Panels[0].Text := 'WAV saved — copied original file';
-      end else begin
-        DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
-        SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, SaveDialogWav.FileName, DesiredRate, GetPlaybackGain(), ActualRate);
-        StatusBar.Panels[0].Text := Format('WAV saved — %d Hz (%.1f%% speed)',
-          [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
-      end;
-    except
-      on E: Exception do
-        MessageDlg('Error saving WAV:'#13#10 + E.Message, mtError, [mbOK], 0);
+    for I := 0 to High(EXPORT_TYPES) do begin
+      Item := D.FileTypes.Add();
+      Item.DisplayName := EXPORT_TYPES[I].DisplayName;
+      Item.FileMask := EXPORT_TYPES[I].Mask;
     end;
-  finally
-    Screen.Cursor := crDefault;
-  end;
-end;
-
-
-
-procedure TFormMain.BtnExportSectionsFileClick(Sender: TObject);
-var
-  D: TFileOpenDialog;
-  Idx, SavedCount, SkippedCount: Integer;
-  ErrorLog: TStringList;
-begin
-  if FWavFile = nil then
-    Exit();
-  Idx := GetCurrentFileIndex();
-  if (Idx < 0) or (Length(FFileEntries[Idx].Detections) = 0) then begin
-    MessageDlg('No detections found for this file. Open its folder (or re-run BatIdent) first.', mtInformation, [mbOK], 0);
-    Exit();
-  end;
-  D := TFileOpenDialog.Create(nil);
-  try
-    D.Options := [fdoPickFolders, fdoPathMustExist];
-    if FLastSectionsFolder <> '' then
-      D.DefaultFolder := FLastSectionsFolder;
-    if not D.Execute then
+    D.FileTypeIndex := EnsureRange(FExportTypeIdx, 1, Length(EXPORT_TYPES));
+    D.DefaultExtension := Copy(EXPORT_TYPES[D.FileTypeIndex - 1].Ext, 2, MaxInt);
+    D.Options := [fdoOverWritePrompt, fdoPathMustExist];
+    D.FileName := BuildDefaultExportFileName(D.FileTypeIndex >= EXPORT_TYPE_FIRST_AUDIO);
+    if not D.Execute() then
       Exit();
-    FLastSectionsFolder := ExcludeTrailingPathDelimiter(D.FileName);
+    TypeIdx := D.FileTypeIndex;
+    FileName := D.FileName;
   finally
     D.Free();
   end;
 
-  SavedCount := 0;
-  SkippedCount := 0;
-  ErrorLog := TStringList.Create();
-  try
-    Screen.Cursor := crHourGlass;
-    Enabled := False;
-    BeginBusy('Exporting sections...');
-    try
-      ExportSectionsForFile(FFileEntries[Idx], FLastSectionsFolder, GetSectionFormat(), SavedCount, SkippedCount, ErrorLog);
-    finally
-      EndBusy();
-      Enabled := True;
-      Screen.Cursor := crDefault;
-    end;
-    ReportSectionExportResult(FLastSectionsFolder, SavedCount, SkippedCount, ErrorLog);
-  finally
-    ErrorLog.Free();
+  FExportTypeIdx := TypeIdx;
+  Ext := EXPORT_TYPES[TypeIdx - 1].Ext;
+  TypedExt := ExtractFileExt(FileName);
+  if not SameText(TypedExt, Ext) then
+    if SameText(TypedExt, '.png') or SameText(TypedExt, '.wav') or SameText(TypedExt, '.mp3') then
+      FileName := ChangeFileExt(FileName, Ext)
+    else
+      FileName := FileName + Ext;
+  case TypeIdx of
+    1:
+      ExportImage(FileName, 2);
+    2:
+      ExportImage(FileName, 1);
+    3:
+      ExportImage(FileName, 0);
+  else
+    ExportAudio(FileName, Ext);
   end;
 end;
 
 
 
-procedure TFormMain.BtnExportSectionsFolderClick(Sender: TObject);
+procedure TFormMain.BtnExportClipsClick(Sender: TObject);
 var
+  Dlg: TFormClipExport;
   D: TFileOpenDialog;
-  I, SavedCount, SkippedCount: Integer;
+  Filter: TClipFilter;
+  Selected: TArray<TFlatDet>;
   ErrorLog: TStringList;
-  Fmt: TSectionFormat;
+  SavedCount, SkippedCount: Integer;
+  Cancelled, Accepted: Boolean;
 begin
   if Length(FFileEntries) = 0 then
     Exit();
+  Filter := FClipFilter;
+  Dlg := TFormClipExport.Create(Self);
+  try
+    Accepted := Dlg.Execute(Filter,
+      function(const AFilter: TClipFilter): Integer
+      begin
+        Result := Length(SelectClips(AFilter));
+      end);
+  finally
+    Dlg.Free();
+  end;
+  if not Accepted then
+    Exit();
+  FClipFilter := Filter;
+
   D := TFileOpenDialog.Create(nil);
   try
     D.Options := [fdoPickFolders, fdoPathMustExist];
@@ -2087,25 +2164,25 @@ begin
     D.Free();
   end;
 
-  Fmt := GetSectionFormat();
+  Selected := SelectClips(Filter);
   SavedCount := 0;
   SkippedCount := 0;
+  Cancelled := False;
   ErrorLog := TStringList.Create();
   try
     Screen.Cursor := crHourGlass;
     Enabled := False;
-    BeginBusy('Exporting sections...');
+    BeginBusy('Exporting clips...');
+    FBusyForm.ShowCancel(True);
+    FBusyForm.SetProgress(0, Length(Selected));
     try
-      for I := 0 to High(FFileEntries) do begin
-        FBusyForm.LblMessage.Caption := 'Exporting sections: ' + FFileEntries[I].FileName;
-        ExportSectionsForFile(FFileEntries[I], FLastSectionsFolder, Fmt, SavedCount, SkippedCount, ErrorLog);
-      end;
+      ExportClips(Selected, Filter.MarginSec, FLastSectionsFolder, SavedCount, SkippedCount, Cancelled, ErrorLog);
     finally
       EndBusy();
       Enabled := True;
       Screen.Cursor := crDefault;
     end;
-    ReportSectionExportResult(FLastSectionsFolder, SavedCount, SkippedCount, ErrorLog);
+    ReportClipExportResult(FLastSectionsFolder, SavedCount, SkippedCount, Length(Selected), Cancelled, ErrorLog);
   finally
     ErrorLog.Free();
   end;

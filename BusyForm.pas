@@ -34,6 +34,15 @@ type
   TFormBusy = class(TForm)
     LblMessage: TLabel;
     PrgBar: TProgressBar;
+    BtnCancel: TButton;
+    procedure BtnCancelClick(Sender: TObject);
+  private
+    FCancelled: Boolean;
+  public
+    procedure SetProgress(APosition, AMax: Integer);
+    procedure SetMarquee;
+    procedure ShowCancel(AVisible: Boolean);
+    property Cancelled: Boolean read FCancelled;
   end;
 
 
@@ -43,6 +52,50 @@ implementation
 
 
 {$R *.dfm}
+
+
+
+const
+  HEIGHT_WITHOUT_CANCEL = 66;
+  HEIGHT_WITH_CANCEL = 96;
+
+
+
+procedure TFormBusy.BtnCancelClick(Sender: TObject);
+begin
+  FCancelled := True;
+  BtnCancel.Enabled := False;
+  LblMessage.Caption := 'Cancelling...';
+end;
+
+
+
+procedure TFormBusy.SetProgress(APosition, AMax: Integer);
+begin
+  PrgBar.Style := pbstNormal;
+  PrgBar.Max := AMax;
+  PrgBar.Position := APosition;
+end;
+
+
+
+procedure TFormBusy.SetMarquee;
+begin
+  PrgBar.Style := pbstMarquee;
+end;
+
+
+
+procedure TFormBusy.ShowCancel(AVisible: Boolean);
+begin
+  FCancelled := False;
+  BtnCancel.Enabled := True;
+  BtnCancel.Visible := AVisible;
+  if AVisible then
+    ClientHeight := HEIGHT_WITH_CANCEL
+  else
+    ClientHeight := HEIGHT_WITHOUT_CANCEL;
+end;
 
 
 

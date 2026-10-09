@@ -30,4 +30,14 @@ object FormBusy: TFormBusy
     MarqueeInterval = 30
     TabOrder = 0
   end
+  object BtnCancel: TButton
+    Left = 173
+    Top = 62
+    Width = 75
+    Height = 24
+    Caption = 'Cancel'
+    TabOrder = 1
+    Visible = False
+    OnClick = BtnCancelClick
+  end
 end

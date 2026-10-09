@@ -21,6 +21,8 @@ tool called BatIdent can additionally run automated species identification over 
 - Ten spectrogram color schemes, including Viridis, Magma, and grayscale in both directions.
 - Export of the current view as a PNG, and export of a zoomed selection as WAV or MP3, the latter by way of LAME.
   The export filename reflects whichever playback mode was selected at the time.
+- Export of detection clips: short WAV files cut around each detection in a folder, optionally limited to the best
+  results per species or to detections above a confidence threshold, with a configurable margin.
 - Folder browsing, so that an entire directory of recordings can be reviewed at once, with per-file and
   per-species detection counts sortable by timestamp or confidence. Species common names are translated into
   Dutch, English, German, French, or Spanish.
@@ -87,8 +89,15 @@ swept, and the steepness of that sweep are reported on screen at once. Noise red
 gate filter can each be switched on independently when a recording is noisy, and any of the ten available color
 schemes for the spectrogram can be selected according to preference or to suit a particular recording.
 
-Exporting saves the current waveform, spectrogram, or both together as a PNG, or saves the current zoomed
-selection as a WAV or an MP3 file.
+The Export button in the left panel saves the current view. The file type chosen in the save dialog decides what is
+written: the waveform, the spectrogram, or both together as a PNG, or the current zoomed selection as a WAV or an
+MP3 file.
+
+Once a folder with BatIdent results has been opened, the Export clips button at the bottom of the right panel cuts
+a separate WAV file around every detection in that folder. A dialog offers two optional limits, which can be
+combined: only the best N detections per species, and only detections above a given confidence. It also sets the
+margin, in seconds, that is kept before and after each detection. The clips are written unmodified at the original
+sample rate, and a progress bar with a Cancel button is shown while they are being written.
 
 ### Species identification
 
@@ -130,7 +139,8 @@ process, from [BatIdentForm.pas](BatIdentForm.pas).
 | [BatIdent.dpr](BatIdent.dpr) | Entry point for the standalone species identification tool |
 | [MainForm.pas](MainForm.pas) | Main viewer window: file handling, zoom, playback, filtering, measuring, export |
 | [BatIdentForm.pas](BatIdentForm.pas) | BatIdent UI: folder selection, analysis options, results |
-| [BusyForm.pas](BusyForm.pas) | Modal busy indicator shown during longer operations |
+| [BusyForm.pas](BusyForm.pas) | Busy indicator with optional progress bar and Cancel button for longer operations |
+| [ClipExportForm.pas](ClipExportForm.pas) | Dialog for choosing which detection clips to export and the margin around them |
 | [NightlyActivityForm.pas](NightlyActivityForm.pas) | Nightly activity summary view, still in development and not yet enabled in the UI |
 | [WavReader.pas](WavReader.pas) | WAV file parsing and sample access |
 | [WavWriter.pas](WavWriter.pas) | Streaming WAV export of a selection |

@@ -2,7 +2,7 @@ object FormMain: TFormMain
   Left = 100
   Top = 80
   Caption = 'Bat Visualizer'
-  ClientHeight = 945
+  ClientHeight = 703
   ClientWidth = 1205
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -408,113 +408,21 @@ object FormMain: TFormMain
         OnClick = BtnAutoMaxFreqClick
       end
     end
-    object GroupExport: TGroupBox
-      Left = 3
-      Top = 642
-      Width = 180
-      Height = 280
-      Align = alClient
-      Caption = 'Export'
+    object BtnExport: TButton
+      AlignWithMargins = True
+      Left = 9
+      Top = 648
+      Width = 168
+      Height = 26
+      Margins.Left = 6
+      Margins.Top = 6
+      Margins.Right = 6
+      Margins.Bottom = 6
+      Align = alBottom
+      Caption = 'Export...'
+      Enabled = False
       TabOrder = 5
-      object LblImage: TLabel
-        Left = 8
-        Top = 20
-        Width = 31
-        Height = 13
-        Caption = 'Image'
-      end
-      object LblAudio: TLabel
-        Left = 8
-        Top = 100
-        Width = 103
-        Height = 13
-        Caption = 'Audio (current view)'
-      end
-      object CbxSaveTarget: TComboBox
-        Left = 8
-        Top = 36
-        Width = 164
-        Height = 21
-        Style = csDropDownList
-        ItemIndex = 2
-        TabOrder = 0
-        Text = 'Combined'
-        Items.Strings = (
-          'Waveform'
-          'Spectrogram'
-          'Combined')
-      end
-      object BtnSavePNG: TButton
-        Left = 8
-        Top = 66
-        Width = 164
-        Height = 26
-        Caption = 'Save PNG...'
-        Enabled = False
-        TabOrder = 1
-        OnClick = BtnSavePNGClick
-      end
-      object BtnSaveWav: TButton
-        Left = 8
-        Top = 116
-        Width = 80
-        Height = 26
-        Caption = 'WAV...'
-        Enabled = False
-        TabOrder = 2
-        OnClick = BtnSaveWavClick
-      end
-      object BtnSaveMp3: TButton
-        Left = 92
-        Top = 116
-        Width = 80
-        Height = 26
-        Caption = 'MP3...'
-        Enabled = False
-        TabOrder = 3
-        OnClick = BtnSaveMp3Click
-      end
-      object LblSections: TLabel
-        Left = 8
-        Top = 150
-        Width = 110
-        Height = 13
-        Caption = 'Sections (per detection)'
-      end
-      object CbxSectionFormat: TComboBox
-        Left = 8
-        Top = 166
-        Width = 164
-        Height = 21
-        Style = csDropDownList
-        ItemIndex = 0
-        TabOrder = 4
-        Text = 'WAV'
-        Items.Strings = (
-          'WAV'
-          'MP3'
-          'WAV + MP3')
-      end
-      object BtnExportSectionsFile: TButton
-        Left = 8
-        Top = 197
-        Width = 80
-        Height = 26
-        Caption = 'This File...'
-        Enabled = False
-        TabOrder = 5
-        OnClick = BtnExportSectionsFileClick
-      end
-      object BtnExportSectionsFolder: TButton
-        Left = 92
-        Top = 197
-        Width = 80
-        Height = 26
-        Caption = 'Whole Folder...'
-        Enabled = False
-        TabOrder = 6
-        OnClick = BtnExportSectionsFolderClick
-      end
+      OnClick = BtnExportClick
     end
   end
   object StatusBar: TStatusBar
@@ -625,9 +533,9 @@ object FormMain: TFormMain
       end
       object PanelFilesBottom: TPanel
         Left = 0
-        Top = 679
+        Top = 641
         Width = 318
-        Height = 94
+        Height = 132
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 2
@@ -647,9 +555,25 @@ object FormMain: TFormMain
           Visible = False
           OnClick = BtnNightlyActivityClick
         end
+        object BtnExportClips: TButton
+          AlignWithMargins = True
+          Left = 6
+          Top = 38
+          Width = 306
+          Height = 26
+          Margins.Left = 6
+          Margins.Top = 6
+          Margins.Right = 6
+          Margins.Bottom = 6
+          Align = alTop
+          Caption = 'Export clips'
+          Enabled = False
+          TabOrder = 2
+          OnClick = BtnExportClipsClick
+        end
         object GroupBox1: TGroupBox
           Left = 0
-          Top = 38
+          Top = 76
           Width = 318
           Height = 56
           Align = alClient
@@ -884,27 +808,6 @@ object FormMain: TFormMain
       's|*.*'
     Left = 1080
     Top = 8
-  end
-  object SaveDialog: TSaveDialog
-    DefaultExt = 'png'
-    Filter = 'PNG image|*.png'
-    Options = [ofOverwritePrompt, ofPathMustExist]
-    Left = 1080
-    Top = 40
-  end
-  object SaveDialogMp3: TSaveDialog
-    DefaultExt = 'mp3'
-    Filter = 'MP3 audio|*.mp3'
-    Options = [ofOverwritePrompt, ofPathMustExist]
-    Left = 1080
-    Top = 104
-  end
-  object SaveDialogWav: TSaveDialog
-    DefaultExt = 'wav'
-    Filter = 'WAV audio|*.wav'
-    Options = [ofOverwritePrompt, ofPathMustExist]
-    Left = 1080
-    Top = 136
   end
   object Timer: TTimer
     Enabled = False
