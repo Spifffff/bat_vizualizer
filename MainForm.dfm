@@ -570,6 +570,8 @@ object FormMain: TFormMain
           Align = alClient
           Caption = 'Species language'
           TabOrder = 0
+          ExplicitLeft = 2
+          ExplicitTop = -3
           object CbxLanguage: TComboBox
             AlignWithMargins = True
             Left = 8
