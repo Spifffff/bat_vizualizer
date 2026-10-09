@@ -367,7 +367,7 @@ begin
   Result := True;
   if not FileExists(TPath.Combine(EdtBattyFolder.Text, 'bat_ident.py')) then
     Exit();
-  if not DirectoryExists(GetModelFolder()) then begin
+  if not System.SysUtils.DirectoryExists(GetModelFolder()) then begin
     AMessage := 'The BattyBirdNET classifier folder was not found: ' + GetModelFolder();
     Result := False;
     Exit();
@@ -418,7 +418,7 @@ begin
     MessageDlg('Please select a WAV folder.', mtError, [mbOK], 0);
     Exit();
   end;
-  if not DirectoryExists(EdtWavFolder.Text) then begin
+  if not System.SysUtils.DirectoryExists(EdtWavFolder.Text) then begin
     MessageDlg('WAV folder does not exist.', mtError, [mbOK], 0);
     Exit();
   end;

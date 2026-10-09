@@ -26,7 +26,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, Winapi.ShellAPI,
-  System.SysUtils, System.Classes, System.Math, System.IOUtils, System.DateUtils, System.UITypes,
+  System.SysUtils, System.Classes, System.Types, System.Math, System.IOUtils, System.DateUtils, System.UITypes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Themes,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Heterodyne, Mp3Writer, WavWriter,
@@ -3108,8 +3108,8 @@ begin
   if (FDisplayBmp <> nil) and (FDisplayBmp.Width > 0) then
     BitBlt(PaintBox.Canvas.Handle, R.Left, R.Top, W, H, FDisplayBmp.Canvas.Handle, 0, 0, SRCCOPY);
 
+  AxisColor := StyleServices.GetSystemColor(clWindowText);
   if (W > 0) and (H > 0) then begin
-    AxisColor := StyleServices.GetSystemColor(clWindowText);
     GridColor := BlendColors(StyleServices.GetSystemColor(clWindow), AxisColor, 0.3);
     if FWavFile <> nil then
       DrawSpectAxes(PaintBox.Canvas, R, FWavFile.Info.DurationSec, FMaxPlotHz, FZoomStart, FZoomEnd, AxisColor, GridColor);

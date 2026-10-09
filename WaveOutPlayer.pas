@@ -374,7 +374,7 @@ begin
   FillChar(MMT, SizeOf(MMT), 0);
   MMT.wType := TIME_SAMPLES;
   waveOutGetPosition(FDevHandle, @MMT, SizeOf(TMMTime));
-  Result := (FRangeStart + (FSeekOffset + MMT.sample) * FTimeScale) / FFileTotalSamples;
+  Result := (FRangeStart + (Int64(FSeekOffset) + Int64(MMT.sample)) * FTimeScale) / FFileTotalSamples;
   if Result > 1.0 then
     Result := 1.0;
 end;
