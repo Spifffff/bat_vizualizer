@@ -2,7 +2,7 @@ object FormMain: TFormMain
   Left = 100
   Top = 80
   Caption = 'Bat vizualizer'
-  ClientHeight = 703
+  ClientHeight = 687
   ClientWidth = 1205
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,7 +18,7 @@ object FormMain: TFormMain
     Left = 883
     Top = 0
     Width = 4
-    Height = 680
+    Height = 664
     Align = alRight
     MinSize = 118
     ResizeStyle = rsUpdate
@@ -29,7 +29,7 @@ object FormMain: TFormMain
     Left = 0
     Top = 0
     Width = 186
-    Height = 680
+    Height = 664
     Align = alLeft
     BevelOuter = bvNone
     Padding.Left = 3
@@ -75,30 +75,23 @@ object FormMain: TFormMain
       Left = 3
       Top = 86
       Width = 180
-      Height = 180
+      Height = 164
       Align = alTop
       Caption = 'Playback options'
       TabOrder = 1
       object LblGainCaption: TLabel
         Left = 8
-        Top = 134
+        Top = 118
         Width = 27
         Height = 13
         Caption = 'Gain:'
       end
       object LblGainVal: TLabel
         Left = 50
-        Top = 134
+        Top = 118
         Width = 22
         Height = 13
         Caption = '0 dB'
-      end
-      object LblTuneFreq: TLabel
-        Left = 28
-        Top = 84
-        Width = 120
-        Height = 13
-        Caption = 'Tune frequency: 45 kHz'
       end
       object RbTimeExpansion: TRadioButton
         Left = 8
@@ -135,14 +128,14 @@ object FormMain: TFormMain
         Top = 64
         Width = 164
         Height = 17
-        Caption = 'Heterodyne'
+        Caption = 'Heterodyne (45 kHz)'
         TabOrder = 2
         OnClick = PlaybackModeClick
       end
       object TrkTuneFreq: TTrackBar
-        Left = 28
-        Top = 100
-        Width = 144
+        Left = 22
+        Top = 84
+        Width = 156
         Height = 26
         Enabled = False
         Max = 96
@@ -155,7 +148,7 @@ object FormMain: TFormMain
       end
       object TrkGain: TTrackBar
         Left = 4
-        Top = 150
+        Top = 134
         Width = 144
         Height = 26
         Max = 96
@@ -166,7 +159,7 @@ object FormMain: TFormMain
       end
       object BtnAutoGain: TButton
         Left = 146
-        Top = 148
+        Top = 132
         Width = 26
         Height = 26
         DisabledImageIndex = 1
@@ -180,7 +173,7 @@ object FormMain: TFormMain
     end
     object GroupFiltering: TGroupBox
       Left = 3
-      Top = 266
+      Top = 250
       Width = 180
       Height = 67
       Align = alTop
@@ -211,7 +204,7 @@ object FormMain: TFormMain
     end
     object GroupFFT: TGroupBox
       Left = 3
-      Top = 333
+      Top = 317
       Width = 180
       Height = 113
       Align = alTop
@@ -272,7 +265,7 @@ object FormMain: TFormMain
     end
     object GroupSpectrogram: TGroupBox
       Left = 3
-      Top = 446
+      Top = 430
       Width = 180
       Height = 196
       Align = alTop
@@ -411,7 +404,7 @@ object FormMain: TFormMain
     object BtnExport: TButton
       AlignWithMargins = True
       Left = 9
-      Top = 648
+      Top = 632
       Width = 168
       Height = 26
       Margins.Left = 6
@@ -427,7 +420,7 @@ object FormMain: TFormMain
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 680
+    Top = 664
     Width = 1205
     Height = 23
     Panels = <
@@ -446,7 +439,7 @@ object FormMain: TFormMain
     Left = 887
     Top = 0
     Width = 318
-    Height = 680
+    Height = 664
     Align = alRight
     BevelOuter = bvNone
     Constraints.MinWidth = 100
@@ -455,7 +448,7 @@ object FormMain: TFormMain
       Left = 0
       Top = 0
       Width = 318
-      Height = 680
+      Height = 664
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 0
@@ -510,7 +503,7 @@ object FormMain: TFormMain
         Left = 0
         Top = 32
         Width = 318
-        Height = 526
+        Height = 510
         Align = alClient
         Columns = <
           item
@@ -530,11 +523,10 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
-        ExplicitHeight = 516
       end
       object PanelFilesBottom: TPanel
         Left = 0
-        Top = 558
+        Top = 542
         Width = 318
         Height = 122
         Align = alBottom
@@ -554,7 +546,6 @@ object FormMain: TFormMain
           TabOrder = 1
           Visible = False
           OnClick = BtnNightlyActivityClick
-          ExplicitTop = 6
         end
         object BtnExportClips: TButton
           AlignWithMargins = True
@@ -570,7 +561,6 @@ object FormMain: TFormMain
           Enabled = False
           TabOrder = 2
           OnClick = BtnExportClipsClick
-          ExplicitTop = 44
         end
         object GroupBox1: TGroupBox
           Left = 0
@@ -580,7 +570,6 @@ object FormMain: TFormMain
           Align = alClient
           Caption = 'Species language'
           TabOrder = 0
-          ExplicitHeight = 62
           object CbxLanguage: TComboBox
             AlignWithMargins = True
             Left = 8
@@ -612,7 +601,7 @@ object FormMain: TFormMain
     Left = 186
     Top = 0
     Width = 697
-    Height = 680
+    Height = 664
     Align = alClient
     BevelOuter = bvNone
     DoubleBuffered = True
@@ -658,7 +647,7 @@ object FormMain: TFormMain
       Left = 0
       Top = 128
       Width = 697
-      Height = 500
+      Height = 484
       Align = alClient
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove
@@ -666,10 +655,11 @@ object FormMain: TFormMain
       OnPaint = PaintBoxPaint
       ExplicitLeft = -2
       ExplicitTop = 130
+      ExplicitHeight = 500
     end
     object PanelTransport: TPanel
       Left = 0
-      Top = 648
+      Top = 632
       Width = 697
       Height = 32
       Align = alBottom
@@ -792,7 +782,7 @@ object FormMain: TFormMain
     end
     object ZoomBar: TScrollBar
       Left = 0
-      Top = 628
+      Top = 612
       Width = 697
       Height = 20
       Align = alBottom

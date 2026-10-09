@@ -100,7 +100,6 @@ type
     CbxSpeed: TComboBox;
     RbHeterodyne: TRadioButton;
     TrkTuneFreq: TTrackBar;
-    LblTuneFreq: TLabel;
     BtnExport: TButton;
     PanelRight: TPanel;
     PanelFileContent: TPanel;
@@ -998,7 +997,7 @@ begin
       TrkTuneFreq.Max := FWavFile.Info.SampleRate div 2000;
       TrkTuneFreq.Min := 1;
       TrkTuneFreq.Position := EnsureRange(45, TrkTuneFreq.Min, TrkTuneFreq.Max);
-      LblTuneFreq.Caption := Format('Tune frequency: %d kHz', [TrkTuneFreq.Position]);
+      RbHeterodyne.Caption := Format('Heterodyne (%d kHz)', [TrkTuneFreq.Position]);
       RecomputeSpectrogram();
       UpdateGainRange();
       BtnPlay.Enabled := True;
@@ -2427,7 +2426,7 @@ end;
 
 procedure TFormMain.TrkTuneFreqChange(Sender: TObject);
 begin
-  LblTuneFreq.Caption := Format('Tune frequency: %d kHz', [TrkTuneFreq.Position]);
+  RbHeterodyne.Caption := Format('Heterodyne (%d kHz)', [TrkTuneFreq.Position]);
   { Dragging the slider fires this on every intermediate position; debounce
     so a live reload/reopen of the audio device only happens once dragging
     settles, instead of on every pixel of movement. }
