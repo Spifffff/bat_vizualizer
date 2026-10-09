@@ -3,7 +3,7 @@
         <ProjectGuid>{56840B8B-9FCF-4A37-86E0-097A92FFE6FF}</ProjectGuid>
         <MainSource>BatViz.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <ProjectName Condition="'$(ProjectName)'==''">BatViz</ProjectName>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
