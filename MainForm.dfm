@@ -18,7 +18,7 @@ object FormMain: TFormMain
     Left = 883
     Top = 0
     Width = 4
-    Height = 773
+    Height = 680
     Align = alRight
     MinSize = 118
     ResizeStyle = rsUpdate
@@ -29,7 +29,7 @@ object FormMain: TFormMain
     Left = 0
     Top = 0
     Width = 186
-    Height = 773
+    Height = 680
     Align = alLeft
     BevelOuter = bvNone
     Padding.Left = 3
@@ -96,7 +96,7 @@ object FormMain: TFormMain
       object LblTuneFreq: TLabel
         Left = 28
         Top = 84
-        Width = 116
+        Width = 120
         Height = 13
         Caption = 'Tune frequency: 45 kHz'
       end
@@ -144,11 +144,11 @@ object FormMain: TFormMain
         Top = 100
         Width = 144
         Height = 26
+        Enabled = False
         Max = 96
         Min = 1
         Frequency = 10
         Position = 45
-        Enabled = False
         TabOrder = 3
         TickStyle = tsNone
         OnChange = TrkTuneFreqChange
@@ -427,7 +427,7 @@ object FormMain: TFormMain
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 773
+    Top = 680
     Width = 1205
     Height = 23
     Panels = <
@@ -446,7 +446,7 @@ object FormMain: TFormMain
     Left = 887
     Top = 0
     Width = 318
-    Height = 773
+    Height = 680
     Align = alRight
     BevelOuter = bvNone
     Constraints.MinWidth = 100
@@ -455,7 +455,7 @@ object FormMain: TFormMain
       Left = 0
       Top = 0
       Width = 318
-      Height = 773
+      Height = 680
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 0
@@ -510,7 +510,7 @@ object FormMain: TFormMain
         Left = 0
         Top = 32
         Width = 318
-        Height = 647
+        Height = 526
         Align = alClient
         Columns = <
           item
@@ -530,55 +530,57 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
+        ExplicitHeight = 516
       end
       object PanelFilesBottom: TPanel
         Left = 0
-        Top = 641
+        Top = 558
         Width = 318
-        Height = 132
+        Height = 122
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 2
         object BtnNightlyActivity: TButton
           AlignWithMargins = True
           Left = 6
-          Top = 6
+          Top = 58
           Width = 306
           Height = 26
           Margins.Left = 6
           Margins.Top = 6
           Margins.Right = 6
-          Margins.Bottom = 6
-          Align = alTop
+          Align = alBottom
           Caption = 'Nightly activity...'
           TabOrder = 1
           Visible = False
           OnClick = BtnNightlyActivityClick
+          ExplicitTop = 6
         end
         object BtnExportClips: TButton
           AlignWithMargins = True
           Left = 6
-          Top = 38
+          Top = 90
           Width = 306
           Height = 26
           Margins.Left = 6
-          Margins.Top = 6
           Margins.Right = 6
           Margins.Bottom = 6
-          Align = alTop
-          Caption = 'Export clips'
+          Align = alBottom
+          Caption = 'Export clips...'
           Enabled = False
           TabOrder = 2
           OnClick = BtnExportClipsClick
+          ExplicitTop = 44
         end
         object GroupBox1: TGroupBox
           Left = 0
-          Top = 76
+          Top = 0
           Width = 318
-          Height = 56
+          Height = 52
           Align = alClient
           Caption = 'Species language'
           TabOrder = 0
+          ExplicitHeight = 62
           object CbxLanguage: TComboBox
             AlignWithMargins = True
             Left = 8
@@ -610,7 +612,7 @@ object FormMain: TFormMain
     Left = 186
     Top = 0
     Width = 697
-    Height = 773
+    Height = 680
     Align = alClient
     BevelOuter = bvNone
     DoubleBuffered = True
@@ -656,20 +658,18 @@ object FormMain: TFormMain
       Left = 0
       Top = 128
       Width = 697
-      Height = 593
+      Height = 500
       Align = alClient
       OnMouseDown = PaintBoxMouseDown
       OnMouseMove = PaintBoxMouseMove
       OnMouseUp = PaintBoxMouseUp
       OnPaint = PaintBoxPaint
       ExplicitLeft = -2
-      ExplicitTop = 126
-      ExplicitWidth = 698
-      ExplicitHeight = 551
+      ExplicitTop = 130
     end
     object PanelTransport: TPanel
       Left = 0
-      Top = 741
+      Top = 648
       Width = 697
       Height = 32
       Align = alBottom
@@ -792,7 +792,7 @@ object FormMain: TFormMain
     end
     object ZoomBar: TScrollBar
       Left = 0
-      Top = 721
+      Top = 628
       Width = 697
       Height = 20
       Align = alBottom
