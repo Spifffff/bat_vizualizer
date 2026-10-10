@@ -67,8 +67,6 @@ type
     GrpSensitivity: TGroupBox;
     LblMinConf: TLabel;
     TrkMinConf: TTrackBar;
-    LblSfThresh: TLabel;
-    TrkSfThresh: TTrackBar;
     LblSensitivity: TLabel;
     TrkSensitivity: TTrackBar;
     GrpPerformance: TGroupBox;
@@ -85,7 +83,6 @@ type
     ImgArea: TImage;
     ImgKHz: TImage;
     ImgMinConf: TImage;
-    ImgSfThresh: TImage;
     ImgSensitivity: TImage;
     ImgParallel: TImage;
     LblModelHint: TLabel;
@@ -99,7 +96,6 @@ type
     procedure BtnStopClick(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
     procedure TrkMinConfChange(Sender: TObject);
-    procedure TrkSfThreshChange(Sender: TObject);
     procedure TrkSensitivityChange(Sender: TObject);
     procedure ImgInfoClick(Sender: TObject);
     procedure ModelSettingChange(Sender: TObject);
@@ -181,7 +177,6 @@ begin
   Settings.StoredProps.Add('CbxArea.ItemIndex');
   Settings.StoredProps.Add('CbxKHz.ItemIndex');
   Settings.StoredProps.Add('TrkMinConf.Position');
-  Settings.StoredProps.Add('TrkSfThresh.Position');
   Settings.StoredProps.Add('TrkSensitivity.Position');
   Settings.StoredProps.Add('CbxParallel.ItemIndex');
   Settings.LoadSettings();
@@ -192,7 +187,6 @@ begin
     Settings.ReadFormPositions(Self);
 
   TrkMinConfChange(TrkMinConf);
-  TrkSfThreshChange(TrkSfThresh);
   TrkSensitivityChange(TrkSensitivity);
   UpdateModelHint();
 end;
@@ -202,13 +196,6 @@ end;
 procedure TFormBatIdent.TrkMinConfChange(Sender: TObject);
 begin
   LblMinConf.Caption := Format('Min confidence: %.2f', [TrkMinConf.Position / 100.0]);
-end;
-
-
-
-procedure TFormBatIdent.TrkSfThreshChange(Sender: TObject);
-begin
-  LblSfThresh.Caption := Format('Species filter: %.2f', [TrkSfThresh.Position / 100.0]);
 end;
 
 
@@ -230,16 +217,15 @@ end;
 
 procedure TFormBatIdent.ImgInfoClick(Sender: TObject);
 const
-  MSG_AREA = 'Region used to narrow down which species are considered. Species rarely recorded in this area are ' +
-    'filtered out before analysis.';
+  MSG_AREA = 'Selects the classifier for a region. Each area has its own trained model with its own list of bat ' +
+    'species, so choose the one closest to where the recordings were made.';
   MSG_KHZ = 'Sample rate the classifier model was trained on. Pick whichever is closest to the actual recording ' +
     'sample rate.';
   MSG_MIN_CONF = 'Minimum confidence a detection must reach to be kept. Higher means fewer, more certain ' +
     'detections. Lower means more detections, but more false positives.';
-  MSG_SF_THRESH = 'How common a species must be in the selected area to be considered at all. Higher means only ' +
-    'common local species. Lower means rare species stay in the running too.';
-  MSG_SENSITIVITY = 'How sensitive the classifier is when scoring calls. Higher means more calls get flagged as ' +
-    'detections. Lower means stricter, fewer detections.';
+  MSG_SENSITIVITY = 'Changes how the confidence scores are spread. Higher flattens them: more weak calls pass when ' +
+    'the minimum confidence is low (below 0.50), but strong calls score lower. Lower sharpens them: more calls ' +
+    'pass when the minimum confidence is high (above 0.50). Around 0.50 it makes little difference.';
   MSG_PARALLEL = 'How many files are analyzed at the same time. More is faster, but it uses more processor power ' +
     'and memory. If your computer slows down or runs out of memory, choose a lower number.';
 begin
@@ -249,8 +235,6 @@ begin
     MessageDlg(MSG_KHZ, mtInformation, [mbOK], 0)
   else if Sender = ImgMinConf then
     MessageDlg(MSG_MIN_CONF, mtInformation, [mbOK], 0)
-  else if Sender = ImgSfThresh then
-    MessageDlg(MSG_SF_THRESH, mtInformation, [mbOK], 0)
   else if Sender = ImgSensitivity then
     MessageDlg(MSG_SENSITIVITY, mtInformation, [mbOK], 0)
   else if Sender = ImgParallel then
@@ -451,7 +435,6 @@ begin
   CbxKHz.Enabled := AEnabled;
   CbxParallel.Enabled := AEnabled;
   TrkMinConf.Enabled := AEnabled;
-  TrkSfThresh.Enabled := AEnabled;
   TrkSensitivity.Enabled := AEnabled;
 end;
 
@@ -618,7 +601,7 @@ begin
     CbxKHz.Text + ' --area ' + CbxArea.Text +
     ' --sensitivity ' + FormatFloat('0.00', TrkSensitivity.Position / 100.0, TFormatSettings.Invariant) +
     ' --min_conf ' + FormatFloat('0.00', TrkMinConf.Position / 100.0, TFormatSettings.Invariant) +
-    ' --sf_thresh ' + FormatFloat('0.00', TrkSfThresh.Position / 100.0, TFormatSettings.Invariant) + ' --threads 1';
+    ' --threads 1';
   Log('Processing: ' + ExtractFileName(FSlots[SlotIdx].WavFile));
   FSlots[SlotIdx].ProcessHandle := LaunchProcess(Cmd, FSlots[SlotIdx].StdOutRead);
   if FSlots[SlotIdx].ProcessHandle = INVALID_HANDLE_VALUE then begin
@@ -773,6 +756,7 @@ var
   I: Integer;
   ExitCode: DWORD;
   AllDone: Boolean;
+  Msg: string;
 begin
   for I := 0 to FSlotCount - 1 do
     if FSlots[I].State = ssBatIdent then
@@ -808,8 +792,11 @@ begin
     SetControlsEnabled(True);
     PrgBar.Position := PrgBar.Max;
     Log(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]));
-    MessageDlg(Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]),
-      mtInformation, [mbOK], 0);
+    Msg := Format('Done. Processed %d of %d files (%d skipped, %d failed).', [FDoneCount, FTotalFiles, FSkippedCount, FFailedCount]);
+    if FFailedCount > 0 then
+      Msg := Msg + #13#10#13#10 + 'Some files could not be processed. Check the available system resources (memory and ' +
+        'processor load) and run the analysis again with fewer parallel files.';
+    MessageDlg(Msg, mtInformation, [mbOK], 0);
     { Only when opened as a dialog from Bat vizualizer, not when this form is its
       own program's main window (the standalone BatIdent.exe), where there
       is nothing to hand control back to. }

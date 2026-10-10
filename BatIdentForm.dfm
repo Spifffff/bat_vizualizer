@@ -3,7 +3,7 @@ object FormBatIdent: TFormBatIdent
   Top = 0
   BorderStyle = bsDialog
   Caption = 'Bat identifyer'
-  ClientHeight = 583
+  ClientHeight = 501
   ClientWidth = 640
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -24,12 +24,13 @@ object FormBatIdent: TFormBatIdent
   object LblScore: TLabel
     AlignWithMargins = True
     Left = 11
-    Top = 283
+    Top = 239
     Width = 618
     Height = 13
     Align = alTop
     Caption = 'No results yet.'
     Layout = tlCenter
+    ExplicitTop = 283
     ExplicitWidth = 71
   end
   object GrpFolders: TGroupBox
@@ -92,7 +93,7 @@ object FormBatIdent: TFormBatIdent
     Left = 8
     Top = 84
     Width = 624
-    Height = 164
+    Height = 120
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
@@ -100,13 +101,14 @@ object FormBatIdent: TFormBatIdent
       Left = 0
       Top = 0
       Width = 208
-      Height = 164
+      Height = 120
       Align = alLeft
       Caption = 'Classifier'
       TabOrder = 0
+      ExplicitHeight = 164
       DesignSize = (
         208
-        164)
+        120)
       object LblArea: TLabel
         Left = 8
         Top = 20
@@ -208,13 +210,14 @@ object FormBatIdent: TFormBatIdent
       Left = 208
       Top = 0
       Width = 208
-      Height = 164
+      Height = 120
       Align = alLeft
       Caption = 'Detection sensitivity'
       TabOrder = 1
+      ExplicitHeight = 164
       DesignSize = (
         208
-        164)
+        120)
       object LblMinConf: TLabel
         Left = 8
         Top = 20
@@ -222,16 +225,9 @@ object FormBatIdent: TFormBatIdent
         Height = 13
         Caption = 'Min confidence: 0.80'
       end
-      object LblSfThresh: TLabel
-        Left = 8
-        Top = 66
-        Width = 90
-        Height = 13
-        Caption = 'Species filter: 0.80'
-      end
       object LblSensitivity: TLabel
         Left = 8
-        Top = 112
+        Top = 66
         Width = 78
         Height = 13
         Caption = 'Sensitivity: 1.00'
@@ -260,33 +256,9 @@ object FormBatIdent: TFormBatIdent
           4E44AE426082}
         OnClick = ImgInfoClick
       end
-      object ImgSfThresh: TImage
-        Left = 182
-        Top = 84
-        Width = 16
-        Height = 16
-        Center = True
-        Picture.Data = {
-          0954506E67496D61676589504E470D0A1A0A0000000D49484452000000100000
-          001008060000001FF3FF61000001674944415478DA6364A010306213FCFFFF3F
-          DB83070F0CFFFDFB670856C4C8784E5151F10290FE85D700A046A6BB77EFB603
-          99B940CC8926F71548F5AAAAAAD6633500AA793E901947C0D593555454F2300C
-          B873E74E0B90AA46B3752DD0D93640A6388AAD8C8C05CACACA13E106BC7EFD9A
-          F7E3C78F2F804C2E34038C818A6B80CC403457BC001A200394FB0B36E0DEBD7B
-          21C0005B4D62045803BD720C6CC0EDDBB72B80A6B5A3AB60666636FCFBF76F1D
-          1617805C970D0CD06930038A8006F4624411236303D065408AB11E8B01454003
-          FA19A101E809A4B66151D4083508C300262626372525A5DD60031E3F7ECCF9E3
-          C78F974085BC68EA5A8162D780062D4533F82DD0FF52A084058F46A0371AB0D8
-          048A99CD409C8A265E0A34A0071E8D505319815E59043424065FD003D54D076A
-          CE06AAFB8F62005412941ABB80CC6C20E64093FB0CA4FA7126656400F40E3B90
-          3202DA620AA47F82321330C04099E937464C3150080050EF9611386E69950000
-          00106465424737383645303642303741413732393745381EAA95000000004945
-          4E44AE426082}
-        OnClick = ImgInfoClick
-      end
       object ImgSensitivity: TImage
         Left = 182
-        Top = 130
+        Top = 84
         Width = 16
         Height = 16
         Center = True
@@ -322,23 +294,9 @@ object FormBatIdent: TFormBatIdent
         TickStyle = tsNone
         OnChange = TrkMinConfChange
       end
-      object TrkSfThresh: TTrackBar
-        Left = 8
-        Top = 82
-        Width = 175
-        Height = 26
-        Anchors = [akLeft, akTop, akRight]
-        Max = 99
-        Min = 1
-        Frequency = 10
-        Position = 80
-        TabOrder = 1
-        TickStyle = tsNone
-        OnChange = TrkSfThreshChange
-      end
       object TrkSensitivity: TTrackBar
         Left = 8
-        Top = 128
+        Top = 82
         Width = 175
         Height = 26
         Anchors = [akLeft, akTop, akRight]
@@ -346,7 +304,7 @@ object FormBatIdent: TFormBatIdent
         Min = 50
         Frequency = 10
         Position = 100
-        TabOrder = 2
+        TabOrder = 1
         TickStyle = tsNone
         OnChange = TrkSensitivityChange
       end
@@ -355,13 +313,14 @@ object FormBatIdent: TFormBatIdent
       Left = 416
       Top = 0
       Width = 208
-      Height = 164
+      Height = 120
       Align = alClient
       Caption = 'Performance'
       TabOrder = 2
+      ExplicitHeight = 164
       DesignSize = (
         208
-        164)
+        120)
       object LblParallel: TLabel
         Left = 8
         Top = 20
@@ -407,7 +366,7 @@ object FormBatIdent: TFormBatIdent
   object PrgBar: TProgressBar
     AlignWithMargins = True
     Left = 8
-    Top = 253
+    Top = 209
     Width = 624
     Height = 22
     Margins.Left = 0
@@ -417,25 +376,29 @@ object FormBatIdent: TFormBatIdent
     Align = alTop
     BarColor = clDodgerblue
     TabOrder = 2
+    ExplicitTop = 253
   end
   object MemoLog: TMemo
     Left = 8
-    Top = 299
+    Top = 255
     Width = 624
-    Height = 235
+    Height = 197
     Align = alClient
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 3
+    ExplicitTop = 299
+    ExplicitHeight = 235
   end
   object PanelButtons: TPanel
     Left = 8
-    Top = 534
+    Top = 452
     Width = 624
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 4
+    ExplicitTop = 534
     DesignSize = (
       624
       41)
