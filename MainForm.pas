@@ -1009,8 +1009,6 @@ begin
       BtnAutoMaxFreq.Enabled := True;
       BtnAutoGain.Enabled := True;
       Detections := GetCurrentFileDetections();
-      for I := 0 to High(Detections) do
-        OutputDebugString(PChar(Format('%s: detection %d - %.3fs to %.3fs', [ExtractFileName(AFilePath), I, Detections[I].StartSec, Detections[I].EndSec])));
     except
       on E: Exception do begin
         FreeAndNil(FWavFile);

@@ -169,6 +169,20 @@ object FormBatIdent: TFormBatIdent
           4E44AE426082}
         OnClick = ImgInfoClick
       end
+      object LblModelHint: TLabel
+        Left = 8
+        Top = 110
+        Width = 192
+        Height = 48
+        AutoSize = False
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clMaroon
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        WordWrap = True
+      end
       object CbxArea: TComboBox
         Left = 8
         Top = 36
@@ -188,20 +202,6 @@ object FormBatIdent: TFormBatIdent
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 1
         OnChange = ModelSettingChange
-      end
-      object LblModelHint: TLabel
-        Left = 8
-        Top = 110
-        Width = 192
-        Height = 48
-        AutoSize = False
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clMaroon
-        Font.Height = -11
-        Font.Name = 'Tahoma'
-        Font.Style = []
-        ParentFont = False
-        WordWrap = True
       end
     end
     object GrpSensitivity: TGroupBox
