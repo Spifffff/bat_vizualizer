@@ -55,7 +55,7 @@ type
     function NightDateOf(ADateTime: TDateTime): TDateTime;
     function HourSlotOf(ADateTime: TDateTime): Integer;
     function HourLabelForSlot(ASlot: Integer): string;
-    function ColorForFraction(AFraction: Double): TColor;
+    function ColorForSpecies(AIndex: Integer): TColor;
     function GetSelectedCounts: TArray<TArray<Integer>>;
   public
     procedure LoadItems(const AItems: TArray<TNightlyActivityItem>);
@@ -159,19 +159,25 @@ end;
 
 
 
-function TFormNightlyActivity.ColorForFraction(AFraction: Double): TColor;
+function TFormNightlyActivity.ColorForSpecies(AIndex: Integer): TColor;
 const
-  HUE = 212.0;
-  SAT_MIN = 0.10;
-  SAT_MAX = 0.55;
-  LUM_MAX = 0.74;
-  LUM_MIN = 0.28;
+  // Ten clearly different hues (blue, orange, red, teal, green, yellow, purple, pink, brown, grey), as $00BBGGRR.
+  PALETTE: array[0..9] of TColor = ($00A7794E, $002B8EF2, $005957E1, $00B2B776, $004FA159, $0048C9ED, $00A17AB0,
+    $00A79DFF, $005F759C, $00ACB0BA);
+  GOLDEN_ANGLE = 137.508;
 var
-  S, L: Double;
+  Extra: Integer;
 begin
-  S := SAT_MIN + AFraction * (SAT_MAX - SAT_MIN);
-  L := LUM_MAX - AFraction * (LUM_MAX - LUM_MIN);
-  Result := HSLToRGB(HUE, S, L);
+  if AIndex <= High(PALETTE) then begin
+    Result := PALETTE[AIndex];
+    Exit();
+  end;
+  { Beyond the palette, step the hue by the golden angle and alternate the lightness so neighbours stay distinct. }
+  Extra := AIndex - Length(PALETTE);
+  if Odd(Extra) then
+    Result := HSLToRGB(Extra * GOLDEN_ANGLE, 0.65, 0.62)
+  else
+    Result := HSLToRGB(Extra * GOLDEN_ANGLE, 0.65, 0.45);
 end;
 
 
@@ -231,10 +237,7 @@ begin
 
     SetLength(FSpeciesColors, NSpecies);
     for I := 0 to NSpecies - 1 do
-      if NSpecies <= 1 then
-        FSpeciesColors[I] := ColorForFraction(0.5)
-      else
-        FSpeciesColors[I] := ColorForFraction(I / (NSpecies - 1));
+      FSpeciesColors[I] := ColorForSpecies(I);
 
     SetLength(FCountsAll, 24, NSpecies);
     SetLength(FCountsByNight, Length(FNightDates), 24, NSpecies);
@@ -283,8 +286,6 @@ const
   BOTTOM_AXIS_MARGIN = 22;
   TOP_PAD = 8;
   SIDE_PAD = 12;
-  HOUR_GROUP_GAP = 4;
-  BAR_GAP = 1;
 var
   C: TCanvas;
   W, H: Integer;
@@ -292,7 +293,7 @@ var
   ChartR: TRect;
   Counts: TArray<TArray<Integer>>;
   NSpecies, MaxCount, Slot, SIdx: Integer;
-  GroupW, BarW, GX: Double;
+  GroupW, BarW, GX: Integer;
   XLeft, XRight, BarTop, BarH: Integer;
   Step, GridVal, GridY: Integer;
   S: string;
@@ -348,6 +349,12 @@ begin
   if (ChartR.Right <= ChartR.Left) or (ChartR.Bottom <= ChartR.Top) then
     Exit();
 
+  { Every bar gets the same whole number of pixels and the bars touch, so the chart is narrowed to the exact
+    width of 24 hours of bars; any leftover pixels become extra right margin. }
+  BarW := Max(1, (ChartR.Right - ChartR.Left) div (24 * NSpecies));
+  GroupW := BarW * NSpecies;
+  ChartR.Right := ChartR.Left + 24 * GroupW;
+
   Counts := GetSelectedCounts();
   MaxCount := 1;
   for Slot := 0 to 23 do
@@ -377,22 +384,15 @@ begin
   C.LineTo(ChartR.Left, ChartR.Bottom);
   C.LineTo(ChartR.Right, ChartR.Bottom);
 
-  GroupW := (ChartR.Right - ChartR.Left) / 24;
-  BarW := (GroupW - HOUR_GROUP_GAP) / NSpecies;
-  if BarW < 0.5 then
-    BarW := 0.5;
-
   C.Font.Size := 7;
   C.Brush.Style := bsSolid;
   for Slot := 0 to 23 do begin
-    GX := ChartR.Left + Slot * GroupW + HOUR_GROUP_GAP / 2;
+    GX := ChartR.Left + Slot * GroupW;
     for SIdx := 0 to NSpecies - 1 do begin
       BarH := Round(Counts[Slot][SIdx] / MaxCount * (ChartR.Bottom - ChartR.Top));
       if BarH > 0 then begin
-        XLeft := Round(GX + SIdx * BarW);
-        XRight := Round(GX + (SIdx + 1) * BarW) - BAR_GAP;
-        if XRight <= XLeft then
-          XRight := XLeft + 1;
+        XLeft := GX + SIdx * BarW;
+        XRight := XLeft + BarW;
         BarTop := ChartR.Bottom - BarH;
         C.Brush.Color := FSpeciesColors[SIdx];
         C.FillRect(Rect(XLeft, BarTop, XRight, ChartR.Bottom));
