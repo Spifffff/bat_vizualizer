@@ -443,28 +443,32 @@ object FormMain: TFormMain
     Align = alRight
     BevelOuter = bvNone
     Constraints.MinWidth = 100
+    Padding.Left = 3
     TabOrder = 2
     object PanelFileContent: TPanel
-      Left = 0
+      Left = 3
       Top = 0
-      Width = 318
+      Width = 315
       Height = 664
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 0
+      ExplicitLeft = 0
+      ExplicitWidth = 318
       object PanelFileHeader: TPanel
         Left = 0
         Top = 0
-        Width = 318
+        Width = 315
         Height = 32
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 0
+        ExplicitWidth = 318
         DesignSize = (
-          318
+          315
           32)
         object BtnCloseRightPanel: TButton
-          Left = 300
+          Left = 297
           Top = 2
           Width = 16
           Height = 16
@@ -473,6 +477,7 @@ object FormMain: TFormMain
           Images = ImageListClose
           TabOrder = 0
           OnClick = BtnCloseRightPanelClick
+          ExplicitLeft = 300
         end
         object BtnPrevFile: TButton
           Left = 0
@@ -502,7 +507,7 @@ object FormMain: TFormMain
       object FileListView: TListView
         Left = 0
         Top = 32
-        Width = 318
+        Width = 315
         Height = 510
         Align = alClient
         Columns = <
@@ -515,7 +520,6 @@ object FormMain: TFormMain
             Width = 80
           end>
         HideSelection = False
-        Items.ItemData = {050000000000000000}
         ReadOnly = True
         RowSelect = True
         TabOrder = 1
@@ -524,20 +528,22 @@ object FormMain: TFormMain
         OnColumnClick = FileListViewColumnClick
         OnDblClick = FileListViewDblClick
         OnResize = FileListViewResize
+        ExplicitWidth = 318
       end
       object PanelFilesBottom: TPanel
         Left = 0
         Top = 542
-        Width = 318
+        Width = 315
         Height = 122
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 2
+        ExplicitWidth = 318
         object BtnNightlyActivity: TButton
           AlignWithMargins = True
           Left = 6
           Top = 58
-          Width = 306
+          Width = 303
           Height = 26
           Margins.Left = 6
           Margins.Top = 6
@@ -547,12 +553,13 @@ object FormMain: TFormMain
           TabOrder = 1
           Visible = False
           OnClick = BtnNightlyActivityClick
+          ExplicitWidth = 306
         end
         object BtnExportClips: TButton
           AlignWithMargins = True
           Left = 6
           Top = 90
-          Width = 306
+          Width = 303
           Height = 26
           Margins.Left = 6
           Margins.Right = 6
@@ -562,20 +569,22 @@ object FormMain: TFormMain
           Enabled = False
           TabOrder = 2
           OnClick = BtnExportClipsClick
+          ExplicitWidth = 306
         end
         object GroupBox1: TGroupBox
           Left = 0
           Top = 0
-          Width = 318
+          Width = 315
           Height = 52
           Align = alClient
           Caption = 'Species language'
           TabOrder = 0
+          ExplicitWidth = 318
           object CbxLanguage: TComboBox
             AlignWithMargins = True
             Left = 8
             Top = 21
-            Width = 302
+            Width = 299
             Height = 21
             Margins.Left = 6
             Margins.Top = 6
@@ -593,6 +602,7 @@ object FormMain: TFormMain
               'German'
               'French'
               'Spanish')
+            ExplicitWidth = 302
           end
         end
       end
