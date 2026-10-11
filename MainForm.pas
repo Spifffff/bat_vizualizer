@@ -266,6 +266,7 @@ type
 
 
     TBatDetection = record
+      ScientificName: string;
       CommonName: string;
       Confidence: Double;
       StartSec: Double;
@@ -279,6 +280,7 @@ type
       FilePath: string;
       FileName: string;
       HasCsv: Boolean;
+      RawDetections: TArray<TBatDetection>;
       Detections: TArray<TBatDetection>;
       RecordedAt: TDateTime;
     end;
@@ -343,12 +345,14 @@ type
     function SelectClips(const AFilter: TClipFilter): TArray<TFlatDet>;
     procedure ExportImage(const AFileName: string; ATarget: Integer);
     procedure ExportAudio(const AFileName, AExt: string);
+    procedure WriteClipResultsCsv(const AFileName: string; const AEntry: TBatFileEntry; AClipStartSec, AClipEndSec: Double);
     procedure ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFileEntry; const Det: TBatDetection;
-      const AOutputFolder: string; AMarginSec: Double; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
-    procedure ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; const AOutputFolder: string;
-      var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
-    procedure ReportClipExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount, ATotal: Integer; ACancelled: Boolean;
-      AErrorLog: TStrings);
+      const AOutputFolder: string; AMarginSec: Double; AWriteCsv: Boolean; AUsedNames: TStrings;
+      var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+    procedure ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; AWriteCsv: Boolean;
+      const AOutputFolder: string; var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
+    procedure ReportClipExportResult(const AOutputFolder: string; ASavedCount, ASkippedCount, ATotal: Integer;
+      ACancelled: Boolean; AErrorLog: TStrings);
   end;
 
 var
@@ -909,6 +913,7 @@ begin
   FClipFilter.UseMinConfidence := Settings.ReadBoolean('ClipUseMinConfidence', FClipFilter.UseMinConfidence);
   FClipFilter.MinConfidence := Settings.ReadFloat('ClipMinConfidence', FClipFilter.MinConfidence);
   FClipFilter.MarginSec := Settings.ReadFloat('ClipMarginSec', FClipFilter.MarginSec);
+  FClipFilter.WriteCsv := Settings.ReadBoolean('ClipWriteCsv', FClipFilter.WriteCsv);
 
   FitResultsColumns();
 end;
@@ -938,6 +943,7 @@ begin
   Settings.WriteBoolean('ClipUseMinConfidence', FClipFilter.UseMinConfidence);
   Settings.WriteFloat('ClipMinConfidence', FClipFilter.MinConfidence);
   Settings.WriteFloat('ClipMarginSec', FClipFilter.MarginSec);
+  Settings.WriteBoolean('ClipWriteCsv', FClipFilter.WriteCsv);
   Settings.WriteFormPositions(Self);
   Settings.SaveSettings();
 
@@ -1136,6 +1142,7 @@ begin
       Det.StartSec := StrToFloatDef(Trim(Parts[0]), 0, FS);
       Det.EndSec := StrToFloatDef(Trim(Parts[1]), 0, FS);
       Det.Confidence := StrToFloatDef(Trim(Parts[High(Parts)]), 0, FS);
+      Det.ScientificName := Trim(Parts[2]);
       Name := '';
       for K := 3 to High(Parts) - 1 do begin
         if K > 3 then
@@ -1266,10 +1273,14 @@ begin
           Entry.RecordedAt := GetFileFallbackDateTime(Entry.FilePath);
         CsvPath := ChangeFileExt(Entry.FilePath, '.results.csv');
         Entry.HasCsv := FileExists(CsvPath);
-        if Entry.HasCsv then
-          Entry.Detections := MergeConsecutiveDetections(ParseBatResults(CsvPath))
-        else
+        if Entry.HasCsv then begin
+          Entry.RawDetections := ParseBatResults(CsvPath);
+          Entry.Detections := MergeConsecutiveDetections(Entry.RawDetections);
+        end
+        else begin
+          Entry.RawDetections := [];
           Entry.Detections := [];
+        end;
         for K := 0 to High(Entry.Detections) do
           Entry.Detections[K].DateTime := Entry.RecordedAt + (Entry.Detections[K].StartSec / SECONDS_PER_DAY);
         FFileEntries := FFileEntries + [Entry];
@@ -1521,79 +1532,142 @@ end;
 
 
 
+function MakeUniqueName(const ABaseName: string; AUsedNames: TStrings): string;
+var
+  N: Integer;
+begin
+  Result := ABaseName;
+  N := 1;
+  while AUsedNames.IndexOf(Result) >= 0 do begin
+    Inc(N);
+    Result := Format('%s_%d', [ABaseName, N]);
+  end;
+  AUsedNames.Add(Result);
+end;
+
+
+
+{ Writes "<clip>.results.csv" in the format BattyBirdNET itself produces, with the rows of the source recording that
+  overlap the clip, shifted so that times count from the start of the clip. }
+procedure TFormMain.WriteClipResultsCsv(const AFileName: string; const AEntry: TBatFileEntry; AClipStartSec, AClipEndSec: Double);
+var
+  Lines: TStringList;
+  Row: TBatDetection;
+  RowStart, RowEnd: Double;
+begin
+  Lines := TStringList.Create();
+  try
+    Lines.Add('Start (s),End (s),Scientific name,Common name,Confidence');
+    for Row in AEntry.RawDetections do
+      if (Row.EndSec > AClipStartSec) and (Row.StartSec < AClipEndSec) then begin
+        RowStart := Max(0.0, Row.StartSec - AClipStartSec);
+        RowEnd := Min(AClipEndSec - AClipStartSec, Row.EndSec - AClipStartSec);
+        Lines.Add(FormatFloat('0.####', RowStart, TFormatSettings.Invariant) + ',' +
+          FormatFloat('0.####', RowEnd, TFormatSettings.Invariant) + ',' + Row.ScientificName + ',' + Row.CommonName + ',' +
+          FormatFloat('0.0000', Row.Confidence, TFormatSettings.Invariant));
+      end;
+    Lines.SaveToFile(AFileName, TEncoding.UTF8);
+  finally
+    Lines.Free();
+  end;
+end;
+
+
+
 procedure TFormMain.ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFileEntry; const Det: TBatDetection;
-  const AOutputFolder: string; AMarginSec: Double; var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
+  const AOutputFolder: string; AMarginSec: Double; AWriteCsv: Boolean; AUsedNames: TStrings;
+  var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
 var
   ZoomStart, ZoomEnd: Double;
-  BaseName, FileName: string;
+  BaseName, FilePath: string;
   ActualRate: Cardinal;
 begin
   ZoomStart := Max(0.0, (Det.StartSec - AMarginSec) / AWav.Info.DurationSec);
   ZoomEnd := Min(1.0, (Det.EndSec + AMarginSec) / AWav.Info.DurationSec);
   if ZoomEnd <= ZoomStart then
     ZoomEnd := Min(1.0, ZoomStart + 0.01);
-  BaseName := BuildSectionFileName(AEntry, Det);
+  { Two detections can map to the same name (same species, same second); without a suffix the second clip would
+    silently overwrite the first while both were counted as exported. }
+  BaseName := MakeUniqueName(BuildSectionFileName(AEntry, Det), AUsedNames);
+  FilePath := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName;
   try
-    FileName := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName + '.wav';
-    SaveWav(AWav.Samples, ZoomStart, ZoomEnd, FileName, AWav.Info.SampleRate, 1.0, ActualRate);
+    SaveWav(AWav.Samples, ZoomStart, ZoomEnd, FilePath + '.wav', AWav.Info.SampleRate, 1.0, ActualRate);
     Inc(ASavedCount);
   except
     on E: Exception do begin
       Inc(ASkippedCount);
       AErrorLog.Add(BaseName + ': ' + E.Message);
+      Exit();
     end;
   end;
+  if AWriteCsv then
+    try
+      WriteClipResultsCsv(FilePath + '.results.csv', AEntry, ZoomStart * AWav.Info.DurationSec, ZoomEnd * AWav.Info.DurationSec);
+    except
+      on E: Exception do
+        AErrorLog.Add(BaseName + '.results.csv: ' + E.Message);
+    end;
 end;
 
 
 
-procedure TFormMain.ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; const AOutputFolder: string;
-  var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
+procedure TFormMain.ExportClips(const ASelected: TArray<TFlatDet>; AMarginSec: Double; AWriteCsv: Boolean;
+  const AOutputFolder: string; var ASavedCount, ASkippedCount: Integer; var ACancelled: Boolean; AErrorLog: TStrings);
 var
   Wav: TWavFile;
   Entry: TBatFileEntry;
+  UsedNames: TStringList;
   Loaded: Boolean;
   I, J, FileStart, FileIdx, Total: Integer;
 begin
   Total := Length(ASelected);
-  I := 0;
-  while (I < Total) and not ACancelled do begin
-    FileIdx := ASelected[I].FileIdx;
-    FileStart := I;
-    while (I < Total) and (ASelected[I].FileIdx = FileIdx) do
-      Inc(I);
-    Entry := FFileEntries[FileIdx];
-    FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
-    FBusyForm.LblMessage.Caption := Format('Loading %s...', [Entry.FileName]);
-    Wav := TWavFile.Create();
-    try
-      Loaded := True;
+  UsedNames := TStringList.Create();
+  try
+    UsedNames.Sorted := True;
+    UsedNames.CaseSensitive := False;
+    UsedNames.Duplicates := dupIgnore;
+    I := 0;
+    while (I < Total) and not ACancelled do begin
+      FileIdx := ASelected[I].FileIdx;
+      FileStart := I;
+      while (I < Total) and (ASelected[I].FileIdx = FileIdx) do
+        Inc(I);
+      Entry := FFileEntries[FileIdx];
+      FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
+      FBusyForm.LblMessage.Caption := Format('Loading %s...', [Entry.FileName]);
+      Wav := TWavFile.Create();
       try
-        Wav.LoadFromFile(Entry.FilePath, TickBusy);
-      except
-        on E: Exception do begin
-          Loaded := False;
-          AErrorLog.Add(Entry.FileName + ': ' + E.Message);
-          Inc(ASkippedCount, I - FileStart);
-        end;
-      end;
-      if Loaded then
-        for J := FileStart to I - 1 do begin
-          FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
-          FBusyForm.LblMessage.Caption := Format('Exporting clip %d of %d: %s', [ASavedCount + ASkippedCount + 1, Total, Entry.FileName]);
-          TickBusy();
-          if FBusyForm.Cancelled then begin
-            ACancelled := True;
-            Break;
+        Loaded := True;
+        try
+          Wav.LoadFromFile(Entry.FilePath, TickBusy);
+        except
+          on E: Exception do begin
+            Loaded := False;
+            AErrorLog.Add(Entry.FileName + ': ' + E.Message);
+            Inc(ASkippedCount, I - FileStart);
           end;
-          ExportDetectionSection(Wav, Entry, Entry.Detections[ASelected[J].DetIdx], AOutputFolder, AMarginSec, ASavedCount,
-            ASkippedCount, AErrorLog);
         end;
-    finally
-      Wav.Free();
+        if Loaded then
+          for J := FileStart to I - 1 do begin
+            FBusyForm.SetProgress(ASavedCount + ASkippedCount, Total);
+            FBusyForm.LblMessage.Caption :=
+              Format('Exporting clip %d of %d: %s', [ASavedCount + ASkippedCount + 1, Total, Entry.FileName]);
+            TickBusy();
+            if FBusyForm.Cancelled then begin
+              ACancelled := True;
+              Break;
+            end;
+            ExportDetectionSection(Wav, Entry, Entry.Detections[ASelected[J].DetIdx], AOutputFolder, AMarginSec, AWriteCsv,
+              UsedNames, ASavedCount, ASkippedCount, AErrorLog);
+          end;
+      finally
+        Wav.Free();
+      end;
+      if FBusyForm.Cancelled then
+        ACancelled := True;
     end;
-    if FBusyForm.Cancelled then
-      ACancelled := True;
+  finally
+    UsedNames.Free();
   end;
 end;
 
@@ -2176,7 +2250,7 @@ begin
     FBusyForm.ShowCancel(True);
     FBusyForm.SetProgress(0, Length(Selected));
     try
-      ExportClips(Selected, Filter.MarginSec, FLastSectionsFolder, SavedCount, SkippedCount, Cancelled, ErrorLog);
+      ExportClips(Selected, Filter.MarginSec, Filter.WriteCsv, FLastSectionsFolder, SavedCount, SkippedCount, Cancelled, ErrorLog);
     finally
       EndBusy();
       Enabled := True;

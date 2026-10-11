@@ -37,6 +37,7 @@ type
     UseMinConfidence: Boolean;
     MinConfidence: Double; // 0..1, same scale as the detections
     MarginSec: Double;
+    WriteCsv: Boolean;
   end;
 
 
@@ -52,6 +53,7 @@ type
     EdtMinConfidence: TSpinEdit;
     LblMargin: TLabel;
     EdtMargin: TEdit;
+    ChkWriteCsv: TCheckBox;
     LblCount: TLabel;
     BtnOk: TButton;
     BtnCancel: TButton;
@@ -85,6 +87,7 @@ begin
   Result.UseMinConfidence := False;
   Result.MinConfidence := 0.5;
   Result.MarginSec := 2.0;
+  Result.WriteCsv := True;
 end;
 
 
@@ -95,7 +98,8 @@ begin
   AFilter.BestN := EdtBestN.Value;
   AFilter.UseMinConfidence := ChkMinConfidence.Checked;
   AFilter.MinConfidence := EdtMinConfidence.Value / 100.0;
-  Result := TryStrToFloat(Trim(EdtMargin.Text), AFilter.MarginSec) and (AFilter.MarginSec >= 0.0) and (AFilter.MarginSec <= 3600.0);
+  AFilter.WriteCsv := ChkWriteCsv.Checked;
+  Result :=TryStrToFloat(Trim(EdtMargin.Text), AFilter.MarginSec) and (AFilter.MarginSec >= 0.0) and (AFilter.MarginSec <= 3600.0);
 end;
 
 
@@ -136,6 +140,7 @@ begin
   ChkMinConfidence.Checked := AFilter.UseMinConfidence;
   EdtMinConfidence.Value := Round(AFilter.MinConfidence * 100.0);
   EdtMargin.Text := FloatToStr(AFilter.MarginSec);
+  ChkWriteCsv.Checked := AFilter.WriteCsv;
   FCountFunc := ACountFunc;
   UpdateState();
   Result := ShowModal() = mrOk;

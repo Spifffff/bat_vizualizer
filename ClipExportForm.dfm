@@ -4,7 +4,7 @@ object FormClipExport: TFormClipExport
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Export clips'
-  ClientHeight = 170
+  ClientHeight = 198
   ClientWidth = 340
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -23,7 +23,7 @@ object FormClipExport: TFormClipExport
   end
   object LblCount: TLabel
     Left = 16
-    Top = 112
+    Top = 140
     Width = 308
     Height = 13
     AutoSize = False
@@ -78,24 +78,34 @@ object FormClipExport: TFormClipExport
     Text = '2'
     OnChange = FilterChange
   end
+  object ChkWriteCsv: TCheckBox
+    Left = 16
+    Top = 109
+    Width = 308
+    Height = 17
+    Caption = 'Also save a results CSV file next to each clip'
+    Checked = True
+    State = cbChecked
+    TabOrder = 5
+  end
   object BtnOk: TButton
     Left = 168
-    Top = 135
+    Top = 163
     Width = 75
     Height = 25
     Caption = 'OK'
     Default = True
     ModalResult = 1
-    TabOrder = 5
+    TabOrder = 6
   end
   object BtnCancel: TButton
     Left = 249
-    Top = 135
+    Top = 163
     Width = 75
     Height = 25
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
-    TabOrder = 6
+    TabOrder = 7
   end
 end

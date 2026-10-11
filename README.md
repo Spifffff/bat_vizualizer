@@ -23,7 +23,8 @@ tool called Bat identifyer can additionally run automated species identification
 - Export of the current view as a PNG, and export of a zoomed selection as WAV or MP3, the latter by way of LAME.
   The export filename reflects whichever playback mode was selected at the time.
 - Export of detection clips: short WAV files cut around each detection in a folder, optionally limited to the best
-  results per species or to detections above a confidence threshold, with a configurable margin.
+  results per species or to detections above a confidence threshold, with a configurable margin, and optionally
+  with a results CSV file next to each clip, so that the exported folder can be opened like any analyzed folder.
 - Folder browsing, so that an entire directory of recordings can be reviewed at once, with per-file and
   per-species detection counts sortable by timestamp or confidence. Species common names are translated into
   Dutch, English, German, French, or Spanish.
@@ -106,10 +107,15 @@ written: the waveform, the spectrogram, or both together as a PNG, or the curren
 MP3 file.
 
 Once a folder with Bat identifyer results has been opened, the Export clips button at the bottom of the right
-panel cuts a separate WAV file around every detection in that folder. A dialog offers two optional limits,
-which can be combined: only the best N detections per species, and only detections above a given confidence. It
-also sets the margin, in seconds, that is kept before and after each detection. The clips are written unmodified
-at the original sample rate, and a progress bar with a Cancel button is shown while they are being written.
+panel cuts a separate WAV file around every detection in that folder, where consecutive results of the same
+species that lie within five seconds of each other count as one detection, so there are fewer clips than rows in
+the results files. A dialog offers two optional limits, which can be combined: only the best N detections per
+species, and only detections above a given confidence. It also sets the margin, in seconds, that is kept before
+and after each detection. The clips are written unmodified at the original sample rate, and a progress bar with a
+Cancel button is shown while they are being written. A checkbox in the same dialog adds a results
+file named like the clip, for example `<clip>.results.csv`, in the same format as the BattyBirdNET output. It holds
+the results of the source recording that fall inside the clip, with times counted from the start of the clip, so the
+exported folder can be opened in Bat vizualizer like any folder of analyzed recordings.
 
 The Nightly activity button, also at the bottom of the right panel, opens a summary of the detections in the opened
 folder, showing for each species how many were recorded in each hour of the night, either for all nights
