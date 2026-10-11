@@ -83,7 +83,9 @@ A single recording can be loaded with "Open file", or by dragging a WAV file ont
 waveform appears at the top of the window and the spectrogram below it. "Open folder" instead browses every
 recording in a chosen folder at once. BattyBirdNET-Analyzer is not required for this: if none of the files in the
 folder have been analyzed by Bat identifyer yet, the list on the right simply shows their file names, and it fills in
-with species and detection counts once results become available.
+with species and detection counts once results become available. The recording time shown for each detection is
+taken from the first timestamp of the form `yyyymmdd_hhnnss` in the file name, for example `20250812_034000`; a file
+without one is dated by its creation time instead.
 
 Dragging a region on the waveform zooms the spectrogram into that range, and the transport controls step between
 files or between individual detections.

@@ -340,7 +340,7 @@ type
     function BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
     function CanCopyOriginalForExport(const ATargetExt: string): Boolean;
     function SanitizeSpeciesForFileName(const ASpecies: string): string;
-    function BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection): string;
+    function BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection; AClipStartSec: Double): string;
     function SelectClips(const AFilter: TClipFilter): TArray<TFlatDet>;
     procedure ExportImage(const AFileName: string; ATarget: Integer);
     procedure ExportAudio(const AFileName, AExt: string);
@@ -1209,24 +1209,39 @@ end;
 
 function TFormMain.TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
 var
+  P, I: Integer;
+  IsStamp: Boolean;
   Y, Mo, D, H, Mi, S: Integer;
 begin
+  { Looks for the first yyyymmdd_hhnnss anywhere in the name, as a separate run of digits, so recordings such as
+    "1.000_7_20250812_034000" and exported clips are read as well as plain "20250812_034000". }
   Result := False;
-  if (Length(ABaseName) <> 15) or (ABaseName[9] <> '_') then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 1, 4), Y) then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 5, 2), Mo) then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 7, 2), D) then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 10, 2), H) then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 12, 2), Mi) then
-    Exit();
-  if not TryStrToInt(Copy(ABaseName, 14, 2), S) then
-    Exit();
-  Result := TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime);
+  for P := 1 to Length(ABaseName) - 14 do begin
+    if (P > 1) and CharInSet(ABaseName[P - 1], ['0'..'9']) then
+      Continue;
+    if (P + 15 <= Length(ABaseName)) and CharInSet(ABaseName[P + 15], ['0'..'9']) then
+      Continue;
+    if ABaseName[P + 8] <> '_' then
+      Continue;
+    IsStamp := True;
+    for I := 0 to 14 do
+      if (I <> 8) and not CharInSet(ABaseName[P + I], ['0'..'9']) then begin
+        IsStamp := False;
+        Break;
+      end;
+    if not IsStamp then
+      Continue;
+    Y := StrToInt(Copy(ABaseName, P, 4));
+    Mo := StrToInt(Copy(ABaseName, P + 4, 2));
+    D := StrToInt(Copy(ABaseName, P + 6, 2));
+    H := StrToInt(Copy(ABaseName, P + 9, 2));
+    Mi := StrToInt(Copy(ABaseName, P + 11, 2));
+    S := StrToInt(Copy(ABaseName, P + 13, 2));
+    if TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime) then begin
+      Result := True;
+      Exit();
+    end;
+  end;
 end;
 
 
@@ -1477,10 +1492,12 @@ end;
 
 
 
-function TFormMain.BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection): string;
+{ The timestamp in the name is the start of the clip itself, so that opening the exported folder gives every clip its
+  true recording time (TryParseFileNameDateTime reads the first timestamp in a name). }
+function TFormMain.BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection; AClipStartSec: Double): string;
 begin
   Result := SanitizeSpeciesForFileName(Det.CommonName) + '_' +
-    FormatDateTime('yyyymmdd_hhnnss', Det.DateTime, TFormatSettings.Invariant) + '_' +
+    FormatDateTime('yyyymmdd_hhnnss', AEntry.RecordedAt + AClipStartSec / 86400.0, TFormatSettings.Invariant) + '_' +
     ChangeFileExt(AEntry.FileName, '');
 end;
 
@@ -1569,17 +1586,24 @@ procedure TFormMain.ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFil
   const AOutputFolder: string; AMarginSec: Double; AWriteCsv: Boolean; AUsedNames: TStrings;
   var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
 var
-  ZoomStart, ZoomEnd: Double;
+  ZoomStart, ZoomEnd, ClipStartSec, ClipEndSec, SecFraction: Double;
   BaseName, FilePath: string;
   ActualRate: Cardinal;
 begin
-  ZoomStart := Max(0.0, (Det.StartSec - AMarginSec) / AWav.Info.DurationSec);
-  ZoomEnd := Min(1.0, (Det.EndSec + AMarginSec) / AWav.Info.DurationSec);
+  { The clip name only holds whole seconds, so the clip starts on a whole second of the recording time (at most one
+    second earlier than the margin asks for). That keeps the times of the clips and of the results in them exact. }
+  SecFraction := RoundTo(Frac(AEntry.RecordedAt * 86400.0), -3);
+  if SecFraction >= 1.0 then
+    SecFraction := 0.0;
+  ClipStartSec := Max(0.0, Floor(Det.StartSec - AMarginSec + SecFraction) - SecFraction);
+  ClipEndSec := Min(AWav.Info.DurationSec, Det.EndSec + AMarginSec);
+  ZoomStart := ClipStartSec / AWav.Info.DurationSec;
+  ZoomEnd := ClipEndSec / AWav.Info.DurationSec;
   if ZoomEnd <= ZoomStart then
     ZoomEnd := Min(1.0, ZoomStart + 0.01);
   { Two detections can map to the same name (same species, same second); without a suffix the second clip would
     silently overwrite the first while both were counted as exported. }
-  BaseName := MakeUniqueName(BuildSectionFileName(AEntry, Det), AUsedNames);
+  BaseName := MakeUniqueName(BuildSectionFileName(AEntry, Det, ClipStartSec), AUsedNames);
   FilePath := IncludeTrailingPathDelimiter(AOutputFolder) + BaseName;
   try
     SaveWav(AWav.Samples, ZoomStart, ZoomEnd, FilePath + '.wav', AWav.Info.SampleRate, 1.0, ActualRate);
@@ -1593,7 +1617,7 @@ begin
   end;
   if AWriteCsv then
     try
-      WriteClipResultsCsv(FilePath + '.results.csv', Det, ZoomStart * AWav.Info.DurationSec, ZoomEnd * AWav.Info.DurationSec);
+      WriteClipResultsCsv(FilePath + '.results.csv', Det, ClipStartSec, ClipEndSec);
     except
       on E: Exception do
         AErrorLog.Add(BaseName + '.results.csv: ' + E.Message);
