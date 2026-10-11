@@ -31,7 +31,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.ImgList,
   FFT, WavReader, Spectrogram, WaveOutPlayer, Heterodyne, Mp3Writer, WavWriter,
   WaveformPainter, SpectrogramPainter, PngExport, BatSpeciesTranslations, System.ImageList,
-  BatIdentForm, BusyForm, NightlyActivityForm, ClipExportForm, settings;
+  BatIdentForm, BusyForm, NightlyActivityForm, ClipExportForm, ExportForm, settings;
 
 const
   LEFT_MARGIN = 65;
@@ -205,7 +205,8 @@ type
     Settings: TSettings;
     FLastOpenFolder: string;
     FLastSectionsFolder: string;
-    FExportTypeIdx: Integer;
+    FExportOptions: TExportOptions;
+    FLastExportFolder: string;
     FClipFilter: TClipFilter;
 
     { AllowDropFiles/OnDropFiles aren't published on TCustomForm -- streaming
@@ -338,7 +339,9 @@ type
     function GetMarkerRect(const Det: TBatDetection; DurationSec: Double; ALeft, ARight: Integer): TRect;
     function GetCurrentFileRecordedAt: TDateTime;
     function GetCurrentClipSpeciesName: string;
+    function GetExpansionText: string;
     function BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
+    function BuildExportSummary(AKind: TExportKind): string;
     function CanCopyOriginalForExport(const ATargetExt: string): Boolean;
     function SanitizeSpeciesForFileName(const ASpecies: string): string;
     function BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection; AClipStartSec: Double): string;
@@ -906,7 +909,10 @@ begin
   FSortAscending := Settings.ReadBoolean('SortAscending', FSortAscending);
   FLastOpenFolder := Settings.ReadString('LastOpenFolder', '');
   FLastSectionsFolder := Settings.ReadString('LastSectionsFolder', '');
-  FExportTypeIdx := Settings.ReadInteger('ExportType', 1);
+  FExportOptions := DefaultExportOptions();
+  FExportOptions.Kind := TExportKind(EnsureRange(Settings.ReadInteger('ExportKind', Ord(ekImage)), 0, Ord(High(TExportKind))));
+  FExportOptions.ImageTarget := EnsureRange(Settings.ReadInteger('ExportImageTarget', 2), 0, 2);
+  FLastExportFolder := Settings.ReadString('ExportFolder', '');
   FClipFilter := DefaultClipFilter();
   FClipFilter.UseBestN := Settings.ReadBoolean('ClipUseBestN', FClipFilter.UseBestN);
   FClipFilter.BestN := Settings.ReadInteger('ClipBestN', FClipFilter.BestN);
@@ -937,7 +943,9 @@ begin
   Settings.WriteBoolean('SortAscending', FSortAscending);
   Settings.WriteString('LastOpenFolder', FLastOpenFolder);
   Settings.WriteString('LastSectionsFolder', FLastSectionsFolder);
-  Settings.WriteInteger('ExportType', FExportTypeIdx);
+  Settings.WriteInteger('ExportKind', Ord(FExportOptions.Kind));
+  Settings.WriteInteger('ExportImageTarget', FExportOptions.ImageTarget);
+  Settings.WriteString('ExportFolder', FLastExportFolder);
   Settings.WriteBoolean('ClipUseBestN', FClipFilter.UseBestN);
   Settings.WriteInteger('ClipBestN', FClipFilter.BestN);
   Settings.WriteBoolean('ClipUseMinConfidence', FClipFilter.UseMinConfidence);
@@ -1540,10 +1548,22 @@ end;
 
 
 
+function TFormMain.GetExpansionText: string;
+var
+  ExpansionFactor: Double;
+begin
+  ExpansionFactor := 1.0 / GetPlaybackRate();
+  if SameValue(Frac(ExpansionFactor), 0.0) then
+    Result := IntToStr(Round(ExpansionFactor))
+  else
+    Result := FormatFloat('0.#', ExpansionFactor, TFormatSettings.Invariant);
+end;
+
+
+
 function TFormMain.BuildDefaultExportFileName(AIncludePlaybackSuffix: Boolean): string;
 var
-  Species, Expansion, DateTimePart: string;
-  ExpansionFactor: Double;
+  Species, DateTimePart: string;
 begin
   DateTimePart := FormatDateTime('yyyymmdd_hhnnss', GetCurrentFileRecordedAt(), TFormatSettings.Invariant);
   Species := GetCurrentClipSpeciesName();
@@ -1554,15 +1574,46 @@ begin
   if AIncludePlaybackSuffix then begin
     if RbHeterodyne.Checked then
       Result := Result + '_HET_' + IntToStr(TrkTuneFreq.Position) + 'kHz'
-    else begin
-      ExpansionFactor := 1.0 / GetPlaybackRate();
-      if SameValue(Frac(ExpansionFactor), 0.0) then
-        Expansion := IntToStr(Round(ExpansionFactor))
-      else
-        Expansion := FormatFloat('0.#', ExpansionFactor, TFormatSettings.Invariant);
-      Result := Result + '_TE_x' + Expansion;
-    end;
+    else
+      Result := Result + '_TE_x' + GetExpansionText();
+    { The gain, in dB: "+6dB", "-3dB" or "0dB". }
+    if TrkGain.Position > 0 then
+      Result := Result + '_+' + IntToStr(TrkGain.Position) + 'dB'
+    else
+      Result := Result + '_' + IntToStr(TrkGain.Position) + 'dB';
   end;
+end;
+
+
+
+function TFormMain.BuildExportSummary(AKind: TExportKind): string;
+var
+  Mode, GainText: string;
+  Duration: Double;
+begin
+  if AKind = ekImage then begin
+    Result := 'The current view as a PNG image.';
+    Exit();
+  end;
+  if CanCopyOriginalForExport(ExportExtension(AKind)) then begin
+    Result := 'The original file is copied unchanged.';
+    Exit();
+  end;
+  if AKind = ekWav then begin
+    Duration := FWavFile.Info.DurationSec;
+    Result := Format('Raw audio at the original sample rate, from %.2f s to %.2f s.', [FZoomStart * Duration, FZoomEnd * Duration]);
+    Exit();
+  end;
+  if RbHeterodyne.Checked then
+    Mode := Format('Heterodyne at %d kHz', [TrkTuneFreq.Position])
+  else
+    Mode := 'Time expansion x' + GetExpansionText();
+  if TrkGain.Position > 0 then
+    GainText := '+' + IntToStr(TrkGain.Position)
+  else
+    GainText := IntToStr(TrkGain.Position);
+  Duration := FWavFile.Info.DurationSec;
+  Result := Format('%s, gain %s dB, from %.2f s to %.2f s.', [Mode, GainText, FZoomStart * Duration, FZoomEnd * Duration]);
 end;
 
 
@@ -1573,10 +1624,12 @@ begin
     would actually change: same format, the whole file (not just a zoomed
     section), no time expansion, no gain. Copying preserves the original's
     exact bit depth and (for MP3) avoids a second lossy encode -- both of
-    which re-encoding through Samples always loses, even at these settings. }
+    which re-encoding through Samples always loses, even at these settings.
+    WAV is exported raw, so the playback settings do not count for it. }
   Result := (FCurrentFilePath <> '') and SameText(ExtractFileExt(FCurrentFilePath), ATargetExt) and
-    SameValue(FZoomStart, 0.0) and SameValue(FZoomEnd, 1.0) and
-    SameValue(GetPlaybackRate(), 1.0) and (TrkGain.Position = 0);
+    SameValue(FZoomStart, 0.0) and SameValue(FZoomEnd, 1.0);
+  if Result and not SameText(ATargetExt, '.wav') then
+    Result := not RbHeterodyne.Checked and SameValue(GetPlaybackRate(), 1.0) and (TrkGain.Position = 0);
 end;
 
 
@@ -2100,24 +2153,6 @@ end;
 
 
 
-type
-  TExportType = record
-    DisplayName: string;
-    Mask: string;
-    Ext: string;
-  end;
-
-const
-  EXPORT_TYPES: array[0..4] of TExportType = (
-    (DisplayName: 'PNG image: waveform and spectrogram'; Mask: '*.png'; Ext: '.png'),
-    (DisplayName: 'PNG image: spectrogram only'; Mask: '*.png'; Ext: '.png'),
-    (DisplayName: 'PNG image: waveform only'; Mask: '*.png'; Ext: '.png'),
-    (DisplayName: 'WAV audio'; Mask: '*.wav'; Ext: '.wav'),
-    (DisplayName: 'MP3 audio'; Mask: '*.mp3'; Ext: '.mp3'));
-  EXPORT_TYPE_FIRST_AUDIO = 4;
-
-
-
 procedure TFormMain.ExportImage(const AFileName: string; ATarget: Integer);
 var
   WavBmp, SpectBmp: TBitmap;
@@ -2167,8 +2202,11 @@ end;
 
 procedure TFormMain.ExportAudio(const AFileName, AExt: string);
 var
-  DesiredRate, ActualRate: Cardinal;
+  DesiredRate, ActualRate, OutRate: Cardinal;
   Fmt: string;
+  Buffer: TArray<Single>;
+  StartSample, EndSample, TimelineStart: Integer;
+  TimeScale: Double;
 begin
   if FWavFile = nil then
     Exit();
@@ -2179,14 +2217,24 @@ begin
       if CanCopyOriginalForExport(AExt) then begin
         TFile.Copy(FCurrentFilePath, AFileName, True);
         StatusBar.Panels[0].Text := Fmt + ' saved — copied original file';
+      end else if SameText(AExt, '.wav') then begin
+        { WAV is raw: the selected part of the recording at its own sample rate, with no gain, time expansion or
+          heterodyne. }
+        SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, FWavFile.Info.SampleRate, 1.0, ActualRate);
+        StatusBar.Panels[0].Text := Format('WAV saved — raw, %d Hz', [ActualRate]);
+      end else if RbHeterodyne.Checked then begin
+        { MP3 follows the playback settings. Heterodyne uses the same mixed-down audio that Play uses, so the file
+          matches what is heard. }
+        StartSample := EnsureRange(Round(FZoomStart * FWavFile.Info.NumSamples), 0, FWavFile.Info.NumSamples);
+        EndSample := EnsureRange(Round(FZoomEnd * FWavFile.Info.NumSamples), StartSample, FWavFile.Info.NumSamples);
+        BuildPlaybackBuffer(StartSample, EndSample, Buffer, TimelineStart, TimeScale, OutRate);
+        SaveMp3(Buffer, 0.0, 1.0, AFileName, OutRate, GetPlaybackGain(), ActualRate);
+        StatusBar.Panels[0].Text := Format('MP3 saved — heterodyne %d kHz, %d Hz', [TrkTuneFreq.Position, ActualRate]);
       end else begin
         DesiredRate := Round(FWavFile.Info.SampleRate * GetPlaybackRate());
-        if SameText(AExt, '.mp3') then
-          SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, DesiredRate, GetPlaybackGain(), ActualRate)
-        else
-          SaveWav(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, DesiredRate, GetPlaybackGain(), ActualRate);
-        StatusBar.Panels[0].Text := Format('%s saved — %d Hz (%.1f%% speed)',
-          [Fmt, ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
+        SaveMp3(FWavFile.Samples, FZoomStart, FZoomEnd, AFileName, DesiredRate, GetPlaybackGain(), ActualRate);
+        StatusBar.Panels[0].Text := Format('MP3 saved — %d Hz (%.1f%% speed)',
+          [ActualRate, DesiredRate / FWavFile.Info.SampleRate * 100]);
       end;
     except
       on E: Exception do
@@ -2201,50 +2249,65 @@ end;
 
 procedure TFormMain.BtnExportClick(Sender: TObject);
 var
-  D: TFileSaveDialog;
+  Dlg: TFormExport;
+  SaveDlg: TFileSaveDialog;
   Item: TFileTypeItem;
-  I, TypeIdx: Integer;
-  FileName, Ext, TypedExt: string;
+  Options: TExportOptions;
+  Accepted: Boolean;
+  FilePath, Ext: string;
 begin
   if FWavFile = nil then
     Exit();
-  D := TFileSaveDialog.Create(nil);
+  Options := FExportOptions;
+  Dlg := TFormExport.Create(Self);
   try
-    for I := 0 to High(EXPORT_TYPES) do begin
-      Item := D.FileTypes.Add();
-      Item.DisplayName := EXPORT_TYPES[I].DisplayName;
-      Item.FileMask := EXPORT_TYPES[I].Mask;
-    end;
-    D.FileTypeIndex := EnsureRange(FExportTypeIdx, 1, Length(EXPORT_TYPES));
-    D.DefaultExtension := Copy(EXPORT_TYPES[D.FileTypeIndex - 1].Ext, 2, MaxInt);
-    D.Options := [fdoOverWritePrompt, fdoPathMustExist];
-    D.FileName := BuildDefaultExportFileName(D.FileTypeIndex >= EXPORT_TYPE_FIRST_AUDIO);
-    if not D.Execute() then
-      Exit();
-    TypeIdx := D.FileTypeIndex;
-    FileName := D.FileName;
+    Accepted := Dlg.Execute(Options,
+      function(AKind: TExportKind): string
+      begin
+        Result := BuildExportSummary(AKind);
+      end);
   finally
-    D.Free();
+    Dlg.Free();
   end;
+  if not Accepted then
+    Exit();
+  FExportOptions := Options;
 
-  FExportTypeIdx := TypeIdx;
-  Ext := EXPORT_TYPES[TypeIdx - 1].Ext;
-  TypedExt := ExtractFileExt(FileName);
-  if not SameText(TypedExt, Ext) then
-    if SameText(TypedExt, '.png') or SameText(TypedExt, '.wav') or SameText(TypedExt, '.mp3') then
-      FileName := ChangeFileExt(FileName, Ext)
+  { The file name is proposed per type: images and WAV files get species and time, MP3 files also the playback mode,
+    its setting and the gain. }
+  Ext := ExportExtension(Options.Kind);
+  SaveDlg := TFileSaveDialog.Create(nil);
+  try
+    Item := SaveDlg.FileTypes.Add();
+    case Options.Kind of
+      ekImage:
+        Item.DisplayName := 'PNG image';
+      ekWav:
+        Item.DisplayName := 'WAV audio';
     else
-      FileName := FileName + Ext;
-  case TypeIdx of
-    1:
-      ExportImage(FileName, 2);
-    2:
-      ExportImage(FileName, 1);
-    3:
-      ExportImage(FileName, 0);
-  else
-    ExportAudio(FileName, Ext);
+      Item.DisplayName := 'MP3 audio';
+    end;
+    Item.FileMask := '*' + Ext;
+    SaveDlg.DefaultExtension := Copy(Ext, 2, MaxInt);
+    SaveDlg.Options := [fdoOverWritePrompt, fdoPathMustExist];
+    SaveDlg.FileName := BuildDefaultExportFileName(Options.Kind = ekMp3);
+    if System.SysUtils.DirectoryExists(FLastExportFolder) then
+      SaveDlg.DefaultFolder := FLastExportFolder
+    else
+      SaveDlg.DefaultFolder := ExcludeTrailingPathDelimiter(ExtractFilePath(FCurrentFilePath));
+    if not SaveDlg.Execute() then
+      Exit();
+    FilePath := SaveDlg.FileName;
+  finally
+    SaveDlg.Free();
   end;
+  if not SameText(ExtractFileExt(FilePath), Ext) then
+    FilePath := FilePath + Ext;
+  FLastExportFolder := ExcludeTrailingPathDelimiter(ExtractFilePath(FilePath));
+  if Options.Kind = ekImage then
+    ExportImage(FilePath, Options.ImageTarget)
+  else
+    ExportAudio(FilePath, Ext);
 end;
 
 

@@ -157,6 +157,10 @@
             <Form>FormClipExport</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="ExportForm.pas">
+            <Form>FormExport</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

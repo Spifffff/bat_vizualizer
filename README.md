@@ -20,8 +20,8 @@ tool called Bat identifyer can additionally run automated species identification
   configurable FFT window function and size.
 - Ten spectrogram color schemes, including Viridis, Magma, and grayscale in both directions. The floor and ceiling
   of the color range are set automatically whenever a file or a detection is opened, and can be adjusted by hand.
-- Export of the current view as a PNG, and export of a zoomed selection as WAV or MP3, the latter by way of LAME.
-  The export filename reflects whichever playback mode was selected at the time.
+- Export of the current view as a PNG, and export of a zoomed selection as a raw WAV or as MP3, the latter by way of LAME.
+  The name of an exported MP3 file reflects the playback mode, its setting and the gain that were selected.
 - Export of detection clips: short WAV files cut around each detection in a folder, optionally limited to the best
   results per species or to detections above a confidence threshold, with a configurable margin, and optionally
   with a results CSV file next to each clip, so that the exported folder can be opened like any analyzed folder.
@@ -104,9 +104,13 @@ floor and ceiling of the color range are chosen automatically each time a file o
 usually gives a clear picture at once; the Auto buttons next to the sliders repeat this for the current view,
 and the sliders can be moved by hand when a different contrast is wanted.
 
-The Export button in the left panel saves the current view. The file type chosen in the save dialog decides what is
-written: the waveform, the spectrogram, or both together as a PNG, or the current zoomed selection as a WAV or an
-MP3 file.
+The Export button in the left panel opens a dialog for saving the current view. It offers a PNG image of the
+waveform, the spectrogram or both together, or the current zoomed selection as a WAV or an MP3 file, and then opens
+a save dialog with a proposed file name. A WAV file is exported raw: the selected part of the
+recording at its own sample rate, without gain, time expansion or heterodyne. An MP3 file follows the playback
+settings, and its proposed file name contains the playback mode and its setting together with the gain, for example
+`_TE_x10_+6dB` or `_HET_45kHz_0dB`; a heterodyne MP3 contains the same mixed-down audio that is heard during
+playback. A summary line in the dialog shows what will be written.
 
 Once a folder with Bat identifyer results has been opened, the Export clips button at the bottom of the right
 panel cuts a separate WAV file around every detection in that folder, where consecutive results of the same
@@ -167,6 +171,7 @@ process, from [BatIdentForm.pas](BatIdentForm.pas).
 | [BatIdentForm.pas](BatIdentForm.pas) | Bat identifyer UI: folder selection, analysis options, results |
 | [BusyForm.pas](BusyForm.pas) | Busy indicator with optional progress bar and Cancel button for longer operations |
 | [ClipExportForm.pas](ClipExportForm.pas) | Dialog for choosing which detection clips to export and the margin around them |
+| [ExportForm.pas](ExportForm.pas) | Dialog for choosing how the current view is exported: as an image, as raw WAV or as MP3 |
 | [NightlyActivityForm.pas](NightlyActivityForm.pas) | Nightly activity summary dialog, with per-species bars by hour |
 | [WavReader.pas](WavReader.pas) | WAV file parsing and sample access |
 | [WavWriter.pas](WavWriter.pas) | Streaming WAV export of a selection |

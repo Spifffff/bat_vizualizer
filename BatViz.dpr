@@ -30,7 +30,8 @@ uses
   Spectrogram in 'Spectrogram.pas',
   WaveOutPlayer in 'WaveOutPlayer.pas',
   settings in 'settings.pas',
-  ClipExportForm in 'ClipExportForm.pas' {FormClipExport};
+  ClipExportForm in 'ClipExportForm.pas' {FormClipExport},
+  ExportForm in 'ExportForm.pas' {FormExport};
 
 {$R *.res}
 
