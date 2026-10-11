@@ -112,10 +112,10 @@ Once a folder with Bat identifyer results has been opened, the Export clips butt
 panel cuts a separate WAV file around every detection in that folder, where consecutive results of the same
 species that lie within five seconds of each other count as one detection, so there are fewer clips than rows in
 the results files. A dialog offers two optional limits, which can be combined: only the best N detections per
-species, and only detections above a given confidence. It also sets the margin, in seconds, that is kept before
-and after each detection. The clips are written unmodified at the original sample rate, and a progress bar with a
-Cancel button is shown while they are being written. A checkbox in the same dialog adds a results
-file named like the clip, for example `<clip>.results.csv`, in the same format as the BattyBirdNET output. It holds
+species, and only detections above a given confidence. It also sets the margin, in seconds and in steps of 0.1,
+that is kept before and after each detection. The clips are written unmodified at the original sample rate, and a
+progress bar with a Cancel button is shown while they are being written. A checkbox in the same dialog adds a
+results file named like the clip, for example `<clip>.results.csv`, in the same format as the BattyBirdNET output. It holds
 a single row, the result that led to the clip, with times counted from the start of the clip, so the exported
 folder can be opened in Bat vizualizer like any folder of analyzed recordings.
 

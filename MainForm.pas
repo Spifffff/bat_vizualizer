@@ -325,7 +325,7 @@ type
     procedure ScanFolderForFiles(const AFolder: string);
     procedure ScanAndShowFolder(const AFolder: string);
     function TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
-    function FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos: Integer): Boolean;
+    function FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos, AStampLen: Integer): Boolean;
     function GetFileFallbackDateTime(const AFilePath: string): TDateTime;
     procedure BuildSpeciesEntries;
     procedure BuildResultsList;
@@ -1210,23 +1210,25 @@ end;
 
 function TFormMain.TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
 var
-  StampPos: Integer;
+  StampPos, StampLen: Integer;
 begin
-  Result := FindFileNameStamp(ABaseName, ADateTime, StampPos);
+  Result := FindFileNameStamp(ABaseName, ADateTime, StampPos, StampLen);
 end;
 
 
 
-function TFormMain.FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos: Integer): Boolean;
+function TFormMain.FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos, AStampLen: Integer): Boolean;
 var
   P, I: Integer;
   IsStamp: Boolean;
   Y, Mo, D, H, Mi, S: Integer;
 begin
   { Looks for the first yyyymmdd_hhnnss anywhere in the name, as a separate run of digits, so recordings such as
-    "1.000_7_20250812_034000" and exported clips are read as well as plain "20250812_034000". }
+    "1.000_7_20250812_034000" and exported clips are read as well as plain "20250812_034000". Exported clips can
+    carry tenths of a second after it ("20250812_034000.3"). }
   Result := False;
   AStampPos := 0;
+  AStampLen := 15;
   for P := 1 to Length(ABaseName) - 14 do begin
     if (P > 1) and CharInSet(ABaseName[P - 1], ['0'..'9']) then
       Continue;
@@ -1250,6 +1252,11 @@ begin
     S := StrToInt(Copy(ABaseName, P + 13, 2));
     if TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime) then begin
       AStampPos := P;
+      if (P + 16 <= Length(ABaseName)) and (ABaseName[P + 15] = '.') and CharInSet(ABaseName[P + 16], ['0'..'9']) and
+        ((P + 17 > Length(ABaseName)) or not CharInSet(ABaseName[P + 17], ['0'..'9'])) then begin
+        ADateTime := IncMilliSecond(ADateTime, StrToInt(ABaseName[P + 16]) * 100);
+        AStampLen := 17;
+      end;
       Result := True;
       Exit();
     end;
@@ -1511,13 +1518,17 @@ function TFormMain.BuildSectionFileName(const AEntry: TBatFileEntry; const Det: 
 var
   SourceName, Rest: string;
   SourceTime: TDateTime;
-  StampPos: Integer;
+  StampPos, StampLen, Tenths: Integer;
 begin
+  { The clip starts on a tenth of a second (see ExportDetectionSection), counted here from the whole second of the
+    recording time, so the name can hold it exactly as "yyyymmdd_hhnnss.t". }
+  Tenths := Round((MilliSecondOf(AEntry.RecordedAt) / 1000.0 + AClipStartSec) * 10);
   Result := SanitizeSpeciesForFileName(Det.CommonName) + '_' +
-    FormatDateTime('yyyymmdd_hhnnss', AEntry.RecordedAt + AClipStartSec / 86400.0, TFormatSettings.Invariant);
+    FormatDateTime('yyyymmdd_hhnnss', IncSecond(RecodeMilliSecond(AEntry.RecordedAt, 0), Tenths div 10), TFormatSettings.Invariant) +
+    '.' + IntToStr(Tenths mod 10);
   SourceName := ChangeFileExt(AEntry.FileName, '');
-  if FindFileNameStamp(SourceName, SourceTime, StampPos) then
-    SourceName := Copy(SourceName, 1, StampPos - 1) + Copy(SourceName, StampPos + 15, MaxInt);
+  if FindFileNameStamp(SourceName, SourceTime, StampPos, StampLen) then
+    SourceName := Copy(SourceName, 1, StampPos - 1) + Copy(SourceName, StampPos + StampLen, MaxInt);
   Rest := Trim(SourceName);
   while (Rest <> '') and CharInSet(Rest[1], ['_', '-', ' ', '.']) do
     Delete(Rest, 1, 1);
@@ -1616,12 +1627,10 @@ var
   BaseName, FilePath: string;
   ActualRate: Cardinal;
 begin
-  { The clip name only holds whole seconds, so the clip starts on a whole second of the recording time (at most one
-    second earlier than the margin asks for). That keeps the times of the clips and of the results in them exact. }
-  SecFraction := RoundTo(Frac(AEntry.RecordedAt * 86400.0), -3);
-  if SecFraction >= 1.0 then
-    SecFraction := 0.0;
-  ClipStartSec := Max(0.0, Floor(Det.StartSec - AMarginSec + SecFraction) - SecFraction);
+  { The clip name holds tenths of a second, so the clip starts on a tenth of the recording time (less than 0.1 s
+    earlier than the margin asks for). That keeps the times of the clips and of the results in them exact. }
+  SecFraction := MilliSecondOf(AEntry.RecordedAt) / 1000.0;
+  ClipStartSec := Max(0.0, Floor((Det.StartSec - AMarginSec + SecFraction) * 10 + 1.0E-6) / 10.0 - SecFraction);
   ClipEndSec := Min(AWav.Info.DurationSec, Det.EndSec + AMarginSec);
   ZoomStart := ClipStartSec / AWav.Info.DurationSec;
   ZoomEnd := ClipEndSec / AWav.Info.DurationSec;

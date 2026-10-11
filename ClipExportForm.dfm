@@ -38,16 +38,25 @@ object FormClipExport: TFormClipExport
     TabOrder = 0
     OnClick = FilterChange
   end
-  object EdtBestN: TSpinEdit
+  object EdtBestN: TEdit
     Left = 228
     Top = 8
-    Width = 60
-    Height = 22
-    MaxValue = 9999
-    MinValue = 1
+    Width = 44
+    Height = 21
+    NumbersOnly = True
     TabOrder = 1
-    Value = 10
+    Text = '10'
     OnChange = FilterChange
+  end
+  object SpnBestN: TSpinButton
+    Left = 272
+    Top = 8
+    Width = 16
+    Height = 21
+    FocusControl = EdtBestN
+    TabOrder = 2
+    OnDownClick = SpinDownClick
+    OnUpClick = SpinUpClick
   end
   object ChkMinConfidence: TCheckBox
     Left = 8
@@ -55,28 +64,47 @@ object FormClipExport: TFormClipExport
     Width = 214
     Height = 17
     Caption = 'Only sections above confidence (%)'
-    TabOrder = 2
+    TabOrder = 3
     OnClick = FilterChange
   end
-  object EdtMinConfidence: TSpinEdit
+  object EdtMinConfidence: TEdit
     Left = 228
     Top = 34
-    Width = 60
-    Height = 22
-    MaxValue = 100
-    MinValue = 0
-    TabOrder = 3
-    Value = 50
+    Width = 44
+    Height = 21
+    NumbersOnly = True
+    TabOrder = 4
+    Text = '50'
     OnChange = FilterChange
+  end
+  object SpnMinConfidence: TSpinButton
+    Left = 272
+    Top = 34
+    Width = 16
+    Height = 21
+    FocusControl = EdtMinConfidence
+    TabOrder = 5
+    OnDownClick = SpinDownClick
+    OnUpClick = SpinUpClick
   end
   object EdtMargin: TEdit
     Left = 228
     Top = 62
-    Width = 60
+    Width = 44
     Height = 21
-    TabOrder = 4
-    Text = '2'
+    TabOrder = 6
+    Text = '2.0'
     OnChange = FilterChange
+  end
+  object SpnMargin: TSpinButton
+    Left = 272
+    Top = 62
+    Width = 16
+    Height = 21
+    FocusControl = EdtMargin
+    TabOrder = 7
+    OnDownClick = SpinDownClick
+    OnUpClick = SpinUpClick
   end
   object ChkWriteCsv: TCheckBox
     Left = 8
@@ -86,7 +114,7 @@ object FormClipExport: TFormClipExport
     Caption = 'Also save a results CSV file next to each clip'
     Checked = True
     State = cbChecked
-    TabOrder = 5
+    TabOrder = 8
   end
   object BtnOk: TButton
     Left = 132
@@ -96,7 +124,7 @@ object FormClipExport: TFormClipExport
     Caption = 'OK'
     Default = True
     ModalResult = 1
-    TabOrder = 6
+    TabOrder = 9
   end
   object BtnCancel: TButton
     Left = 213
@@ -106,6 +134,6 @@ object FormClipExport: TFormClipExport
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
-    TabOrder = 7
+    TabOrder = 10
   end
 end

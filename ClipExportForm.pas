@@ -23,10 +23,9 @@ unit ClipExportForm;
 interface
 
 
-
 uses
   Winapi.Windows, Winapi.Messages,
-  System.SysUtils, System.Classes,
+  System.SysUtils, System.Classes, System.Math,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.Samples.Spin;
 
@@ -48,18 +47,24 @@ type
 
   TFormClipExport = class(TForm)
     ChkBestN: TCheckBox;
-    EdtBestN: TSpinEdit;
+    EdtBestN: TEdit;
+    SpnBestN: TSpinButton;
     ChkMinConfidence: TCheckBox;
-    EdtMinConfidence: TSpinEdit;
+    EdtMinConfidence: TEdit;
+    SpnMinConfidence: TSpinButton;
     LblMargin: TLabel;
     EdtMargin: TEdit;
+    SpnMargin: TSpinButton;
     ChkWriteCsv: TCheckBox;
     LblCount: TLabel;
     BtnOk: TButton;
     BtnCancel: TButton;
     procedure FilterChange(Sender: TObject);
+    procedure SpinUpClick(Sender: TObject);
+    procedure SpinDownClick(Sender: TObject);
   private
     FCountFunc: TClipCountFunc;
+    procedure StepValue(ASpin: TObject; ADirection: Integer);
     function TryGetFilter(out AFilter: TClipFilter): Boolean;
     procedure UpdateState;
   public
@@ -93,13 +98,19 @@ end;
 
 
 function TFormClipExport.TryGetFilter(out AFilter: TClipFilter): Boolean;
+var
+  Confidence: Integer;
 begin
   AFilter.UseBestN := ChkBestN.Checked;
-  AFilter.BestN := EdtBestN.Value;
   AFilter.UseMinConfidence := ChkMinConfidence.Checked;
-  AFilter.MinConfidence := EdtMinConfidence.Value / 100.0;
   AFilter.WriteCsv := ChkWriteCsv.Checked;
-  Result :=TryStrToFloat(Trim(EdtMargin.Text), AFilter.MarginSec) and (AFilter.MarginSec >= 0.0) and (AFilter.MarginSec <= 3600.0);
+  Result := TryStrToInt(Trim(EdtBestN.Text), AFilter.BestN) and (AFilter.BestN >= 1) and (AFilter.BestN <= 9999) and
+    TryStrToInt(Trim(EdtMinConfidence.Text), Confidence) and (Confidence >= 0) and (Confidence <= 100) and
+    TryStrToFloat(Trim(EdtMargin.Text), AFilter.MarginSec) and (AFilter.MarginSec >= 0.0) and (AFilter.MarginSec <= 3600.0);
+  if Result then begin
+    AFilter.MinConfidence := Confidence / 100.0;
+    AFilter.MarginSec := Round(AFilter.MarginSec * 10) / 10.0;
+  end;
 end;
 
 
@@ -112,9 +123,11 @@ begin
   if not Assigned(FCountFunc) then
     Exit();
   EdtBestN.Enabled := ChkBestN.Checked;
+  SpnBestN.Enabled := ChkBestN.Checked;
   EdtMinConfidence.Enabled := ChkMinConfidence.Checked;
+  SpnMinConfidence.Enabled := ChkMinConfidence.Checked;
   if not TryGetFilter(Filter) then begin
-    LblCount.Caption := 'Enter a margin of 0 seconds or more.';
+    LblCount.Caption := 'Enter valid numbers (margin 0 s or more).';
     BtnOk.Enabled := False;
     Exit();
   end;
@@ -132,14 +145,46 @@ end;
 
 
 
+procedure TFormClipExport.StepValue(ASpin: TObject; ADirection: Integer);
+var
+  Margin: Double;
+begin
+  if ASpin = SpnBestN then
+    EdtBestN.Text := IntToStr(EnsureRange(StrToIntDef(Trim(EdtBestN.Text), 10) + ADirection, 1, 9999))
+  else if ASpin = SpnMinConfidence then
+    EdtMinConfidence.Text := IntToStr(EnsureRange(StrToIntDef(Trim(EdtMinConfidence.Text), 50) + ADirection, 0, 100))
+  else if ASpin = SpnMargin then begin
+    if not TryStrToFloat(Trim(EdtMargin.Text), Margin) then
+      Margin := 2.0;
+    { In tenths of a second, so repeated clicks never pick up rounding errors. }
+    EdtMargin.Text := FormatFloat('0.0', EnsureRange(Round(Margin * 10) + ADirection, 0, 600) / 10.0);
+  end;
+end;
+
+
+
+procedure TFormClipExport.SpinUpClick(Sender: TObject);
+begin
+  StepValue(Sender, 1);
+end;
+
+
+
+procedure TFormClipExport.SpinDownClick(Sender: TObject);
+begin
+  StepValue(Sender, -1);
+end;
+
+
+
 function TFormClipExport.Execute(var AFilter: TClipFilter; const ACountFunc: TClipCountFunc): Boolean;
 begin
   FCountFunc := nil;
   ChkBestN.Checked := AFilter.UseBestN;
-  EdtBestN.Value := AFilter.BestN;
+  EdtBestN.Text := IntToStr(AFilter.BestN);
   ChkMinConfidence.Checked := AFilter.UseMinConfidence;
-  EdtMinConfidence.Value := Round(AFilter.MinConfidence * 100.0);
-  EdtMargin.Text := FloatToStr(AFilter.MarginSec);
+  EdtMinConfidence.Text := IntToStr(Round(AFilter.MinConfidence * 100.0));
+  EdtMargin.Text := FormatFloat('0.0', AFilter.MarginSec);
   ChkWriteCsv.Checked := AFilter.WriteCsv;
   FCountFunc := ACountFunc;
   UpdateState();
