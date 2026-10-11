@@ -75,6 +75,8 @@
         <Icon_MainIcon>resources\icon.ico</Icon_MainIcon>
         <UWP_DelphiLogo44>resources\icon_44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>resources\icon_150.png</UWP_DelphiLogo150>
+        <VerInfo_Release>1</VerInfo_Release>
+        <VerInfo_Keys>CompanyName=;FileDescription=Bat identifyer;FileVersion=1.0.1.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=BatIdent;ProductVersion=1.0.1;Comments=;ProgramID=com.embarcadero.BatIdent</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
