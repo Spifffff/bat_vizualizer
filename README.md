@@ -114,8 +114,8 @@ species, and only detections above a given confidence. It also sets the margin, 
 and after each detection. The clips are written unmodified at the original sample rate, and a progress bar with a
 Cancel button is shown while they are being written. A checkbox in the same dialog adds a results
 file named like the clip, for example `<clip>.results.csv`, in the same format as the BattyBirdNET output. It holds
-the results of the source recording that fall inside the clip, with times counted from the start of the clip, so the
-exported folder can be opened in Bat vizualizer like any folder of analyzed recordings.
+a single row, the result that led to the clip, with times counted from the start of the clip, so the exported
+folder can be opened in Bat vizualizer like any folder of analyzed recordings.
 
 The Nightly activity button, also at the bottom of the right panel, opens a summary of the detections in the opened
 folder, showing for each species how many were recorded in each hour of the night, either for all nights

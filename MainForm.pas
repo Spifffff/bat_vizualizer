@@ -280,7 +280,6 @@ type
       FilePath: string;
       FileName: string;
       HasCsv: Boolean;
-      RawDetections: TArray<TBatDetection>;
       Detections: TArray<TBatDetection>;
       RecordedAt: TDateTime;
     end;
@@ -345,7 +344,7 @@ type
     function SelectClips(const AFilter: TClipFilter): TArray<TFlatDet>;
     procedure ExportImage(const AFileName: string; ATarget: Integer);
     procedure ExportAudio(const AFileName, AExt: string);
-    procedure WriteClipResultsCsv(const AFileName: string; const AEntry: TBatFileEntry; AClipStartSec, AClipEndSec: Double);
+    procedure WriteClipResultsCsv(const AFileName: string; const Det: TBatDetection; AClipStartSec, AClipEndSec: Double);
     procedure ExportDetectionSection(AWav: TWavFile; const AEntry: TBatFileEntry; const Det: TBatDetection;
       const AOutputFolder: string; AMarginSec: Double; AWriteCsv: Boolean; AUsedNames: TStrings;
       var ASavedCount, ASkippedCount: Integer; AErrorLog: TStrings);
@@ -1273,14 +1272,10 @@ begin
           Entry.RecordedAt := GetFileFallbackDateTime(Entry.FilePath);
         CsvPath := ChangeFileExt(Entry.FilePath, '.results.csv');
         Entry.HasCsv := FileExists(CsvPath);
-        if Entry.HasCsv then begin
-          Entry.RawDetections := ParseBatResults(CsvPath);
-          Entry.Detections := MergeConsecutiveDetections(Entry.RawDetections);
-        end
-        else begin
-          Entry.RawDetections := [];
+        if Entry.HasCsv then
+          Entry.Detections := MergeConsecutiveDetections(ParseBatResults(CsvPath))
+        else
           Entry.Detections := [];
-        end;
         for K := 0 to High(Entry.Detections) do
           Entry.Detections[K].DateTime := Entry.RecordedAt + (Entry.Detections[K].StartSec / SECONDS_PER_DAY);
         FFileEntries := FFileEntries + [Entry];
@@ -1547,25 +1542,21 @@ end;
 
 
 
-{ Writes "<clip>.results.csv" in the format BattyBirdNET itself produces, with the rows of the source recording that
-  overlap the clip, shifted so that times count from the start of the clip. }
-procedure TFormMain.WriteClipResultsCsv(const AFileName: string; const AEntry: TBatFileEntry; AClipStartSec, AClipEndSec: Double);
+{ Writes "<clip>.results.csv" in the format BattyBirdNET itself produces, with a single row: the result that led to
+  the clip, with its times counted from the start of the clip. }
+procedure TFormMain.WriteClipResultsCsv(const AFileName: string; const Det: TBatDetection; AClipStartSec, AClipEndSec: Double);
 var
   Lines: TStringList;
-  Row: TBatDetection;
   RowStart, RowEnd: Double;
 begin
+  RowStart := Max(0.0, Det.StartSec - AClipStartSec);
+  RowEnd := Min(AClipEndSec - AClipStartSec, Det.EndSec - AClipStartSec);
   Lines := TStringList.Create();
   try
     Lines.Add('Start (s),End (s),Scientific name,Common name,Confidence');
-    for Row in AEntry.RawDetections do
-      if (Row.EndSec > AClipStartSec) and (Row.StartSec < AClipEndSec) then begin
-        RowStart := Max(0.0, Row.StartSec - AClipStartSec);
-        RowEnd := Min(AClipEndSec - AClipStartSec, Row.EndSec - AClipStartSec);
-        Lines.Add(FormatFloat('0.####', RowStart, TFormatSettings.Invariant) + ',' +
-          FormatFloat('0.####', RowEnd, TFormatSettings.Invariant) + ',' + Row.ScientificName + ',' + Row.CommonName + ',' +
-          FormatFloat('0.0000', Row.Confidence, TFormatSettings.Invariant));
-      end;
+    Lines.Add(FormatFloat('0.####', RowStart, TFormatSettings.Invariant) + ',' +
+      FormatFloat('0.####', RowEnd, TFormatSettings.Invariant) + ',' + Det.ScientificName + ',' + Det.CommonName + ',' +
+      FormatFloat('0.0000', Det.Confidence, TFormatSettings.Invariant));
     Lines.SaveToFile(AFileName, TEncoding.UTF8);
   finally
     Lines.Free();
@@ -1602,7 +1593,7 @@ begin
   end;
   if AWriteCsv then
     try
-      WriteClipResultsCsv(FilePath + '.results.csv', AEntry, ZoomStart * AWav.Info.DurationSec, ZoomEnd * AWav.Info.DurationSec);
+      WriteClipResultsCsv(FilePath + '.results.csv', Det, ZoomStart * AWav.Info.DurationSec, ZoomEnd * AWav.Info.DurationSec);
     except
       on E: Exception do
         AErrorLog.Add(BaseName + '.results.csv: ' + E.Message);
