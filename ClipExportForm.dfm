@@ -4,8 +4,8 @@ object FormClipExport: TFormClipExport
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Export clips'
-  ClientHeight = 198
-  ClientWidth = 340
+  ClientHeight = 172
+  ClientWidth = 296
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,33 +15,33 @@ object FormClipExport: TFormClipExport
   Position = poOwnerFormCenter
   TextHeight = 13
   object LblMargin: TLabel
-    Left = 16
-    Top = 79
+    Left = 8
+    Top = 66
     Width = 202
     Height = 13
     Caption = 'Margin before and after each section (s)'
   end
   object LblCount: TLabel
-    Left = 16
-    Top = 140
-    Width = 308
+    Left = 8
+    Top = 116
+    Width = 280
     Height = 13
     AutoSize = False
     Caption = 'LblCount'
   end
   object ChkBestN: TCheckBox
-    Left = 16
-    Top = 16
-    Width = 228
+    Left = 8
+    Top = 10
+    Width = 214
     Height = 17
     Caption = 'Best N sections per species'
     TabOrder = 0
     OnClick = FilterChange
   end
   object EdtBestN: TSpinEdit
-    Left = 254
-    Top = 13
-    Width = 70
+    Left = 228
+    Top = 8
+    Width = 60
     Height = 22
     MaxValue = 9999
     MinValue = 1
@@ -50,18 +50,18 @@ object FormClipExport: TFormClipExport
     OnChange = FilterChange
   end
   object ChkMinConfidence: TCheckBox
-    Left = 16
-    Top = 46
-    Width = 228
+    Left = 8
+    Top = 36
+    Width = 214
     Height = 17
-    Caption = 'Only sections with confidence above (%)'
+    Caption = 'Only sections above confidence (%)'
     TabOrder = 2
     OnClick = FilterChange
   end
   object EdtMinConfidence: TSpinEdit
-    Left = 254
-    Top = 43
-    Width = 70
+    Left = 228
+    Top = 34
+    Width = 60
     Height = 22
     MaxValue = 100
     MinValue = 0
@@ -70,18 +70,18 @@ object FormClipExport: TFormClipExport
     OnChange = FilterChange
   end
   object EdtMargin: TEdit
-    Left = 254
-    Top = 76
-    Width = 70
+    Left = 228
+    Top = 62
+    Width = 60
     Height = 21
     TabOrder = 4
     Text = '2'
     OnChange = FilterChange
   end
   object ChkWriteCsv: TCheckBox
-    Left = 16
-    Top = 109
-    Width = 308
+    Left = 8
+    Top = 90
+    Width = 280
     Height = 17
     Caption = 'Also save a results CSV file next to each clip'
     Checked = True
@@ -89,20 +89,20 @@ object FormClipExport: TFormClipExport
     TabOrder = 5
   end
   object BtnOk: TButton
-    Left = 168
-    Top = 163
+    Left = 132
+    Top = 138
     Width = 75
-    Height = 25
+    Height = 26
     Caption = 'OK'
     Default = True
     ModalResult = 1
     TabOrder = 6
   end
   object BtnCancel: TButton
-    Left = 249
-    Top = 163
+    Left = 213
+    Top = 138
     Width = 75
-    Height = 25
+    Height = 26
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
