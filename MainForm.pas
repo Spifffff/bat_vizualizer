@@ -325,6 +325,7 @@ type
     procedure ScanFolderForFiles(const AFolder: string);
     procedure ScanAndShowFolder(const AFolder: string);
     function TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
+    function FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos: Integer): Boolean;
     function GetFileFallbackDateTime(const AFilePath: string): TDateTime;
     procedure BuildSpeciesEntries;
     procedure BuildResultsList;
@@ -1209,6 +1210,15 @@ end;
 
 function TFormMain.TryParseFileNameDateTime(const ABaseName: string; out ADateTime: TDateTime): Boolean;
 var
+  StampPos: Integer;
+begin
+  Result := FindFileNameStamp(ABaseName, ADateTime, StampPos);
+end;
+
+
+
+function TFormMain.FindFileNameStamp(const ABaseName: string; out ADateTime: TDateTime; out AStampPos: Integer): Boolean;
+var
   P, I: Integer;
   IsStamp: Boolean;
   Y, Mo, D, H, Mi, S: Integer;
@@ -1216,6 +1226,7 @@ begin
   { Looks for the first yyyymmdd_hhnnss anywhere in the name, as a separate run of digits, so recordings such as
     "1.000_7_20250812_034000" and exported clips are read as well as plain "20250812_034000". }
   Result := False;
+  AStampPos := 0;
   for P := 1 to Length(ABaseName) - 14 do begin
     if (P > 1) and CharInSet(ABaseName[P - 1], ['0'..'9']) then
       Continue;
@@ -1238,6 +1249,7 @@ begin
     Mi := StrToInt(Copy(ABaseName, P + 11, 2));
     S := StrToInt(Copy(ABaseName, P + 13, 2));
     if TryEncodeDateTime(Y, Mo, D, H, Mi, S, 0, ADateTime) then begin
+      AStampPos := P;
       Result := True;
       Exit();
     end;
@@ -1493,12 +1505,26 @@ end;
 
 
 { The timestamp in the name is the start of the clip itself, so that opening the exported folder gives every clip its
-  true recording time (TryParseFileNameDateTime reads the first timestamp in a name). }
+  true recording time (TryParseFileNameDateTime reads the first timestamp in a name). The source recording's own
+  timestamp is left out, since it would only repeat the time; whatever else its name holds is kept after the clip time. }
 function TFormMain.BuildSectionFileName(const AEntry: TBatFileEntry; const Det: TBatDetection; AClipStartSec: Double): string;
+var
+  SourceName, Rest: string;
+  SourceTime: TDateTime;
+  StampPos: Integer;
 begin
   Result := SanitizeSpeciesForFileName(Det.CommonName) + '_' +
-    FormatDateTime('yyyymmdd_hhnnss', AEntry.RecordedAt + AClipStartSec / 86400.0, TFormatSettings.Invariant) + '_' +
-    ChangeFileExt(AEntry.FileName, '');
+    FormatDateTime('yyyymmdd_hhnnss', AEntry.RecordedAt + AClipStartSec / 86400.0, TFormatSettings.Invariant);
+  SourceName := ChangeFileExt(AEntry.FileName, '');
+  if FindFileNameStamp(SourceName, SourceTime, StampPos) then
+    SourceName := Copy(SourceName, 1, StampPos - 1) + Copy(SourceName, StampPos + 15, MaxInt);
+  Rest := Trim(SourceName);
+  while (Rest <> '') and CharInSet(Rest[1], ['_', '-', ' ', '.']) do
+    Delete(Rest, 1, 1);
+  while (Rest <> '') and CharInSet(Rest[Length(Rest)], ['_', '-', ' ', '.']) do
+    Delete(Rest, Length(Rest), 1);
+  if Rest <> '' then
+    Result := Result + '_' + Rest;
 end;
 
 
