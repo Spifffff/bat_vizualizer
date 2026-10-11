@@ -29,7 +29,8 @@ uses
   WavReader in 'WavReader.pas',
   Spectrogram in 'Spectrogram.pas',
   WaveOutPlayer in 'WaveOutPlayer.pas',
-  settings in 'settings.pas';
+  settings in 'settings.pas',
+  ClipExportForm in 'ClipExportForm.pas' {FormClipExport};
 
 {$R *.res}
 
